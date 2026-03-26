@@ -20,7 +20,7 @@
 
 from django.db import models
 from academics.base import TimeStampedModel
-
+from authentication.models import CustomUser
 
 ASSESSMENT_TYPE_CHOICES = [
     ('bot',       'Beginning of Term Exam (BOT)'),
@@ -108,7 +108,7 @@ class Assessment(TimeStampedModel):
                             help_text='Results visible to parents on the portal when True')
 
     created_by        = models.ForeignKey(
-                            'accounts.User',
+                            CustomUser,
                             on_delete=models.SET_NULL,
                             null=True,
                             related_name='assessments_created'
@@ -170,7 +170,7 @@ class AssessmentClass(TimeStampedModel):
     students_absent  = models.PositiveIntegerField(default=0)
     venue            = models.CharField(max_length=20, choices=VENUE_CHOICES, blank=True)
     invigilator      = models.ForeignKey(
-                           'accounts.Teacher', on_delete=models.SET_NULL,
+                           CustomUser, on_delete=models.SET_NULL,
                            null=True, blank=True,
                            related_name='invigilated_classes'
                        )
@@ -263,7 +263,7 @@ class AssessmentTeacher(TimeStampedModel):
                         related_name='assessment_teachers'
                     )
     teacher       = models.ForeignKey(
-                        'accounts.Teacher', on_delete=models.CASCADE,
+                        CustomUser, on_delete=models.CASCADE,
                         related_name='teacher_assessment_links'
                     )
     role          = models.CharField(max_length=20, choices=ROLE_CHOICES)
@@ -335,13 +335,13 @@ class AssessmentPassMark(TimeStampedModel):
                           'absolute   → e.g. 45.0 (means 45 marks).'
                       ))
     set_by      = models.ForeignKey(
-                      'accounts.Teacher', on_delete=models.SET_NULL,
+                      CustomUser, on_delete=models.SET_NULL,
                       null=True, blank=True,
                       related_name='pass_marks_set',
                       help_text='The teacher who set this passmark'
                   )
     approved_by = models.ForeignKey(
-                      'accounts.User', on_delete=models.SET_NULL,
+                      CustomUser, on_delete=models.SET_NULL,
                       null=True, blank=True,
                       related_name='pass_marks_approved',
                       help_text='Head teacher or admin who approved this passmark'
@@ -457,13 +457,13 @@ class AssessmentPerformance(TimeStampedModel):
     remarks        = models.CharField(max_length=300, blank=True,
                          help_text='Subject teacher remark e.g. "Excellent" or "Needs more reading"')
     entered_by     = models.ForeignKey(
-                         'accounts.User', on_delete=models.SET_NULL,
+                         CustomUser, on_delete=models.SET_NULL,
                          null=True, blank=True,
                          related_name='performances_entered',
                          help_text='Teacher / staff who entered these marks'
                      )
     verified_by    = models.ForeignKey(
-                         'accounts.User', on_delete=models.SET_NULL,
+                         CustomUser, on_delete=models.SET_NULL,
                          null=True, blank=True,
                          related_name='performances_verified',
                          help_text='Head teacher / second marker who verified the marks'

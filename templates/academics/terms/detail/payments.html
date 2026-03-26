@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+
+{% block title %}Payments — Term {{ term.name }} {{ term.academic_year }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'academics:term_list' %}" class="text-secondary">Terms</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'academics:term_detail_overview' term.pk %}" class="text-secondary">
+    Term {{ term.name }} — {{ term.academic_year }}
+  </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">Payments</li>
+{% endblock %}
+
+{% block content %}
+
+
+{% include "academics/terms/detail/_term_header.html" %}
+
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-dark">{{ total_payments|default:"0" }}</div>
+      <div class="stat-label">Total Payments</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-success">
+        {{ total_confirmed|default:"0"|floatformat:0 }}
+      </div>
+      <div class="stat-label">Total Collected (UGX)</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      {% with top=by_class|first %}
+      <div class="stat-value text-primary">
+        {% if top %}{{ top.total|floatformat:0 }}{% else %}—{% endif %}
+      </div>
+      <div class="stat-label">
+        Top Class
+        {% if top %}
+        <span class="d-block fw-600 text-dark" style="font-size:0.7rem;text-transform:none;letter-spacing:0;">
+          {{ top.student__current_class__level|upper }}
+          {% if top.student__current_class__stream %}{{ top.student__current_class__stream|upper }}{% endif %}
+        </span>
+        {% endif %}
+      </div>
+      {% endwith %}
+    </div>
+  </div>
+
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      {% with latest=daily_trend|first %}
+      <div class="stat-value text-info">
+        {% if latest %}{{ latest.count }}{% else %}—{% endif %}
+      </div>
+      <div class="stat-label">
+        Most Recent Day
+        {% if latest %}
+        <span class="d-block fw-600 text-dark" style="font-size:0.7rem;text-transform:none;letter-spacing:0;">
+          {{ latest.payment_date|date:"d M Y" }}
+        </span>
+        {% endif %}
+      </div>
+      {% endwith %}
+    </div>
+  </div>
+
+</div>
+
+{% if by_class or daily_trend %}
+<div class="row g-4 mb-4">
+
+  {# By class #}
+  {% if by_class %}
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-building me-2 text-primary"></i>Collections by Class
+        </h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Class</th>
+              <th class="text-end">Payments</th>
+              <th class="text-end">Collected (UGX)</th>
+              <th style="width:120px;">Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in by_class %}
+            <tr>
+              <td class="fw-700">
+                {{ row.student__current_class__level|upper }}
+                {% if row.student__current_class__stream %}
+                  {{ row.student__current_class__stream|upper }}
+                {% endif %}
+              </td>
+              <td class="text-end text-muted">{{ row.count }}</td>
+              <td class="text-end fw-700 font-monospace">
+                {{ row.total|floatformat:0 }}
+              </td>
+              <td>
+                {% if total_confirmed %}
+                {% widthratio row.total total_confirmed 100 as pct %}
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress flex-fill" style="height:6px;">
+                    <div class="progress-bar bg-primary" style="width:{{ pct }}%;"></div>
+                  </div>
+                  <span class="small text-muted" style="min-width:32px;">{{ pct }}%</span>
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="table-light">
+            <tr>
+              <td class="fw-700">Total</td>
+              <td class="text-end fw-700">{{ confirmed_count }}</td>
+              <td class="text-end fw-800 font-monospace text-success">
+                {{ total_confirmed|floatformat:0 }}
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Daily trend #}
+  {% if daily_trend %}
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-graph-up me-2 text-success"></i>
+          Daily Collections
+          <span class="text-muted fw-400 small">(last 30 days)</span>
+        </h6>
+      </div>
+      <div class="table-responsive" style="max-height:320px;overflow-y:auto;">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light sticky-top">
+            <tr>
+              <th>Date</th>
+              <th class="text-end">Transactions</th>
+              <th class="text-end">Amount (UGX)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for day in daily_trend %}
+            <tr>
+              <td class="fw-600">{{ day.payment_date|date:"d M Y" }}</td>
+              <td class="text-end text-muted">{{ day.count }}</td>
+              <td class="text-end fw-700 font-monospace">{{ day.total|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-12 col-md-4">
+        <label class="form-label fw-700 small mb-1">Search</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white">
+            <i class="bi bi-search text-secondary"></i>
+          </span>
+          <input type="text" name="q" class="form-control"
+                 value="{{ search }}"
+                 placeholder="Receipt no., student name, ID, mobile/bank ref…"/>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Method</label>
+        <select name="method" class="form-select form-select-sm">
+          <option value="">All Methods</option>
+          {% for key, label in method_choices %}
+          <option value="{{ key }}" {% if method_filter == key %}selected{% endif %}>
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+          <option value="pending"   {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+          <option value="reversed"  {% if status_filter == 'reversed' %}selected{% endif %}>Reversed</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Class</label>
+        <select name="class" class="form-select form-select-sm">
+          <option value="">All Classes</option>
+          {% for cls in all_classes %}
+          <option value="{{ cls.level }}"
+            {% if class_filter == cls.level %}selected{% endif %}>
+            {{ cls.display_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill">
+          <i class="bi bi-funnel me-1"></i>Filter
+        </button>
+        {% if search or method_filter or status_filter or class_filter %}
+        <a href="{% url 'academics:term_detail_payments' term.pk %}"
+           class="btn btn-outline-secondary btn-sm" title="Clear filters">
+          <i class="bi bi-x-lg"></i>
+        </a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<div class="card">
+
+  <div class="card-header d-flex align-items-center justify-content-between py-3">
+    <span class="fw-700">
+      {{ page_obj.paginator.count }} payment{{ page_obj.paginator.count|pluralize }}
+      {% if search or method_filter or status_filter or class_filter %}
+      <span class="text-muted fw-400 small ms-1">(filtered)</span>
+      {% endif %}
+    </span>
+    {% if page_obj.paginator.count %}
+    <span class="text-muted small">
+      Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if payments %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Receipt</th>
+          <th>Student</th>
+          <th>Class</th>
+          <th>Fee Type</th>
+          <th>Date</th>
+          <th>Method</th>
+          <th class="text-end">Amount (UGX)</th>
+          <th>Reference</th>
+          <th>Received By</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for payment in payments %}
+        <tr>
+
+          {# Receipt number #}
+          <td>
+            <code class="small fw-700">{{ payment.receipt_number|default:"—" }}</code>
+          </td>
+
+          {# Student #}
+          <td>
+            <div class="fw-700 lh-sm">
+              {{ payment.student.last_name }}, {{ payment.student.first_name }}
+            </div>
+            <div class="text-muted" style="font-size:0.75rem;">
+              {{ payment.student.student_id|default:"" }}
+            </div>
+          </td>
+
+          {# Class #}
+          <td>
+            {% if payment.student.current_class %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              {{ payment.student.current_class.display_name }}
+            </span>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+
+          {# Fee type from linked school_fees #}
+          <td class="text-muted small">
+            {% if payment.school_fees %}
+              {{ payment.school_fees.get_fees_type_display }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+
+          {# Payment date #}
+          <td class="text-muted small text-nowrap">
+            {{ payment.payment_date|date:"d M Y" }}
+          </td>
+
+          {# Method badge #}
+          <td>
+            {% if payment.payment_method == 'cash' %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">Cash</span>
+            {% elif payment.payment_method == 'mtn_momo' %}
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">MTN MoMo</span>
+            {% elif payment.payment_method == 'airtel_money' %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Airtel</span>
+            {% elif payment.payment_method == 'bank' %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Bank</span>
+            {% elif payment.payment_method == 'pesapal' %}
+            <span class="badge bg-info-subtle text-info border border-info-subtle">PesaPal</span>
+            {% elif payment.payment_method == 'cheque' %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Cheque</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+              {{ payment.get_payment_method_display|default:"Other" }}
+            </span>
+            {% endif %}
+          </td>
+
+          {# Amount #}
+          <td class="text-end fw-800 font-monospace">
+            {{ payment.amount_paid|floatformat:0 }}
+          </td>
+
+          {# Reference number #}
+          <td>
+            {% if payment.mobile_ref %}
+            <code class="small">{{ payment.mobile_ref }}</code>
+            {% elif payment.bank_ref %}
+            <code class="small">{{ payment.bank_ref }}</code>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+
+          {# Received by #}
+          <td class="text-muted small">
+            {{ payment.received_by.get_full_name|default:"—" }}
+          </td>
+
+          {# Status #}
+          <td>
+            {% if payment.status == 'confirmed' %}
+            <span class="badge bg-success rounded-pill">Confirmed</span>
+            {% elif payment.status == 'pending' %}
+            <span class="badge bg-warning text-dark rounded-pill">Pending</span>
+            {% elif payment.status == 'reversed' %}
+            <span class="badge bg-danger rounded-pill">Reversed</span>
+            {% else %}
+            <span class="badge bg-secondary rounded-pill">
+              {{ payment.get_status_display|default:payment.status }}
+            </span>
+            {% endif %}
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Pagination #}
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between py-3">
+    <small class="text-muted">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </small>
+    <nav aria-label="Payments pagination">
+      <ul class="pagination pagination-sm mb-0">
+
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link"
+             href="?page={{ page_obj.previous_page_number }}&q={{ search }}&method={{ method_filter }}&status={{ status_filter }}&class={{ class_filter }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+        </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+          <li class="page-item">
+            <a class="page-link"
+               href="?page={{ num }}&q={{ search }}&method={{ method_filter }}&status={{ status_filter }}&class={{ class_filter }}">
+              {{ num }}
+            </a>
+          </li>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link"
+             href="?page={{ page_obj.next_page_number }}&q={{ search }}&method={{ method_filter }}&status={{ status_filter }}&class={{ class_filter }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+        </li>
+        {% endif %}
+
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-receipt fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700 mb-1">No payments found</div>
+    {% if search or method_filter or status_filter or class_filter %}
+    <div class="small mb-3">Try adjusting your filters.</div>
+    <a href="{% url 'academics:term_detail_payments' term.pk %}"
+       class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+    {% else %}
+    <div class="small">No payments have been recorded for this term yet.</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

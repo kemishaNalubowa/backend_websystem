@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Assessment{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:list' %}" class="text-secondary">Assessments</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:detail' assessment.pk %}" class="text-secondary">
+    {{ assessment.title|truncatechars:30 }}
+  </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">Delete</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-12 col-md-7 col-lg-5">
+
+    <div class="card border-danger">
+      <div class="card-header bg-danger-subtle border-danger-subtle py-3">
+        <h5 class="fw-800 mb-0 text-danger">
+          <i class="bi bi-exclamation-triangle me-2"></i>Delete Assessment
+        </h5>
+      </div>
+      <div class="card-body">
+
+        <p class="mb-1 text-muted small">You are about to permanently delete:</p>
+        <div class="fw-800 fs-5 mb-1">{{ assessment.title }}</div>
+        <div class="d-flex gap-2 mb-4 flex-wrap">
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+            {{ assessment.get_assessment_type_display }}
+          </span>
+          <span class="text-muted small">{{ assessment.term }}</span>
+          <span class="text-muted small">{{ assessment.date_given|date:"d M Y" }}</span>
+        </div>
+
+        {# Impact stats #}
+        <div class="alert alert-warning border-warning-subtle mb-4">
+          <div class="fw-700 mb-2 small">
+            <i class="bi bi-database me-1"></i>Records that will also be deleted:
+          </div>
+          <div class="row g-2 small">
+            <div class="col-6">
+              <span class="text-muted">Classes linked:</span>
+              <strong class="ms-1">{{ assessment.assessment_classes.count }}</strong>
+            </div>
+            <div class="col-6">
+              <span class="text-muted">Subjects linked:</span>
+              <strong class="ms-1">{{ assessment.assessment_subjects.count }}</strong>
+            </div>
+            <div class="col-6">
+              <span class="text-muted">Teachers linked:</span>
+              <strong class="ms-1">{{ assessment.assessment_teachers.count }}</strong>
+            </div>
+            <div class="col-6">
+              <span class="text-muted">Pass marks:</span>
+              <strong class="ms-1">{{ assessment.pass_marks.count }}</strong>
+            </div>
+            <div class="col-12">
+              <span class="text-muted">Performance records:</span>
+              <strong class="ms-1 text-danger">{{ assessment.performances.count }}</strong>
+            </div>
+          </div>
+        </div>
+
+        {% if assessment.performances.count %}
+        <div class="alert alert-danger py-2 small mb-4">
+          <i class="bi bi-exclamation-circle me-1"></i>
+          <strong>{{ assessment.performances.count }} student performance record{{ assessment.performances.count|pluralize }}</strong>
+          will be permanently lost.
+        </div>
+        {% endif %}
+
+        <p class="text-muted small mb-4">
+          This action <strong>cannot be undone</strong>.
+        </p>
+
+        <div class="d-flex gap-2">
+          <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-trash me-1"></i>Yes, Delete Permanently
+            </button>
+          </form>
+          <a href="{% url 'assessments:detail' assessment.pk %}"
+             class="btn btn-outline-secondary">Cancel</a>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

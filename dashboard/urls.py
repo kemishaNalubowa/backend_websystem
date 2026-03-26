@@ -9,6 +9,7 @@ urlpatterns = [
     path("auth/", include("authentication.urls")),
     path("academics/", include("academics.urls",  namespace="academics")),
     path("accounts/", include("accounts.urls",  namespace="accounts")),
+    path("assessments/", include("assessments.urls",  namespace="assessments")),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

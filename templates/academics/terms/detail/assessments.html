@@ -1,0 +1,634 @@
+{% extends "base.html" %}
+
+{% block title %}Assessments — Term {{ term.name }} {{ term.academic_year }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'academics:term_list' %}" class="text-secondary">Terms</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'academics:term_detail_overview' term.pk %}" class="text-secondary">
+    Term {{ term.name }} — {{ term.academic_year }}
+  </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">Assessments</li>
+{% endblock %}
+
+{% block content %}
+
+
+{% include "academics/terms/detail/_term_header.html" %}
+
+
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-value text-dark">{{ total_students_assessed|default:"0" }}</div>
+      <div class="stat-label">Assessed</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-value text-success">{{ promoted|default:"0" }}</div>
+      <div class="stat-label">Promoted</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-value text-danger">{{ retained|default:"0" }}</div>
+      <div class="stat-label">Retained</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-value text-primary">{{ promotion_rate|default:"0" }}%</div>
+      <div class="stat-label">Promotion Rate</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-value text-info">
+        {% if overall_avg %}{{ overall_avg }}%{% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Overall Avg</div>
+    </div>
+  </div>
+
+
+
+</div>
+
+<div class="row g-4 mb-4">
+
+  {# By exam type #}
+  {% if by_exam_type %}
+  <div class="col-12 col-md-4">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-clipboard-check me-2 text-primary"></i>By Exam Type
+        </h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Type</th>
+              <th class="text-center">Records</th>
+              <th class="text-end">Avg %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in by_exam_type %}
+            <tr>
+              <td>
+                {% if row.exam_type == 'bot' %}
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">BOT</span>
+                {% elif row.exam_type == 'mot' %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">MOT</span>
+                {% elif row.exam_type == 'eot' %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">EOT</span>
+                {% elif row.exam_type == 'mock' %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Mock</span>
+                {% else %}
+                <span class="badge bg-info-subtle text-info border border-info-subtle">
+                  {{ row.exam_type|upper }}
+                </span>
+                {% endif %}
+              </td>
+              <td class="text-center fw-700">{{ row.count }}</td>
+              <td class="text-end font-monospace">
+                {% if row.avg %}{{ row.avg|floatformat:1 }}%{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Division distribution (EOT only) #}
+  {% if divisions %}
+  <div class="col-12 col-md-4">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-pie-chart me-2 text-success"></i>
+          EOT Division Distribution
+        </h6>
+      </div>
+      <div class="card-body">
+        {% for div in divisions %}
+        {% if div.division %}
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge
+              {% if div.division == '1' or div.division == 'D1' %}bg-success
+              {% elif div.division == '2' or div.division == 'D2' %}bg-primary
+              {% elif div.division == '3' or div.division == 'D3' %}bg-warning text-dark
+              {% elif div.division == '4' or div.division == 'D4' %}bg-secondary
+              {% else %}bg-danger{% endif %}
+              fw-700" style="min-width:50px;text-align:center;">
+              Div {{ div.division }}
+            </span>
+            <span class="small text-muted">{{ div.count }} student{{ div.count|pluralize }}</span>
+          </div>
+          {% if total_students_assessed %}
+          {% widthratio div.count total_students_assessed 100 as div_pct %}
+          <div class="d-flex align-items-center gap-2" style="min-width:120px;">
+            <div class="progress flex-fill" style="height:6px;">
+              <div class="progress-bar
+                {% if div.division == '1' or div.division == 'D1' %}bg-success
+                {% elif div.division == '2' or div.division == 'D2' %}bg-primary
+                {% elif div.division == '3' or div.division == 'D3' %}bg-warning
+                {% elif div.division == '4' or div.division == 'D4' %}bg-secondary
+                {% else %}bg-danger{% endif %}"
+                   style="width:{{ div_pct }}%;"></div>
+            </div>
+            <span class="small text-muted" style="min-width:32px;">{{ div_pct }}%</span>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Subject averages #}
+  {% if subject_averages %}
+  <div class="col-12 col-md-4">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-journal-bookmark me-2 text-warning"></i>Subject Averages
+        </h6>
+      </div>
+      <div class="table-responsive" style="max-height:260px;overflow-y:auto;">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light sticky-top">
+            <tr>
+              <th>Subject</th>
+              <th>Type</th>
+              <th class="text-end">Avg</th>
+              <th class="text-end">Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in subject_averages %}
+            <tr>
+              <td>
+                <span class="badge bg-dark font-monospace me-1">{{ row.subject__code }}</span>
+                <span class="text-truncate d-inline-block" style="max-width:80px;" title="{{ row.subject__name }}">
+                  {{ row.subject__name }}
+                </span>
+              </td>
+              <td>
+                {% if row.exam_type == 'bot' %}
+                <span class="badge bg-primary-subtle text-primary" style="font-size:0.65rem;">BOT</span>
+                {% elif row.exam_type == 'mot' %}
+                <span class="badge bg-warning-subtle text-warning" style="font-size:0.65rem;">MOT</span>
+                {% elif row.exam_type == 'eot' %}
+                <span class="badge bg-danger-subtle text-danger" style="font-size:0.65rem;">EOT</span>
+                {% else %}
+                <span class="badge bg-secondary-subtle text-secondary" style="font-size:0.65rem;">
+                  {{ row.exam_type|upper }}
+                </span>
+                {% endif %}
+              </td>
+              <td class="text-end font-monospace fw-700
+                {% if row.avg_mark %}
+                  {% if row.avg_mark >= 70 %}text-success
+                  {% elif row.avg_mark >= 50 %}text-warning
+                  {% else %}text-danger{% endif %}
+                {% endif %}">
+                {% if row.avg_mark %}{{ row.avg_mark|floatformat:1 }}{% else %}—{% endif %}
+              </td>
+              <td class="text-end text-muted">{{ row.count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+{% if top_students %}
+<div class="card mb-4">
+  <div class="card-header py-3">
+    <h6 class="fw-700 mb-0">
+      <i class="bi bi-trophy me-2 text-warning"></i>Top Students — EOT
+    </h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th style="width:48px;">#</th>
+          <th>Student</th>
+          <th>Class</th>
+          <th class="text-end">Avg Mark</th>
+          <th class="text-center">Division</th>
+          <th class="text-center">Position</th>
+          <th>Next Class</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in top_students %}
+        <tr {% if forloop.counter <= 3 %}class="fw-600"{% endif %}>
+          <td>
+            {% if forloop.counter == 1 %}
+            <span class="badge bg-warning text-dark fs-6">🥇</span>
+            {% elif forloop.counter == 2 %}
+            <span class="badge bg-secondary fs-6">🥈</span>
+            {% elif forloop.counter == 3 %}
+            <span class="badge bg-danger fs-6">🥉</span>
+            {% else %}
+            <span class="text-muted">{{ forloop.counter }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center fw-800 flex-shrink-0"
+                   style="width:32px;height:32px;font-size:0.75rem;">
+                {{ s.student.first_name|first|upper }}{{ s.student.last_name|first|upper }}
+              </div>
+              <div>
+                <div class="fw-700 lh-sm">
+                  {{ s.student.last_name }}, {{ s.student.first_name }}
+                </div>
+                <div class="text-muted" style="font-size:0.72rem;">
+                  {{ s.student.student_id|default:"" }}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              {{ s.school_class }}
+            </span>
+          </td>
+          <td class="text-end font-monospace fw-800
+            {% if s.average_mark %}
+              {% if s.average_mark >= 70 %}text-success
+              {% elif s.average_mark >= 50 %}text-warning
+              {% else %}text-danger{% endif %}
+            {% endif %}">
+            {% if s.average_mark %}{{ s.average_mark|floatformat:1 }}{% else %}—{% endif %}
+          </td>
+          <td class="text-center">
+            {% if s.division %}
+            <span class="badge fw-700
+              {% if s.division == '1' or s.division == 'D1' %}bg-success
+              {% elif s.division == '2' or s.division == 'D2' %}bg-primary
+              {% elif s.division == '3' or s.division == 'D3' %}bg-warning text-dark
+              {% elif s.division == '4' or s.division == 'D4' %}bg-secondary
+              {% else %}bg-danger{% endif %}">
+              Div {{ s.division }}
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-center fw-700">
+            {{ s.position_in_class|default:"—" }}
+          </td>
+          <td class="text-muted small">
+            {% if s.next_class %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">
+              {{ s.next_class }}
+            </span>
+            {% elif s.is_promoted %}
+            <span class="text-success small">Promoted</span>
+            {% else %}
+            <span class="text-danger small">Retained</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+
+{% if class_summaries %}
+<div class="card mb-4">
+  <div class="card-header py-3">
+    <h6 class="fw-700 mb-0">
+      <i class="bi bi-building me-2 text-info"></i>Class Assessment Summaries
+    </h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>Class</th>
+          <th class="text-center">Invited</th>
+          <th class="text-center">Sat</th>
+          <th class="text-center">Absent</th>
+          <th style="width:160px;">Attendance</th>
+          <th>Compiled By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cs in class_summaries %}
+        <tr>
+          <td class="fw-700">{{ cs.school_class }}</td>
+          <td class="text-center">{{ cs.students_invited }}</td>
+          <td class="text-center fw-700">{{ cs.students_sat }}</td>
+          <td class="text-center text-danger">{{ cs.students_absent }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-fill" style="height:6px;">
+                <div class="progress-bar
+                  {% if cs.attendance_rate >= 90 %}bg-success
+                  {% elif cs.attendance_rate >= 70 %}bg-warning
+                  {% else %}bg-danger{% endif %}"
+                     style="width:{{ cs.attendance_rate|default:0 }}%;">
+                </div>
+              </div>
+              <span class="text-muted" style="min-width:36px;font-size:0.75rem;">
+                {{ cs.attendance_rate|default:0 }}%
+              </span>
+            </div>
+          </td>
+          <td class="text-muted">{{ cs.compiled_by.user.get_full_name|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-6 col-md-4">
+        <label class="form-label fw-700 small mb-1">Exam Type</label>
+        <select name="exam_type" class="form-select form-select-sm">
+          {% for key, label in exam_type_choices %}
+          <option value="{{ key }}" {% if exam_type_filter == key %}selected{% endif %}>
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-4">
+        <label class="form-label fw-700 small mb-1">Class</label>
+        <select name="class" class="form-select form-select-sm">
+          <option value="">All Classes</option>
+          {% for cls in all_classes %}
+          <option value="{{ cls.level }}"
+            {% if class_filter == cls.level %}selected{% endif %}>
+            {{ cls.display_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-12 col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill">
+          <i class="bi bi-funnel me-1"></i>Filter
+        </button>
+        {% if class_filter %}
+        <a href="?exam_type={{ exam_type_filter }}"
+           class="btn btn-outline-secondary btn-sm" title="Clear class filter">
+          <i class="bi bi-x-lg"></i>
+        </a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+
+<div class="card">
+
+  <div class="card-header d-flex align-items-center justify-content-between py-3">
+    <div>
+      <span class="fw-700">
+        {{ page_obj.paginator.count }} record{{ page_obj.paginator.count|pluralize }}
+      </span>
+      <span class="ms-2">
+        {% for key, label in exam_type_choices %}
+          {% if exam_type_filter == key %}
+          <span class="badge
+            {% if key == 'bot' %}bg-primary-subtle text-primary border border-primary-subtle
+            {% elif key == 'mot' %}bg-warning-subtle text-warning border border-warning-subtle
+            {% elif key == 'eot' %}bg-danger-subtle text-danger border border-danger-subtle
+            {% else %}bg-secondary-subtle text-secondary border border-secondary-subtle
+            {% endif %}">{{ label }}</span>
+          {% endif %}
+        {% endfor %}
+        {% if class_filter %}
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">
+          {{ class_filter|upper }}
+        </span>
+        {% endif %}
+      </span>
+    </div>
+    {% if page_obj.paginator.count %}
+    <span class="text-muted small">
+      Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if performances %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width:48px;">Pos.</th>
+          <th>Student</th>
+          <th>Class</th>
+          <th class="text-end">Avg Mark</th>
+          <th class="text-center">Division</th>
+          <th class="text-center">Promoted</th>
+          <th>Next Class</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for perf in performances %}
+        <tr>
+
+          {# Position in class #}
+          <td class="fw-800 text-center text-muted">
+            {{ perf.position_in_class|default:"—" }}
+          </td>
+
+          {# Student #}
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-circle d-flex align-items-center justify-content-center fw-800 flex-shrink-0
+                bg-primary-subtle text-primary"
+                   style="width:34px;height:34px;font-size:0.75rem;">
+                {{ perf.student.first_name|first|upper }}{{ perf.student.last_name|first|upper }}
+              </div>
+              <div>
+                <div class="fw-700 lh-sm">
+                  {{ perf.student.last_name }}, {{ perf.student.first_name }}
+                </div>
+                <div class="text-muted" style="font-size:0.72rem;">
+                  {{ perf.student.student_id|default:"" }}
+                </div>
+              </div>
+            </div>
+          </td>
+
+          {# Class #}
+          <td>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              {{ perf.school_class }}
+            </span>
+          </td>
+
+          {# Average mark #}
+          <td class="text-end font-monospace fw-800
+            {% if perf.average_mark %}
+              {% if perf.average_mark >= 70 %}text-success
+              {% elif perf.average_mark >= 50 %}text-warning
+              {% else %}text-danger{% endif %}
+            {% else %}text-muted{% endif %}">
+            {% if perf.average_mark %}
+              {{ perf.average_mark|floatformat:1 }}%
+            {% else %}
+              —
+            {% endif %}
+          </td>
+
+          {# Division #}
+          <td class="text-center">
+            {% if perf.division %}
+            <span class="badge fw-700
+              {% if perf.division == '1' or perf.division == 'D1' %}bg-success
+              {% elif perf.division == '2' or perf.division == 'D2' %}bg-primary
+              {% elif perf.division == '3' or perf.division == 'D3' %}bg-warning text-dark
+              {% elif perf.division == '4' or perf.division == 'D4' %}bg-secondary
+              {% else %}bg-danger{% endif %}">
+              Div {{ perf.division }}
+            </span>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+
+          {# Promoted #}
+          <td class="text-center">
+            {% if perf.is_promoted %}
+            <span class="badge bg-success rounded-pill">
+              <i class="bi bi-arrow-up me-1"></i>Yes
+            </span>
+            {% else %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">
+              Retained
+            </span>
+            {% endif %}
+          </td>
+
+          {# Next class #}
+          <td class="text-muted small">
+            {% if perf.next_class %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">
+              {{ perf.next_class }}
+            </span>
+            {% else %}
+            —
+            {% endif %}
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Pagination — preserves exam_type and class filters #}
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between py-3">
+    <small class="text-muted">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </small>
+    <nav aria-label="Performances pagination">
+      <ul class="pagination pagination-sm mb-0">
+
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link"
+             href="?page={{ page_obj.previous_page_number }}&exam_type={{ exam_type_filter }}&class={{ class_filter }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+        </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+          <li class="page-item">
+            <a class="page-link"
+               href="?page={{ num }}&exam_type={{ exam_type_filter }}&class={{ class_filter }}">
+              {{ num }}
+            </a>
+          </li>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link"
+             href="?page={{ page_obj.next_page_number }}&exam_type={{ exam_type_filter }}&class={{ class_filter }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+        </li>
+        {% endif %}
+
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-clipboard-x fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700 mb-1">No performance records found</div>
+    {% if class_filter %}
+    <div class="small mb-3">
+      No {{ exam_type_filter|upper }} records for that class this term.
+    </div>
+    <a href="?exam_type={{ exam_type_filter }}"
+       class="btn btn-sm btn-outline-secondary">Show all classes</a>
+    {% else %}
+    <div class="small">
+      No {{ exam_type_filter|upper }} performance records exist for this term yet.
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

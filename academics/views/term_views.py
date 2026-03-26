@@ -663,15 +663,15 @@ def term_detail_assessments(request, pk):
     from assessments.models import AssessmentPerformance
     from django.db.models import Q
 
-    perf_qs = AssessmentPerformance.objects.filter(term=term).select_related(
-        'student', 'school_class', 'next_class'
+    perf_qs = AssessmentPerformance.objects.filter(assessment__term=term).select_related(
+        'student', 'school_class'
     )
     if exam_type_filter:
-        perf_qs = perf_qs.filter(exam_type=exam_type_filter)
+        perf_qs = perf_qs.filter(assessment__assessment_type=exam_type_filter)
     if class_filter:
         perf_qs = perf_qs.filter(school_class__level=class_filter)
 
-    perf_qs = perf_qs.order_by('position_in_class', 'student__last_name')
+    perf_qs = perf_qs.order_by('marks_obtained', 'student__last_name')
     paginator = Paginator(perf_qs, 30)
     page_obj  = paginator.get_page(request.GET.get('page', 1))
 

@@ -235,7 +235,7 @@ def validate_and_parse_term(post: dict, instance: Term | None = None) -> tuple[d
 def get_overview_stats(term: Term) -> dict:
     """High-level stats shown on the Term Overview tab."""
     from students.models import Student
-    from accounts.models import Teacher
+    from accounts.models import CustomUser
     from fees.models import FeesPayment, AssessmentFees
 
     today = date.today()
@@ -246,9 +246,9 @@ def get_overview_stats(term: Term) -> dict:
     days_remaining = max((term.end_date - today).days, 0)   if term.end_date and today <= term.end_date else 0
     progress_pct   = round((days_elapsed / days_total) * 100, 1) if days_total else 0
 
-    # Active student & teacher counts
+    # Active student & CustomUser counts
     student_count = Student.objects.filter(is_active=True).count()
-    teacher_count = Teacher.objects.filter(is_active=True).count()
+    teacher_count = CustomUser.objects.filter(is_active=True, user_type="teacher").count()
     class_count   = SchoolClass.objects.filter(
                         academic_year=term.academic_year,
                         is_active=True
@@ -258,9 +258,7 @@ def get_overview_stats(term: Term) -> dict:
     total_expected = AssessmentFees.objects.filter(term=term).aggregate(
         s=Sum('total_required')
     )['s'] or Decimal('0')
-    total_collected = FeesPayment.objects.filter(
-        term=term, status='confirmed'
-    ).aggregate(s=Sum('amount_paid'))['s'] or Decimal('0')
+    total_collected = FeesPayment.objects.aggregate(s=Sum('amount_paid'))['s'] or Decimal('0')
     collection_rate = (
         round((total_collected / total_expected) * 100, 1)
         if total_expected else 0
@@ -268,10 +266,10 @@ def get_overview_stats(term: Term) -> dict:
 
     # Assessment snapshot
     from assessments.models import AssessmentPerformance
-    perf_qs = AssessmentPerformance.objects.filter(term=term, exam_type='eot')
+    perf_qs = AssessmentPerformance.objects.filter(assessment__term=term, assessment__assessment_type='eot')
     total_assessed   = perf_qs.count()
-    total_promoted   = perf_qs.filter(is_promoted=True).count()
-    avg_class_mark   = perf_qs.aggregate(a=Avg('average_mark'))['a']
+    total_promoted   = perf_qs.filter(is_pass=True).count()
+
 
     # Exam windows — which are past, active, upcoming
     def exam_status(start, end):
@@ -296,7 +294,6 @@ def get_overview_stats(term: Term) -> dict:
         'collection_rate':  collection_rate,
         'total_assessed':   total_assessed,
         'total_promoted':   total_promoted,
-        'avg_class_mark':   round(avg_class_mark, 1) if avg_class_mark else None,
         'bot_status': exam_status(term.bot_start_date, term.bot_end_date),
         'mot_status': exam_status(term.mot_start_date, term.mot_end_date),
         'eot_status': exam_status(term.eot_start_date, term.eot_end_date),
@@ -465,24 +462,12 @@ def get_payments_stats(term: Term) -> dict:
     from fees.models import FeesPayment
 
     qs = FeesPayment.objects.filter(term=term).select_related(
-        'student', 'student__current_class', 'school_fees', 'received_by'
+        'student', 'student__current_class', 'school_fees'
     )
 
-    confirmed   = qs.filter(status='confirmed')
-    pending     = qs.filter(status='pending')
-    reversed_   = qs.filter(status='reversed')
-
-    total_confirmed = confirmed.aggregate(s=Sum('amount_paid'))['s'] or Decimal('0')
-    total_pending   = pending.aggregate(s=Sum('amount_paid'))['s']   or Decimal('0')
-
-    by_method = list(
-        confirmed.values('payment_method').annotate(
-            count=Count('id'),
-            total=Sum('amount_paid')
-        ).order_by('-total')
-    )
+    total_confirmed = qs.aggregate(s=Sum('amount_paid'))['s'] or Decimal('0')
     by_class = list(
-        confirmed.values(
+        qs.values(
             'student__current_class__level',
             'student__current_class__stream',
         ).annotate(
@@ -491,7 +476,7 @@ def get_payments_stats(term: Term) -> dict:
         ).order_by('-total')
     )
     daily = list(
-        confirmed.values('payment_date').annotate(
+        qs.values('payment_date').annotate(
             total=Sum('amount_paid'),
             count=Count('id')
         ).order_by('-payment_date')[:30]
@@ -502,12 +487,8 @@ def get_payments_stats(term: Term) -> dict:
     return {
         'payments':         qs,
         'total_payments':   qs.count(),
-        'confirmed_count':  confirmed.count(),
-        'pending_count':    pending.count(),
-        'reversed_count':   reversed_.count(),
+        'confirmed_count':  qs.count(),
         'total_confirmed':  total_confirmed,
-        'total_pending':    total_pending,
-        'by_method':        by_method,
         'by_class':         by_class,
         'daily_trend':      daily,
         'recent':           recent,
@@ -576,51 +557,44 @@ def get_assessments_stats(term: Term) -> dict:
     from academics.models import Subject
 
     # ── Class-level summaries ─────────────────────────────────────────────────
-    class_summaries = AssessmentClass.objects.filter(term=term).select_related(
-        'school_class', 'compiled_by'
+    class_summaries = AssessmentClass.objects.filter(assessment__term=term).select_related(
+        'school_class',
     ).order_by('school_class__section', 'school_class__level')
 
     # ── Student performance ────────────────────────────────────────────────────
-    perf_qs = AssessmentPerformance.objects.filter(term=term).select_related(
+    perf_qs = AssessmentPerformance.objects.filter(assessment__term=term).select_related(
         'student', 'school_class'
     )
     total_students_assessed = perf_qs.count()
-    promoted                = perf_qs.filter(is_promoted=True).count()
-    retained                = perf_qs.filter(is_promoted=False).count()
+    promoted                = perf_qs.filter(is_pass=True).count()
+    retained                = perf_qs.filter(is_pass=False).count()
 
-    perf_agg = perf_qs.aggregate(
-        avg_mark=Avg('average_mark'),
-        highest=Avg('average_mark'),  # will refine below
-    )
-    overall_avg = perf_agg['avg_mark']
 
     top_students = perf_qs.filter(
-        exam_type='eot'
-    ).order_by('position_in_class')[:10]
+        assessment__assessment_type='eot'
+    ).order_by('marks_obtained')[:10]
 
     # ── Subject-level averages ─────────────────────────────────────────────────
     subj_avgs = list(
-        AssessmentSubject.objects.filter(term=term).values(
-            'subject__name', 'subject__code', 'exam_type'
+        AssessmentSubject.objects.filter(assessment__term=term).values(
+            'subject__name', 'subject__code', 'assessment__assessment_type'
         ).annotate(
-            avg_mark=Avg('marks_obtained'),
             count=Count('id'),
-        ).order_by('subject__sort_order', 'exam_type')
+        ).order_by('subject__sort_order')
     )
 
     # ── Per exam type counts ───────────────────────────────────────────────────
     by_exam_type = list(
-        perf_qs.values('exam_type').annotate(
+        perf_qs.values('assessment__assessment_type').annotate(
             count=Count('id'),
-            avg=Avg('average_mark'),
-        ).order_by('exam_type')
+        ).order_by('assessment__assessment_type')
     )
 
     # ── Division distribution (EOT, primary) ──────────────────────────────────
     divisions = list(
-        perf_qs.filter(exam_type='eot').values('division').annotate(
+        perf_qs.filter(assessment__assessment_type='eot').values('grade').annotate(
             count=Count('id')
-        ).order_by('division')
+        ).order_by('grade')
     )
 
     return {
@@ -630,7 +604,6 @@ def get_assessments_stats(term: Term) -> dict:
         'retained':                 retained,
         'promotion_rate':           round((promoted / total_students_assessed) * 100, 1)
                                     if total_students_assessed else 0,
-        'overall_avg':              round(overall_avg, 1) if overall_avg else None,
         'top_students':             top_students,
         'subject_averages':         subj_avgs,
         'by_exam_type':             by_exam_type,
@@ -660,9 +633,7 @@ def get_terms_list_stats() -> dict:
         Student.objects.filter(is_active=True).count()
     )
     # Total fees ever collected
-    total_collected = FeesPayment.objects.filter(
-        status='confirmed'
-    ).aggregate(s=Sum('amount_paid'))['s'] or Decimal('0')
+    total_collected = FeesPayment.objects.aggregate(s=Sum('amount_paid'))['s'] or Decimal('0')
 
     return {
         'total_terms':    total_terms,

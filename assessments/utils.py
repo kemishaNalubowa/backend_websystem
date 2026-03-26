@@ -248,7 +248,7 @@ def validate_assessment(data, files=None):
 
 def validate_assessment_class(data, assessment):
     from academics.models import SchoolClass
-    from accounts.models  import Teacher
+    from accounts.models  import CustomUser
 
     errors  = {}
     cleaned = {}
@@ -285,7 +285,7 @@ def validate_assessment_class(data, assessment):
 
     invig_pk = data.get('invigilator', '').strip()
     if invig_pk:
-        invig = _resolve_fk(Teacher, invig_pk, 'invigilator', errors, 'Invigilator')
+        invig = _resolve_fk(CustomUser, invig_pk, 'invigilator', errors, 'Invigilator')
         if invig:
             cleaned['invigilator'] = invig
 

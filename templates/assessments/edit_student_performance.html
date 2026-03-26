@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Performance — {{ performance.student.first_name }} {{ performance.student.last_name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:list' %}" class="text-secondary">Assessments</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:detail' assessment.pk %}" class="text-secondary">
+    {{ assessment.title|truncatechars:28 }}
+  </a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:performance_detail' assessment.pk performance.pk %}" class="text-secondary">
+    {{ performance.student.last_name }}, {{ performance.student.first_name }}
+  </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">Edit</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">Edit Performance Record</h4>
+    <p class="text-muted small mb-0">
+      {{ performance.student.last_name }}, {{ performance.student.first_name }}
+      &bull;
+      <span class="badge bg-dark font-monospace">{{ performance.subject.code }}</span>
+      {{ performance.subject.name }}
+      &bull; {{ assessment.title }}
+    </p>
+  </div>
+  <a href="{% url 'assessments:performance_detail' assessment.pk performance.pk %}"
+     class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+</div>
+
+{% with p=post perf=performance %}
+<form method="post" novalidate>
+{% csrf_token %}
+
+<div class="row g-4">
+
+  <div class="col-12 col-lg-8">
+
+    {# ── Identity fields ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-person me-2 text-primary"></i>Student &amp; Subject
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Student <span class="text-danger">*</span></label>
+            <select name="student"
+              class="form-select {% if errors.student %}is-invalid{% endif %}">
+              <option value="{{ perf.student.pk }}" selected>
+                {{ perf.student.last_name }}, {{ perf.student.first_name }}
+              </option>
+              {# Full list not re-fetched in edit view — student field is locked to existing #}
+            </select>
+            {% if errors.student %}<div class="invalid-feedback">{{ errors.student }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Subject <span class="text-danger">*</span></label>
+            <select name="subject"
+              class="form-select {% if errors.subject %}is-invalid{% endif %}">
+              {% for sub in subjects %}
+              <option value="{{ sub.pk }}"
+                {% if p %}
+                  {% if p.subject == sub.pk|stringformat:"s" %}selected{% endif %}
+                {% else %}
+                  {% if perf.subject_id == sub.pk %}selected{% endif %}
+                {% endif %}>
+                {{ sub.code }} – {{ sub.name }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.subject %}<div class="invalid-feedback">{{ errors.subject }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Class <span class="text-danger">*</span></label>
+            <select name="school_class"
+              class="form-select {% if errors.school_class %}is-invalid{% endif %}">
+              {% for cls in classes %}
+              <option value="{{ cls.pk }}"
+                {% if p %}
+                  {% if p.school_class == cls.pk|stringformat:"s" %}selected{% endif %}
+                {% else %}
+                  {% if perf.school_class_id == cls.pk %}selected{% endif %}
+                {% endif %}>
+                {{ cls }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.school_class %}<div class="invalid-feedback">{{ errors.school_class }}</div>{% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Marks ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-award me-2 text-warning"></i>Marks &amp; Rating
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Marks Obtained</label>
+            <input type="number" name="marks_obtained"
+              class="form-control {% if errors.marks_obtained %}is-invalid{% endif %}"
+              value="{{ p.marks_obtained|default:perf.marks_obtained }}"
+              min="0" max="9999" step="0.5"
+              placeholder="Leave blank for nursery"/>
+            {% if errors.marks_obtained %}<div class="invalid-feedback">{{ errors.marks_obtained }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Total Marks <span class="text-danger">*</span></label>
+            <input type="number" name="total_marks"
+              class="form-control {% if errors.total_marks %}is-invalid{% endif %}"
+              value="{{ p.total_marks|default:perf.total_marks }}"
+              min="1" max="9999" step="0.5"/>
+            {% if errors.total_marks %}<div class="invalid-feedback">{{ errors.total_marks }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Nursery Rating</label>
+            <select name="nursery_rating" class="form-select">
+              <option value="">— N/A —</option>
+              {% for key, label in nursery_ratings %}
+              <option value="{{ key }}"
+                {% if p %}
+                  {% if p.nursery_rating == key %}selected{% endif %}
+                {% else %}
+                  {% if perf.nursery_rating == key %}selected{% endif %}
+                {% endif %}>
+                {{ key }} — {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          {# Current grade preview (read-only) #}
+          {% if perf.grade and not p %}
+          <div class="col-12">
+            <div class="alert alert-light border py-2 small d-inline-flex align-items-center gap-2">
+              <span class="text-muted">Current grade:</span>
+              <span class="badge fs-6
+                {% if perf.grade == 'D1' or perf.grade == 'D2' %}bg-success
+                {% elif perf.grade|slice:":1" == 'C' %}bg-primary
+                {% elif perf.grade|slice:":1" == 'P' %}bg-warning text-dark
+                {% else %}bg-danger{% endif %}">
+                {{ perf.grade }}
+              </span>
+              <span class="text-muted">({{ perf.percentage }}%)</span>
+              <span class="ms-2 text-muted">Grade recalculates on save.</span>
+            </div>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Attendance & Remarks ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-chat-left-text me-2 text-info"></i>Attendance &amp; Remarks
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" role="switch"
+                id="is_absent" name="is_absent" value="1"
+                {% if p %}
+                  {% if p.is_absent %}checked{% endif %}
+                {% else %}
+                  {% if perf.is_absent %}checked{% endif %}
+                {% endif %}/>
+              <label class="form-check-label fw-700" for="is_absent">
+                Mark as Absent
+              </label>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Absent Reason</label>
+            <input type="text" name="absent_reason" class="form-control"
+              value="{{ p.absent_reason|default:perf.absent_reason }}"
+              maxlength="200" placeholder='e.g. "Sick", "Travel", "Family emergency"'/>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">Teacher Remark</label>
+            <input type="text" name="remarks" class="form-control"
+              value="{{ p.remarks|default:perf.remarks }}"
+              maxlength="300"
+              placeholder='e.g. "Excellent" or "Needs more reading"'/>
+          </div>
+
+          <div class="col-12">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch"
+                id="is_verified" name="is_verified" value="1"
+                {% if p %}
+                  {% if p.is_verified %}checked{% endif %}
+                {% else %}
+                  {% if perf.is_verified %}checked{% endif %}
+                {% endif %}/>
+              <label class="form-check-label fw-700" for="is_verified">
+                Marks Verified
+              </label>
+            </div>
+            <div class="form-text ms-5">
+              Check when a second authorised person has confirmed these marks.
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 pb-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i>Save Changes
+      </button>
+      <a href="{% url 'assessments:performance_detail' assessment.pk perf.pk %}"
+         class="btn btn-outline-secondary">Cancel</a>
+    </div>
+
+  </div>{# /col-lg-8 #}
+
+  {# ── Right: current snapshot ── #}
+  <div class="col-12 col-lg-4">
+    <div class="card bg-light border-0 sticky-top" style="top:76px;">
+      <div class="card-body small">
+        <div class="fw-700 text-muted text-uppercase mb-3" style="font-size:0.72rem;">
+          Current Snapshot
+        </div>
+        <div class="text-center mb-3">
+          {% if perf.is_absent %}
+          <span class="badge bg-warning text-dark px-3 py-2">ABSENT</span>
+          {% elif perf.nursery_rating %}
+          <span class="badge bg-info px-3 py-2 fs-6">{{ perf.nursery_rating }}</span>
+          {% elif perf.marks_obtained is not None %}
+          <div class="fw-800 fs-3 text-dark">{{ perf.marks_obtained }}<span class="text-muted fs-6 fw-400">/{{ perf.total_marks }}</span></div>
+          {% if perf.percentage %}
+          <div class="fw-700 text-muted">{{ perf.percentage }}%</div>
+          {% endif %}
+          {% if perf.grade %}
+          <span class="badge
+            {% if perf.grade == 'D1' or perf.grade == 'D2' %}bg-success
+            {% elif perf.grade|slice:":1" == 'C' %}bg-primary
+            {% elif perf.grade|slice:":1" == 'P' %}bg-warning text-dark
+            {% else %}bg-danger{% endif %} mt-2">{{ perf.grade }}</span>
+          {% endif %}
+          {% else %}
+          <span class="text-muted">Not entered</span>
+          {% endif %}
+        </div>
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted fw-700">Pass/Fail</dt>
+          <dd class="col-7">
+            {% if perf.is_pass is True %}<span class="badge bg-success rounded-pill">PASS</span>
+            {% elif perf.is_pass is False %}<span class="badge bg-danger rounded-pill">FAIL</span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </dd>
+          <dt class="col-5 text-muted fw-700">Verified</dt>
+          <dd class="col-7">
+            {% if perf.is_verified %}
+            <i class="bi bi-patch-check-fill text-success"></i> Yes
+            {% else %}
+            <i class="bi bi-circle text-muted"></i> No
+            {% endif %}
+          </dd>
+          <dt class="col-5 text-muted fw-700">Entered By</dt>
+          <dd class="col-7">{{ perf.entered_by.get_full_name|default:"—" }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+</div>{# /row #}
+</form>
+{% endwith %}
+
+{% endblock %}

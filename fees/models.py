@@ -8,6 +8,7 @@
 
 from django.db import models
 from academics.base import TimeStampedModel
+from authentication.models import CustomUser
 
 
 class SchoolFees(TimeStampedModel):
@@ -135,7 +136,7 @@ class AssessmentFees(TimeStampedModel):
                            help_text='True when balance is fully paid')
     last_payment_date= models.DateField(null=True, blank=True)
     generated_by     = models.ForeignKey(
-                           'accounts.User',
+                           CustomUser,
                            on_delete=models.SET_NULL,
                            null=True, blank=True,
                            related_name='fee_assessments_generated'
@@ -146,7 +147,7 @@ class AssessmentFees(TimeStampedModel):
         verbose_name        = 'Fees Assessment'
         verbose_name_plural = 'Fees Assessments'
         unique_together     = ['student', 'term']
-        ordering            = ['-term__academic_year', 'term__name', 'student__last_name']
+        ordering            = [ 'term__name', 'student__last_name']
 
     def save(self, *args, **kwargs):
         # Auto-compute balance on every save

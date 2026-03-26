@@ -1,0 +1,1036 @@
+{% extends "base.html" %}
+
+{% block title %}{{ assessment.title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:list' %}" class="text-secondary">Assessments</a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">{{ assessment.title|truncatechars:40 }}</li>
+{% endblock %}
+
+{% block content %}
+
+
+<div class="d-flex align-items-start justify-content-between mb-4 gap-3 flex-wrap">
+
+  <div>
+    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+      <h4 class="fw-800 mb-0">{{ assessment.title }}</h4>
+      <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+        {{ assessment.get_assessment_type_display }}
+      </span>
+      {% if assessment.is_published %}
+      <span class="badge bg-success-subtle text-success border border-success-subtle">Published</span>
+      {% else %}
+      <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Draft</span>
+      {% endif %}
+      {% if assessment.results_published %}
+      <span class="badge bg-info-subtle text-info border border-info-subtle">Results Out</span>
+      {% endif %}
+    </div>
+    <div class="text-muted small d-flex gap-3 flex-wrap">
+      <span><i class="bi bi-calendar3 me-1"></i>{{ assessment.date_given|date:"d M Y" }}</span>
+      <span><i class="bi bi-journal me-1"></i>{{ assessment.term }}</span>
+      <span><i class="bi bi-hash me-1"></i>{{ assessment.academic_year }}</span>
+      {% if assessment.total_marks %}
+      <span><i class="bi bi-award me-1"></i>{{ assessment.total_marks }} marks</span>
+      {% endif %}
+      {% if assessment.duration_minutes %}
+      <span><i class="bi bi-clock me-1"></i>{{ assessment.duration_minutes }} min</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'assessments:edit' assessment.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+
+   
+    {% if not assessment.is_published %}
+    <form method="post" action="{% url 'assessments:change_status' assessment.pk %}">
+      {% csrf_token %}
+      <button name="action" value="publish" type="submit" class="btn btn-sm btn-success">
+        <i class="bi bi-check-circle me-1"></i>Publish
+      </button>
+    </form>
+    {% else %}
+    <form method="post" action="{% url 'assessments:change_status' assessment.pk %}">
+      {% csrf_token %}
+      <button name="action" value="unpublish" type="submit" class="btn btn-sm btn-outline-warning">
+        <i class="bi bi-eye-slash me-1"></i>Unpublish
+      </button>
+    </form>
+    {% endif %}
+
+    {% if assessment.is_published and not assessment.results_published %}
+    <form method="post" action="{% url 'assessments:change_status' assessment.pk %}">
+      {% csrf_token %}
+      <button name="action" value="release_results" type="submit" class="btn btn-sm btn-info">
+        <i class="bi bi-send me-1"></i>Release Results
+      </button>
+    </form>
+    {% elif assessment.results_published %}
+    <form method="post" action="{% url 'assessments:change_status' assessment.pk %}">
+      {% csrf_token %}
+      <button name="action" value="hide_results" type="submit" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-eye-slash me-1"></i>Hide Results
+      </button>
+    </form>
+    {% endif %}
+
+    <a href="{% url 'assessments:delete' assessment.pk %}" class="btn btn-sm btn-outline-danger">
+      <i class="bi bi-trash"></i>
+    </a>
+  </div>
+
+</div>
+
+
+{% if summary %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-dark">{{ summary.total_entries|default:"0" }}</div>
+      <div class="stat-label">Entries</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-success">{{ summary.pass_count|default:"0" }}</div>
+      <div class="stat-label">Passed</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-danger">{{ summary.fail_count|default:"0" }}</div>
+      <div class="stat-label">Failed</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-warning">{{ summary.absent_count|default:"0" }}</div>
+      <div class="stat-label">Absent</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-primary">
+        {% if summary.average_pct %}{{ summary.average_pct }}%{% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Avg Score</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-info">
+        {% if summary.pass_rate %}{{ summary.pass_rate }}%{% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Pass Rate</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+
+<ul class="nav nav-tabs mb-0" id="detailTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link fw-700 {% if active_tab == 'classes' or not active_tab %}active{% endif %}"
+      data-bs-toggle="tab" data-bs-target="#tab-classes" type="button">
+      <i class="bi bi-building me-1"></i>Classes
+      {% if classes %}<span class="badge bg-secondary ms-1">{{ classes|length }}</span>{% endif %}
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link fw-700 {% if active_tab == 'subjects' %}active{% endif %}"
+      data-bs-toggle="tab" data-bs-target="#tab-subjects" type="button">
+      <i class="bi bi-journal-bookmark me-1"></i>Subjects
+      {% if subjects %}<span class="badge bg-secondary ms-1">{{ subjects|length }}</span>{% endif %}
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link fw-700 {% if active_tab == 'teachers' %}active{% endif %}"
+      data-bs-toggle="tab" data-bs-target="#tab-teachers" type="button">
+      <i class="bi bi-person-workspace me-1"></i>Teachers
+      {% if teachers %}<span class="badge bg-secondary ms-1">{{ teachers|length }}</span>{% endif %}
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link fw-700 {% if active_tab == 'passmarks' %}active{% endif %}"
+      data-bs-toggle="tab" data-bs-target="#tab-passmarks" type="button">
+      <i class="bi bi-check2-circle me-1"></i>Pass Marks
+      {% if pass_marks %}<span class="badge bg-secondary ms-1">{{ pass_marks|length }}</span>{% endif %}
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link fw-700 {% if active_tab == 'performance' %}active{% endif %}"
+      data-bs-toggle="tab" data-bs-target="#tab-performance" type="button">
+      <i class="bi bi-clipboard-data me-1"></i>Performance
+      {% if performances %}<span class="badge bg-secondary ms-1">{{ performances|length }}</span>{% endif %}
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content border border-top-0 rounded-bottom bg-white p-4 mb-4" id="detailTabContent">
+
+
+<div class="tab-pane fade {% if active_tab == 'classes' or not active_tab %}show active{% endif %}"
+     id="tab-classes" role="tabpanel">
+
+  {# Existing classes table #}
+  {% if classes %}
+  <div class="table-responsive mb-4">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Class</th>
+          <th>Invited</th>
+          <th>Sat</th>
+          <th>Absent</th>
+          <th>Attendance</th>
+          <th>Venue</th>
+          <th>Invigilator</th>
+          <th>Time</th>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ac in classes %}
+        <tr>
+          <td class="fw-700">{{ ac.school_class }}</td>
+          <td>{{ ac.students_invited }}</td>
+          <td class="fw-700">{{ ac.students_sat }}</td>
+          <td class="text-danger">{{ ac.students_absent }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-fill" style="height:6px;min-width:60px;">
+                <div class="progress-bar bg-success" style="width:{{ ac.attendance_rate }}%;"></div>
+              </div>
+              <span class="small fw-600">{{ ac.attendance_rate }}%</span>
+            </div>
+          </td>
+          <td class="text-muted small">{{ ac.get_venue_display|default:"—" }}</td>
+          <td class="text-muted small">{{ ac.invigilator.user.get_full_name|default:"—" }}</td>
+          <td class="text-muted small text-nowrap">
+            {% if ac.start_time %}{{ ac.start_time|time:"H:i" }}{% endif %}
+            {% if ac.start_time and ac.end_time %} – {% endif %}
+            {% if ac.end_time %}{{ ac.end_time|time:"H:i" }}{% endif %}
+            {% if not ac.start_time and not ac.end_time %}—{% endif %}
+          </td>
+          <td class="text-muted small">{{ ac.class_remarks|default:"—"|truncatechars:40 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-4 text-muted mb-4">
+    <i class="bi bi-building fs-2 d-block mb-1 opacity-25"></i>
+    <div class="small fw-600">No classes linked yet.</div>
+  </div>
+  {% endif %}
+
+  {# ── Add class inline form ── #}
+  <div class="border rounded p-3 bg-light">
+    <h6 class="fw-700 mb-3"><i class="bi bi-plus-circle me-1 text-primary"></i>Link a Class</h6>
+    <form method="post" action="{% url 'assessments:add_class' assessment.pk %}" novalidate>
+      {% csrf_token %}
+      <div class="row g-3">
+
+        <div class="col-12 col-sm-6 col-md-4">
+          <label class="form-label fw-700 small">Class <span class="text-danger">*</span></label>
+          <select name="school_class"
+            class="form-select form-select-sm {% if class_errors.school_class %}is-invalid{% endif %}">
+            <option value="">— Select class —</option>
+            {% for cls in classes %}
+            <option value="{{ cls.pk }}"
+              {% if class_post.school_class == cls.pk|stringformat:"s" %}selected{% endif %}>
+              {{ cls }}
+            </option>
+            {% endfor %}
+          </select>
+          {% if class_errors.school_class %}<div class="invalid-feedback">{{ class_errors.school_class }}</div>{% endif %}
+        </div>
+
+        <div class="col-6 col-sm-3 col-md-2">
+          <label class="form-label fw-700 small">Invited</label>
+          <input type="number" name="students_invited" class="form-control form-control-sm"
+            value="{{ class_post.students_invited|default:'0' }}" min="0"/>
+        </div>
+
+        <div class="col-6 col-sm-3 col-md-2">
+          <label class="form-label fw-700 small">Sat</label>
+          <input type="number" name="students_sat" class="form-control form-control-sm"
+            value="{{ class_post.students_sat|default:'0' }}" min="0"/>
+        </div>
+
+        <div class="col-6 col-sm-3 col-md-2">
+          <label class="form-label fw-700 small">Absent</label>
+          <input type="number" name="students_absent" class="form-control form-control-sm"
+            value="{{ class_post.students_absent|default:'0' }}" min="0"/>
+        </div>
+
+        <div class="col-6 col-sm-3 col-md-2">
+          <label class="form-label fw-700 small">Venue</label>
+          <select name="venue" class="form-select form-select-sm">
+            <option value="">—</option>
+            {% for key, label in venue_choices %}
+            <option value="{{ key }}" {% if class_post.venue == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-4">
+          <label class="form-label fw-700 small">Invigilator</label>
+          <select name="invigilator" class="form-select form-select-sm">
+            <option value="">— Optional —</option>
+            {% for t in teachers %}
+            <option value="{{ t.pk }}"
+              {% if class_post.invigilator == t.pk|stringformat:"s" %}selected{% endif %}>
+              {{ t.user.get_full_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-6 col-sm-3 col-md-2">
+          <label class="form-label fw-700 small">Start Time</label>
+          <input type="time" name="start_time" class="form-control form-control-sm"
+            value="{{ class_post.start_time|default:'' }}"/>
+        </div>
+
+        <div class="col-6 col-sm-3 col-md-2">
+          <label class="form-label fw-700 small">End Time</label>
+          <input type="time" name="end_time" class="form-control form-control-sm"
+            value="{{ class_post.end_time|default:'' }}"/>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <label class="form-label fw-700 small">Remarks</label>
+          <input type="text" name="class_remarks" class="form-control form-control-sm"
+            value="{{ class_post.class_remarks|default:'' }}" maxlength="300"
+            placeholder="Optional note about this class session"/>
+        </div>
+
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Add Class
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+</div>{# /tab-classes #}
+
+
+<div class="tab-pane fade {% if active_tab == 'subjects' %}show active{% endif %}"
+     id="tab-subjects" role="tabpanel">
+
+  {% if subjects %}
+  <div class="table-responsive mb-4">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>Subject</th>
+          <th>Total Marks</th>
+          <th>Paper</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in subjects %}
+        <tr>
+          <td class="text-muted small">{{ s.sort_order }}</td>
+          <td>
+            <span class="badge bg-dark font-monospace me-1">{{ s.subject.code }}</span>
+            <span class="fw-700">{{ s.subject.name }}</span>
+          </td>
+          <td class="fw-700">{{ s.total_marks }}</td>
+          <td>
+            {% if s.paper_file %}
+            <a href="{{ s.paper_file.url }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0">
+              <i class="bi bi-file-earmark"></i>
+            </a>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">{{ s.notes|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-4 text-muted mb-4">
+    <i class="bi bi-journal-x fs-2 d-block mb-1 opacity-25"></i>
+    <div class="small fw-600">No subjects linked yet.</div>
+  </div>
+  {% endif %}
+
+  {# ── Add subject form ── #}
+  <div class="border rounded p-3 bg-light">
+    <h6 class="fw-700 mb-3"><i class="bi bi-plus-circle me-1 text-primary"></i>Add a Subject</h6>
+    <form method="post" action="{% url 'assessments:add_subject' assessment.pk %}"
+          enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      <div class="row g-3">
+
+        <div class="col-12 col-sm-6 col-md-4">
+          <label class="form-label fw-700 small">Subject <span class="text-danger">*</span></label>
+          <select name="subject"
+            class="form-select form-select-sm {% if subject_errors.subject %}is-invalid{% endif %}">
+            <option value="">— Select subject —</option>
+            {% for sub in subjects %}
+            <option value="{{ sub.pk }}"
+              {% if subject_post.subject == sub.pk|stringformat:"s" %}selected{% endif %}>
+              {{ sub.code }} – {{ sub.name }}
+            </option>
+            {% endfor %}
+          </select>
+          {% if subject_errors.subject %}<div class="invalid-feedback">{{ subject_errors.subject }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-sm-4 col-md-2">
+          <label class="form-label fw-700 small">Total Marks <span class="text-danger">*</span></label>
+          <input type="number" name="total_marks"
+            class="form-control form-control-sm {% if subject_errors.total_marks %}is-invalid{% endif %}"
+            value="{{ subject_post.total_marks|default:assessment.total_marks }}"
+            min="1" max="9999" step="0.5"/>
+          {% if subject_errors.total_marks %}<div class="invalid-feedback">{{ subject_errors.total_marks }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-sm-4 col-md-2">
+          <label class="form-label fw-700 small">Sort Order</label>
+          <input type="number" name="sort_order" class="form-control form-control-sm"
+            value="{{ subject_post.sort_order|default:'0' }}" min="0" max="9999"/>
+        </div>
+
+        <div class="col-12 col-sm-4 col-md-3">
+          <label class="form-label fw-700 small">Subject Paper</label>
+          <input type="file" name="paper_file" class="form-control form-control-sm"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"/>
+        </div>
+
+        <div class="col-12 col-md-5">
+          <label class="form-label fw-700 small">Notes</label>
+          <input type="text" name="notes" class="form-control form-control-sm"
+            value="{{ subject_post.notes|default:'' }}" maxlength="200"
+            placeholder="Optional note for this subject"/>
+        </div>
+
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Add Subject
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+</div>{# /tab-subjects #}
+
+
+
+<div class="tab-pane fade {% if active_tab == 'teachers' %}show active{% endif %}"
+     id="tab-teachers" role="tabpanel">
+
+  {% if teachers %}
+  <div class="table-responsive mb-4">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Teacher</th>
+          <th>Role</th>
+          <th>Subject</th>
+          <th>Class</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for at in teachers %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center fw-800 flex-shrink-0"
+                   style="width:34px;height:34px;font-size:0.75rem;">
+                {{ at.teacher.user.first_name|first|upper }}{{ at.teacher.user.last_name|first|upper }}
+              </div>
+              <div class="fw-700">{{ at.teacher.user.get_full_name }}</div>
+            </div>
+          </td>
+          <td>
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+              {{ at.get_role_display }}
+            </span>
+          </td>
+          <td class="text-muted small">
+            {% if at.subject %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ at.subject.code }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-muted small">{{ at.school_class|default:"—" }}</td>
+          <td class="text-muted small">{{ at.notes|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-4 text-muted mb-4">
+    <i class="bi bi-person-x fs-2 d-block mb-1 opacity-25"></i>
+    <div class="small fw-600">No teachers linked yet.</div>
+  </div>
+  {% endif %}
+
+  {# ── Add teacher form ── #}
+  <div class="border rounded p-3 bg-light">
+    <h6 class="fw-700 mb-3"><i class="bi bi-plus-circle me-1 text-primary"></i>Link a Teacher</h6>
+    <form method="post" action="{% url 'assessments:add_teacher' assessment.pk %}" novalidate>
+      {% csrf_token %}
+      <div class="row g-3">
+
+        <div class="col-12 col-sm-6 col-md-4">
+          <label class="form-label fw-700 small">Teacher <span class="text-danger">*</span></label>
+          <select name="teacher"
+            class="form-select form-select-sm {% if teacher_errors.teacher %}is-invalid{% endif %}">
+            <option value="">— Select teacher —</option>
+            {% for t in teachers %}
+            <option value="{{ t.pk }}"
+              {% if teacher_post.teacher == t.pk|stringformat:"s" %}selected{% endif %}>
+              {{ t.user.get_full_name }}
+            </option>
+            {% endfor %}
+          </select>
+          {% if teacher_errors.teacher %}<div class="invalid-feedback">{{ teacher_errors.teacher }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-3">
+          <label class="form-label fw-700 small">Role <span class="text-danger">*</span></label>
+          <select name="role"
+            class="form-select form-select-sm {% if teacher_errors.role %}is-invalid{% endif %}">
+            <option value="">— Select role —</option>
+            {% for key, label in role_choices %}
+            <option value="{{ key }}" {% if teacher_post.role == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          {% if teacher_errors.role %}<div class="invalid-feedback">{{ teacher_errors.role }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-3">
+          <label class="form-label fw-700 small">Subject (marker/setter)</label>
+          <select name="subject" class="form-select form-select-sm">
+            <option value="">— Optional —</option>
+            {% for sub in subjects %}
+            <option value="{{ sub.pk }}"
+              {% if teacher_post.subject == sub.pk|stringformat:"s" %}selected{% endif %}>
+              {{ sub.code }} – {{ sub.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-3">
+          <label class="form-label fw-700 small">Class (invigilator)</label>
+          <select name="school_class" class="form-select form-select-sm">
+            <option value="">— Optional —</option>
+            {% for cls in classes %}
+            <option value="{{ cls.pk }}"
+              {% if teacher_post.school_class == cls.pk|stringformat:"s" %}selected{% endif %}>
+              {{ cls }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-12 col-md-5">
+          <label class="form-label fw-700 small">Notes</label>
+          <input type="text" name="notes" class="form-control form-control-sm"
+            value="{{ teacher_post.notes|default:'' }}" maxlength="200"
+            placeholder="Optional note"/>
+        </div>
+
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Link Teacher
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+</div>{# /tab-teachers #}
+
+
+
+<div class="tab-pane fade {% if active_tab == 'passmarks' %}show active{% endif %}"
+     id="tab-passmarks" role="tabpanel">
+
+  {% if pass_marks %}
+  <div class="table-responsive mb-4">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Subject</th>
+          <th>Pass Type</th>
+          <th>Pass Value</th>
+          <th>Absolute</th>
+          <th>Set By</th>
+          <th>Approved By</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pm in pass_marks %}
+        {% with sub_obj=subjects|dictsort:"subject.code" %}
+        <tr>
+          <td>
+            <span class="badge bg-dark font-monospace me-1">{{ pm.subject.code }}</span>
+            {{ pm.subject.name }}
+          </td>
+          <td>
+            <span class="badge
+              {% if pm.pass_type == 'percentage' %}bg-primary-subtle text-primary border border-primary-subtle
+              {% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %}">
+              {{ pm.get_pass_type_display }}
+            </span>
+          </td>
+          <td class="fw-700 font-monospace">
+            {{ pm.pass_value }}{% if pm.pass_type == 'percentage' %}%{% endif %}
+          </td>
+          <td class="text-muted small">
+            {# Find total_marks for this subject from assessment_subjects #}
+            {% for asub in subjects %}
+              {% if asub.subject_id == pm.subject_id %}
+                {{ pm.get_absolute_pass_mark|default:"—" }} / {{ asub.total_marks }}
+              {% endif %}
+            {% endfor %}
+          </td>
+          <td class="text-muted small">{{ pm.set_by.user.get_full_name|default:"—" }}</td>
+          <td class="text-muted small">{{ pm.approved_by.get_full_name|default:"—" }}</td>
+          <td class="text-muted small">{{ pm.notes|default:"—"|truncatechars:40 }}</td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-4 text-muted mb-4">
+    <i class="bi bi-check2-circle fs-2 d-block mb-1 opacity-25"></i>
+    <div class="small fw-600">No pass marks set yet.</div>
+  </div>
+  {% endif %}
+
+  {# ── Add passmark form ── #}
+  <div class="border rounded p-3 bg-light">
+    <h6 class="fw-700 mb-3"><i class="bi bi-plus-circle me-1 text-primary"></i>Set a Pass Mark</h6>
+    <form method="post" action="{% url 'assessments:add_passmark' assessment.pk %}" novalidate>
+      {% csrf_token %}
+      <div class="row g-3">
+
+        <div class="col-12 col-sm-6 col-md-3">
+          <label class="form-label fw-700 small">Subject <span class="text-danger">*</span></label>
+          <select name="subject"
+            class="form-select form-select-sm {% if passmark_errors.subject %}is-invalid{% endif %}">
+            <option value="">— Select —</option>
+            {% for sub in subjects %}
+            <option value="{{ sub.pk }}"
+              {% if passmark_post.subject == sub.pk|stringformat:"s" %}selected{% endif %}>
+              {{ sub.code }} – {{ sub.name }}
+            </option>
+            {% endfor %}
+          </select>
+          {% if passmark_errors.subject %}<div class="invalid-feedback">{{ passmark_errors.subject }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-2">
+          <label class="form-label fw-700 small">Type <span class="text-danger">*</span></label>
+          <select name="pass_type"
+            class="form-select form-select-sm {% if passmark_errors.pass_type %}is-invalid{% endif %}">
+            {% for key, label in pass_types %}
+            <option value="{{ key }}" {% if passmark_post.pass_type == key %}selected{% endif %}>
+              {{ label }}
+            </option>
+            {% endfor %}
+          </select>
+          {% if passmark_errors.pass_type %}<div class="invalid-feedback">{{ passmark_errors.pass_type }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-sm-4 col-md-2">
+          <label class="form-label fw-700 small">Value <span class="text-danger">*</span></label>
+          <input type="number" name="pass_value"
+            class="form-control form-control-sm {% if passmark_errors.pass_value %}is-invalid{% endif %}"
+            value="{{ passmark_post.pass_value|default:'' }}"
+            min="0" max="9999" step="0.5"
+            placeholder="e.g. 50"/>
+          {% if passmark_errors.pass_value %}<div class="invalid-feedback">{{ passmark_errors.pass_value }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-3">
+          <label class="form-label fw-700 small">Set By (Teacher)</label>
+          <select name="set_by" class="form-select form-select-sm">
+            <option value="">— Optional —</option>
+            {% for t in teachers %}
+            <option value="{{ t.pk }}"
+              {% if passmark_post.set_by == t.pk|stringformat:"s" %}selected{% endif %}>
+              {{ t.user.get_full_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-12 col-md-5">
+          <label class="form-label fw-700 small">Notes</label>
+          <input type="text" name="notes" class="form-control form-control-sm"
+            value="{{ passmark_post.notes|default:'' }}" maxlength="200"
+            placeholder='e.g. "Adjusted because paper was difficult"'/>
+        </div>
+
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Set Pass Mark
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+</div>
+
+
+<div class="tab-pane fade {% if active_tab == 'performance' %}show active{% endif %}"
+     id="tab-performance" role="tabpanel">
+
+  {# Performance filters #}
+  <form method="get" class="row g-2 align-items-end mb-4">
+    {# Keep non-performance tab params clean — force tab on submit #}
+    <input type="hidden" name="_tab" value="performance"/>
+
+    <div class="col-6 col-sm-4 col-md-3">
+      <label class="form-label fw-700 small mb-1">Filter by Class</label>
+      <select name="class" class="form-select form-select-sm">
+        <option value="">All Classes</option>
+        {% for cls in classes %}
+        <option value="{{ cls.pk }}"
+          {% if filter_class == cls.pk|stringformat:"s" %}selected{% endif %}>
+          {{ cls }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-6 col-sm-4 col-md-3">
+      <label class="form-label fw-700 small mb-1">Filter by Subject</label>
+      <select name="subject" class="form-select form-select-sm">
+        <option value="">All Subjects</option>
+        {% for sub in subjects %}
+        <option value="{{ sub.pk }}"
+          {% if filter_subject == sub.pk|stringformat:"s" %}selected{% endif %}>
+          {{ sub.code }} – {{ sub.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-6 col-sm-4 col-md-2">
+      <label class="form-label fw-700 small mb-1">Result</label>
+      <select name="perf_status" class="form-select form-select-sm">
+        <option value="">All</option>
+        <option value="pass"   {% if filter_perf_status == 'pass' %}selected{% endif %}>Pass</option>
+        <option value="fail"   {% if filter_perf_status == 'fail' %}selected{% endif %}>Fail</option>
+        <option value="absent" {% if filter_perf_status == 'absent' %}selected{% endif %}>Absent</option>
+      </select>
+    </div>
+
+    <div class="col-6 col-sm-4 col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-primary btn-sm flex-fill">
+        <i class="bi bi-funnel me-1"></i>Filter
+      </button>
+      {% if filter_class or filter_subject or filter_perf_status %}
+      <a href="{% url 'assessments:detail' assessment.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-x-lg"></i>
+      </a>
+      {% endif %}
+    </div>
+
+  </form>
+
+  {# Performance table #}
+  {% if performances %}
+  <div class="table-responsive mb-4">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>Student</th>
+          <th>Class</th>
+          <th>Subject</th>
+          <th>Marks</th>
+          <th>%</th>
+          <th>Grade</th>
+          <th>Rating</th>
+          <th>Pass/Fail</th>
+          <th>Verified</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for perf in performances %}
+        <tr class="{% if perf.is_absent %}table-warning{% endif %}">
+          <td>
+            <a href="{% url 'assessments:performance_detail' assessment.pk perf.pk %}"
+               class="fw-700 text-dark">
+              {{ perf.student.last_name }}, {{ perf.student.first_name }}
+            </a>
+            {% if perf.is_absent %}
+            <span class="badge bg-warning text-dark ms-1">Absent</span>
+            {% endif %}
+          </td>
+          <td>{{ perf.school_class }}</td>
+          <td>
+            <span class="badge bg-dark font-monospace">{{ perf.subject.code }}</span>
+          </td>
+          <td class="fw-700 font-monospace">
+            {% if perf.is_absent %}
+            —
+            {% elif perf.marks_obtained is not None %}
+            {{ perf.marks_obtained }}<span class="text-muted fw-400">/{{ perf.total_marks }}</span>
+            {% else %}
+            <span class="text-muted">Not entered</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if perf.percentage %}
+            <span class="fw-700">{{ perf.percentage }}%</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if perf.grade %}
+            <span class="badge
+              {% if perf.grade == 'D1' or perf.grade == 'D2' %}bg-success
+              {% elif perf.grade == 'C3' or perf.grade == 'C4' or perf.grade == 'C5' or perf.grade == 'C6' %}bg-primary
+              {% elif perf.grade == 'P7' or perf.grade == 'P8' %}bg-warning text-dark
+              {% else %}bg-danger{% endif %}">
+              {{ perf.grade }}
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if perf.nursery_rating %}
+            <span class="badge bg-info-subtle text-info border border-info-subtle">
+              {{ perf.nursery_rating }}
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if perf.is_pass is True %}
+            <span class="badge bg-success rounded-pill">PASS</span>
+            {% elif perf.is_pass is False %}
+            <span class="badge bg-danger rounded-pill">FAIL</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if perf.is_verified %}
+            <i class="bi bi-patch-check-fill text-success" title="Verified"></i>
+            {% else %}
+            <i class="bi bi-circle text-muted" title="Not verified"></i>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{% url 'assessments:performance_detail' assessment.pk perf.pk %}"
+                 class="btn btn-sm btn-outline-secondary py-0" title="View">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'assessments:edit_performance' assessment.pk perf.pk %}"
+                 class="btn btn-sm btn-outline-primary py-0" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'assessments:delete_performance' assessment.pk perf.pk %}"
+                 class="btn btn-sm btn-outline-danger py-0" title="Delete">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-4 text-muted mb-4">
+    <i class="bi bi-clipboard-x fs-2 d-block mb-1 opacity-25"></i>
+    <div class="small fw-600">No performance records yet.</div>
+  </div>
+  {% endif %}
+
+
+  <div class="border rounded p-3 bg-light">
+    <h6 class="fw-700 mb-3">
+      <i class="bi bi-plus-circle me-1 text-primary"></i>Record Student Performance
+    </h6>
+    <form method="post" action="{% url 'assessments:add_performance' assessment.pk %}" novalidate>
+      {% csrf_token %}
+      <div class="row g-3">
+
+        <div class="col-12 col-sm-6 col-md-3">
+          <label class="form-label fw-700 small">Student <span class="text-danger">*</span></label>
+          <select name="student"
+            class="form-select form-select-sm {% if perf_errors.student %}is-invalid{% endif %}">
+            <option value="">— Select student —</option>
+            {# students list populated from request context or filtered by class #}
+            {% for cls in classes %}
+            <optgroup label="{{ cls }}">
+              {% for st in cls.active_students.all %}
+              <option value="{{ st.pk }}"
+                {% if perf_post.student == st.pk|stringformat:"s" %}selected{% endif %}>
+                {{ st.last_name }}, {{ st.first_name }}
+              </option>
+              {% endfor %}
+            </optgroup>
+            {% endfor %}
+          </select>
+          {% if perf_errors.student %}<div class="invalid-feedback">{{ perf_errors.student }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-3">
+          <label class="form-label fw-700 small">Subject <span class="text-danger">*</span></label>
+          <select name="subject"
+            class="form-select form-select-sm {% if perf_errors.subject %}is-invalid{% endif %}">
+            <option value="">— Select subject —</option>
+            {% for asub in subjects %}
+            <option value="{{ asub.subject.pk }}"
+              {% if perf_post.subject == asub.subject.pk|stringformat:"s" %}selected{% endif %}>
+              {{ asub.subject.code }} – {{ asub.subject.name }}
+            </option>
+            {% endfor %}
+          </select>
+          {% if perf_errors.subject %}<div class="invalid-feedback">{{ perf_errors.subject }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-2">
+          <label class="form-label fw-700 small">Class <span class="text-danger">*</span></label>
+          <select name="school_class"
+            class="form-select form-select-sm {% if perf_errors.school_class %}is-invalid{% endif %}">
+            <option value="">— Select class —</option>
+            {% for cls in classes %}
+            <option value="{{ cls.pk }}"
+              {% if perf_post.school_class == cls.pk|stringformat:"s" %}selected{% endif %}>
+              {{ cls }}
+            </option>
+            {% endfor %}
+          </select>
+          {% if perf_errors.school_class %}<div class="invalid-feedback">{{ perf_errors.school_class }}</div>{% endif %}
+        </div>
+
+        <div class="col-6 col-sm-4 col-md-2">
+          <label class="form-label fw-700 small">Marks Obtained</label>
+          <input type="number" name="marks_obtained"
+            class="form-control form-control-sm {% if perf_errors.marks_obtained %}is-invalid{% endif %}"
+            value="{{ perf_post.marks_obtained|default:'' }}"
+            min="0" max="9999" step="0.5"
+            placeholder="Leave blank for nursery"/>
+          {% if perf_errors.marks_obtained %}<div class="invalid-feedback">{{ perf_errors.marks_obtained }}</div>{% endif %}
+        </div>
+
+        <div class="col-6 col-sm-4 col-md-2">
+          <label class="form-label fw-700 small">Total Marks <span class="text-danger">*</span></label>
+          <input type="number" name="total_marks"
+            class="form-control form-control-sm {% if perf_errors.total_marks %}is-invalid{% endif %}"
+            value="{{ perf_post.total_marks|default:assessment.total_marks }}"
+            min="1" max="9999" step="0.5"/>
+          {% if perf_errors.total_marks %}<div class="invalid-feedback">{{ perf_errors.total_marks }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-sm-4 col-md-2">
+          <label class="form-label fw-700 small">Nursery Rating</label>
+          <select name="nursery_rating" class="form-select form-select-sm">
+            <option value="">— N/A —</option>
+            {% for key, label in nursery_ratings %}
+            <option value="{{ key }}" {% if perf_post.nursery_rating == key %}selected{% endif %}>
+              {{ key }} — {{ label }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-4">
+          <label class="form-label fw-700 small">Remarks</label>
+          <input type="text" name="remarks" class="form-control form-control-sm"
+            value="{{ perf_post.remarks|default:'' }}" maxlength="300"
+            placeholder='e.g. "Excellent" or "Needs more reading"'/>
+        </div>
+
+        <div class="col-12 col-sm-6 col-md-4">
+          <label class="form-label fw-700 small">Absent Reason</label>
+          <input type="text" name="absent_reason" class="form-control form-control-sm"
+            value="{{ perf_post.absent_reason|default:'' }}" maxlength="200"
+            placeholder='e.g. "Sick", "Travel"'/>
+        </div>
+
+        <div class="col-12 d-flex align-items-center gap-4 flex-wrap">
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" role="switch"
+              id="is_absent" name="is_absent" value="1"
+              {% if perf_post.is_absent %}checked{% endif %}/>
+            <label class="form-check-label fw-700 small" for="is_absent">Mark as Absent</label>
+          </div>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" role="switch"
+              id="is_verified" name="is_verified" value="1"
+              {% if perf_post.is_verified %}checked{% endif %}/>
+            <label class="form-check-label fw-700 small" for="is_verified">Verified</label>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Record Performance
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+</div>{# /tab-performance #}
+
+</div>{# /tab-content #}
+
+
+
+<div class="text-muted small d-flex gap-4 flex-wrap mt-2">
+  {% if assessment.created_by %}
+  <span><i class="bi bi-person me-1"></i>Created by {{ assessment.created_by.get_full_name }}</span>
+  {% endif %}
+  <span><i class="bi bi-calendar-plus me-1"></i>{{ assessment.created_at|date:"d M Y, H:i" }}</span>
+  {% if assessment.paper_file %}
+  <a href="{{ assessment.paper_file.url }}" target="_blank" class="text-primary fw-600">
+    <i class="bi bi-file-earmark me-1"></i>Exam Paper
+  </a>
+  {% endif %}
+  {% if assessment.marking_scheme %}
+  <a href="{{ assessment.marking_scheme.url }}" target="_blank" class="text-primary fw-600">
+    <i class="bi bi-file-earmark-check me-1"></i>Marking Scheme
+  </a>
+  {% endif %}
+</div>
+
+
+{% if active_tab %}
+<script>
+  (function () {
+    var tabId = 'tab-{{ active_tab }}';
+    var el = document.querySelector('[data-bs-target="#' + tabId + '"]');
+    if (el) { new bootstrap.Tab(el).show(); }
+  })();
+</script>
+{% endif %}
+
+{% endblock %}

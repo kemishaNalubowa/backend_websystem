@@ -6,6 +6,7 @@
 
 from django.db import models
 from academics.base import TimeStampedModel
+from authentication.models import CustomUser
 
 
 class Student(TimeStampedModel):
@@ -67,7 +68,7 @@ class Student(TimeStampedModel):
 
     # ── Parent / Guardian ─────────────────────────────────────────────────────
     parent              = models.ForeignKey(
-                              'accounts.Parent',
+                              CustomUser,
                               on_delete=models.SET_NULL,
                               null=True, blank=True,
                               related_name='children'
@@ -173,7 +174,7 @@ class Admission(TimeStampedModel):
     interview_date      = models.DateField(null=True, blank=True)
     interview_notes     = models.TextField(blank=True)
     reviewed_by         = models.ForeignKey(
-                              'accounts.User',
+                              CustomUser,
                               on_delete=models.SET_NULL,
                               null=True, blank=True,
                               related_name='admissions_reviewed'

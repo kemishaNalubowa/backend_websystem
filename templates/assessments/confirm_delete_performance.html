@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Performance Record{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:list' %}" class="text-secondary">Assessments</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:detail' assessment.pk %}" class="text-secondary">
+    {{ assessment.title|truncatechars:28 }}
+  </a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:performance_detail' assessment.pk performance.pk %}" class="text-secondary">
+    {{ performance.student.last_name }}, {{ performance.student.first_name }}
+  </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">Delete</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-12 col-md-7 col-lg-5">
+
+    <div class="card border-danger">
+      <div class="card-header bg-danger-subtle border-danger-subtle py-3">
+        <h5 class="fw-800 mb-0 text-danger">
+          <i class="bi bi-exclamation-triangle me-2"></i>Delete Performance Record
+        </h5>
+      </div>
+      <div class="card-body">
+
+        <p class="text-muted small mb-3">You are about to permanently delete the following record:</p>
+
+        {# Record summary #}
+        <div class="border rounded p-3 mb-4 bg-light">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-800 flex-shrink-0"
+                 style="width:44px;height:44px;font-size:0.9rem;">
+              {{ performance.student.first_name|first|upper }}{{ performance.student.last_name|first|upper }}
+            </div>
+            <div>
+              <div class="fw-700">
+                {{ performance.student.last_name }}, {{ performance.student.first_name }}
+              </div>
+              <div class="text-muted small">{{ performance.school_class }}</div>
+            </div>
+          </div>
+
+          <dl class="row mb-0 small">
+            <dt class="col-5 text-muted fw-700">Assessment</dt>
+            <dd class="col-7">{{ assessment.title }}</dd>
+
+            <dt class="col-5 text-muted fw-700">Subject</dt>
+            <dd class="col-7">
+              <span class="badge bg-dark font-monospace">{{ performance.subject.code }}</span>
+              {{ performance.subject.name }}
+            </dd>
+
+            <dt class="col-5 text-muted fw-700">Result</dt>
+            <dd class="col-7">
+              {% if performance.is_absent %}
+                <span class="badge bg-warning text-dark">ABSENT</span>
+              {% elif performance.nursery_rating %}
+                <span class="badge bg-info-subtle text-info border border-info-subtle">
+                  {{ performance.nursery_rating }}
+                </span>
+              {% elif performance.marks_obtained is not None %}
+                <span class="fw-700">{{ performance.marks_obtained }}/{{ performance.total_marks }}</span>
+                {% if performance.percentage %}({{ performance.percentage }}%){% endif %}
+                {% if performance.grade %}
+                <span class="badge
+                  {% if performance.grade == 'D1' or performance.grade == 'D2' %}bg-success
+                  {% elif performance.grade|slice:":1" == 'C' %}bg-primary
+                  {% elif performance.grade|slice:":1" == 'P' %}bg-warning text-dark
+                  {% else %}bg-danger{% endif %} ms-1">{{ performance.grade }}</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">Not entered</span>
+              {% endif %}
+            </dd>
+
+            <dt class="col-5 text-muted fw-700">Pass/Fail</dt>
+            <dd class="col-7">
+              {% if performance.is_pass is True %}
+                <span class="badge bg-success rounded-pill">PASS</span>
+              {% elif performance.is_pass is False %}
+                <span class="badge bg-danger rounded-pill">FAIL</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </dd>
+
+            <dt class="col-5 text-muted fw-700">Verified</dt>
+            <dd class="col-7">
+              {% if performance.is_verified %}
+              <i class="bi bi-patch-check-fill text-success me-1"></i>Yes
+              {% else %}
+              No
+              {% endif %}
+            </dd>
+          </dl>
+        </div>
+
+        <p class="text-muted small mb-4">
+          This action <strong>cannot be undone</strong>.
+          The student's mark for this subject in this assessment will be permanently removed.
+        </p>
+
+        <div class="d-flex gap-2">
+          <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-trash me-1"></i>Yes, Delete Record
+            </button>
+          </form>
+          <a href="{% url 'assessments:performance_detail' assessment.pk performance.pk %}"
+             class="btn btn-outline-secondary">Cancel</a>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

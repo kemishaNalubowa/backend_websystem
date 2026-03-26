@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+
+{% block title %}Fees Assessment — Term {{ term.name }} {{ term.academic_year }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'academics:term_list' %}" class="text-secondary">Terms</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'academics:term_detail_overview' term.pk %}" class="text-secondary">
+    Term {{ term.name }} — {{ term.academic_year }}
+  </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">Fees Assessment</li>
+{% endblock %}
+
+{% block content %}
+
+{% include "academics/terms/detail/_term_header.html" %}
+
+
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-value text-dark">{{ total|default:"0" }}</div>
+      <div class="stat-label">Total Students</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-value text-success">{{ cleared|default:"0" }}</div>
+      <div class="stat-label">
+        Cleared
+        {% if cleared_pct %}
+        <span class="d-block fw-700 text-success" style="font-size:0.85rem;text-transform:none;letter-spacing:0;">
+          {{ cleared_pct }}%
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-value text-danger">{{ outstanding|default:"0" }}</div>
+      <div class="stat-label">Outstanding</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-value text-primary">{{ collection_rate|default:"0" }}%</div>
+      <div class="stat-label">Collection Rate</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-value text-secondary" style="font-size:1.2rem;">
+        {{ total_discount|default:"0"|floatformat:0 }}
+      </div>
+      <div class="stat-label">Discounts (UGX)</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-value text-danger" style="font-size:1.2rem;">
+        {{ total_balance|default:"0"|floatformat:0 }}
+      </div>
+      <div class="stat-label">Balance Due (UGX)</div>
+    </div>
+  </div>
+
+</div>
+
+
+<div class="card mb-4 border-0 bg-dark text-white">
+  <div class="card-body py-3">
+    <div class="row g-0 text-center">
+
+      <div class="col-4 border-end border-secondary">
+        <div class="small text-white-50 fw-700 text-uppercase mb-1"
+             style="font-size:0.65rem;letter-spacing:0.08em;">
+          Total Required
+        </div>
+        <div class="fw-800 font-monospace" style="font-size:1.15rem;">
+          UGX {{ total_required|default:"0"|floatformat:0 }}
+        </div>
+      </div>
+
+      <div class="col-4 border-end border-secondary">
+        <div class="small text-white-50 fw-700 text-uppercase mb-1"
+             style="font-size:0.65rem;letter-spacing:0.08em;">
+          Total Paid
+        </div>
+        <div class="fw-800 font-monospace text-success" style="font-size:1.15rem;">
+          UGX {{ total_paid|default:"0"|floatformat:0 }}
+        </div>
+      </div>
+
+      <div class="col-4">
+        <div class="small text-white-50 fw-700 text-uppercase mb-1"
+             style="font-size:0.65rem;letter-spacing:0.08em;">
+          Balance Remaining
+        </div>
+        <div class="fw-800 font-monospace text-danger" style="font-size:1.15rem;">
+          UGX {{ total_balance|default:"0"|floatformat:0 }}
+        </div>
+      </div>
+
+    </div>
+
+    {# Collection progress bar #}
+    {% if total_required %}
+    <div class="mt-3 px-2">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="small text-white-50">Collection progress</span>
+        <span class="small fw-700">{{ collection_rate }}%</span>
+      </div>
+      <div class="progress" style="height:8px;background:rgba(255,255,255,0.15);">
+        <div class="progress-bar bg-success"
+             style="width:{{ collection_rate }}%;"
+             role="progressbar"
+             aria-valuenow="{{ collection_rate }}"
+             aria-valuemin="0" aria-valuemax="100">
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+
+{% if by_class or defaulters %}
+<div class="row g-4 mb-4">
+
+  {# By class #}
+  {% if by_class %}
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-building me-2 text-primary"></i>Clearance by Class
+        </h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Class</th>
+              <th class="text-center">Students</th>
+              <th class="text-center">Cleared</th>
+              <th class="text-end">Balance (UGX)</th>
+              <th style="width:100px;">Rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in by_class %}
+            {% with pct=row.cleared|default:0 total_row=row.count|default:1 %}
+            <tr>
+              <td class="fw-700">
+                {{ row.student__current_class__level|upper }}
+                {% if row.student__current_class__stream %}
+                  {{ row.student__current_class__stream|upper }}
+                {% endif %}
+              </td>
+              <td class="text-center">{{ row.count }}</td>
+              <td class="text-center">
+                <span class="fw-700 text-success">{{ row.cleared }}</span>
+                <span class="text-muted">/{{ row.count }}</span>
+              </td>
+              <td class="text-end font-monospace
+                {% if row.balance_total > 0 %}text-danger fw-700{% else %}text-success fw-700{% endif %}">
+                {{ row.balance_total|floatformat:0 }}
+              </td>
+              <td>
+                {% if row.count %}
+                {% widthratio row.cleared row.count 100 as class_pct %}
+                <div class="d-flex align-items-center gap-1">
+                  <div class="progress flex-fill" style="height:6px;">
+                    <div class="progress-bar
+                      {% if class_pct >= 80 %}bg-success{% elif class_pct >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                         style="width:{{ class_pct }}%;"></div>
+                  </div>
+                  <span class="text-muted" style="font-size:0.7rem;min-width:28px;">{{ class_pct }}%</span>
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+            {% endwith %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Top defaulters #}
+  {% if defaulters %}
+  <div class="col-12 col-lg-6">
+    <div class="card h-100 border-danger-subtle">
+      <div class="card-header py-3 bg-danger-subtle border-danger-subtle">
+        <h6 class="fw-700 mb-0 text-danger">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          Top Defaulters
+          <span class="text-muted fw-400 small">(highest balance first, max 20)</span>
+        </h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Student</th>
+              <th>Class</th>
+              <th class="text-end">Required</th>
+              <th class="text-end">Paid</th>
+              <th class="text-end">Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in defaulters %}
+            <tr>
+              <td>
+                <div class="fw-700 lh-sm">
+                  {{ d.student.last_name }}, {{ d.student.first_name }}
+                </div>
+                <div class="text-muted" style="font-size:0.72rem;">
+                  {{ d.student.student_id|default:"" }}
+                </div>
+              </td>
+              <td>
+                {% if d.student.current_class %}
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle"
+                      style="font-size:0.7rem;">
+                  {{ d.student.current_class.display_name }}
+                </span>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td class="text-end font-monospace">{{ d.total_required|floatformat:0 }}</td>
+              <td class="text-end font-monospace text-success">{{ d.total_paid|floatformat:0 }}</td>
+              <td class="text-end font-monospace fw-800 text-danger">{{ d.balance|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
+
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-12 col-md-5">
+        <label class="form-label fw-700 small mb-1">Search Student</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white">
+            <i class="bi bi-search text-secondary"></i>
+          </span>
+          <input type="text" name="q" class="form-control"
+                 value="{{ search }}"
+                 placeholder="First name, last name or student ID…"/>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-3">
+        <label class="form-label fw-700 small mb-1">Class</label>
+        <select name="class" class="form-select form-select-sm">
+          <option value="">All Classes</option>
+          {% for cls in all_classes %}
+          <option value="{{ cls.level }}"
+            {% if class_filter == cls.level %}selected{% endif %}>
+            {{ cls.display_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Clearance</label>
+        <select name="cleared" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if cleared_filter == '1' %}selected{% endif %}>Cleared</option>
+          <option value="0" {% if cleared_filter == '0' %}selected{% endif %}>Outstanding</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill">
+          <i class="bi bi-funnel me-1"></i>Filter
+        </button>
+        {% if search or class_filter or cleared_filter %}
+        <a href="{% url 'academics:term_detail_assessment_fees' term.pk %}"
+           class="btn btn-outline-secondary btn-sm" title="Clear">
+          <i class="bi bi-x-lg"></i>
+        </a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+
+<div class="card">
+
+  <div class="card-header d-flex align-items-center justify-content-between py-3">
+    <span class="fw-700">
+      {{ page_obj.paginator.count }} student{{ page_obj.paginator.count|pluralize }}
+      {% if search or class_filter or cleared_filter %}
+      <span class="text-muted fw-400 small ms-1">(filtered)</span>
+      {% endif %}
+    </span>
+    {% if page_obj.paginator.count %}
+    <span class="text-muted small">
+      Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if assessments %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Student</th>
+          <th>Class</th>
+          <th class="text-end">Required (UGX)</th>
+          <th class="text-end">Paid (UGX)</th>
+          <th class="text-end">Discount</th>
+          <th class="text-end">Balance (UGX)</th>
+          <th class="text-center">Cleared</th>
+          <th>Generated By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for af in assessments %}
+        <tr class="{% if af.is_cleared %}table-success table-success-subtle{% elif af.balance > 0 %}{% endif %}">
+
+          {# Student #}
+          <td>
+            <div class="fw-700 lh-sm">
+              {{ af.student.last_name }}, {{ af.student.first_name }}
+            </div>
+            <div class="text-muted" style="font-size:0.75rem;">
+              {{ af.student.student_id|default:"" }}
+            </div>
+          </td>
+
+          {# Class #}
+          <td>
+            {% if af.student.current_class %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              {{ af.student.current_class.display_name }}
+            </span>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+
+          {# Required #}
+          <td class="text-end font-monospace fw-600">
+            {{ af.total_required|floatformat:0 }}
+          </td>
+
+          {# Paid #}
+          <td class="text-end font-monospace fw-600 text-success">
+            {{ af.total_paid|floatformat:0 }}
+          </td>
+
+          {# Discount #}
+          <td class="text-end font-monospace text-muted">
+            {% if af.discount_amount %}
+            {{ af.discount_amount|floatformat:0 }}
+            {% else %}
+            —
+            {% endif %}
+          </td>
+
+          {# Balance #}
+          <td class="text-end font-monospace fw-800
+            {% if af.balance == 0 %}text-success
+            {% elif af.balance > 0 %}text-danger
+            {% else %}text-muted{% endif %}">
+            {{ af.balance|floatformat:0 }}
+          </td>
+
+          {# Cleared #}
+          <td class="text-center">
+            {% if af.is_cleared %}
+            <span class="badge bg-success rounded-pill">
+              <i class="bi bi-check-lg me-1"></i>Cleared
+            </span>
+            {% else %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">
+              Outstanding
+            </span>
+            {% endif %}
+          </td>
+
+          {# Generated by #}
+          <td class="text-muted small">
+            {{ af.generated_by.get_full_name|default:"System" }}
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+
+      {# Inline totals footer for current page #}
+      <tfoot class="table-light fw-700">
+        <tr>
+          <td colspan="2" class="text-muted small">Page totals</td>
+          <td class="text-end font-monospace">
+            {% with page_req=0 %}—{% endwith %}
+          </td>
+          <td class="text-end font-monospace text-success">—</td>
+          <td class="text-end text-muted">—</td>
+          <td class="text-end font-monospace text-danger">—</td>
+          <td colspan="2"></td>
+        </tr>
+        <tr class="border-top border-2">
+          <td colspan="2" class="fw-800">Term Totals</td>
+          <td class="text-end font-monospace fw-800">{{ total_required|floatformat:0 }}</td>
+          <td class="text-end font-monospace fw-800 text-success">{{ total_paid|floatformat:0 }}</td>
+          <td class="text-end font-monospace text-muted">{{ total_discount|floatformat:0 }}</td>
+          <td class="text-end font-monospace fw-800 text-danger">{{ total_balance|floatformat:0 }}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+
+    </table>
+  </div>
+
+  {# Pagination #}
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between py-3">
+    <small class="text-muted">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </small>
+    <nav aria-label="Assessment fees pagination">
+      <ul class="pagination pagination-sm mb-0">
+
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link"
+             href="?page={{ page_obj.previous_page_number }}&q={{ search }}&class={{ class_filter }}&cleared={{ cleared_filter }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+        </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+          <li class="page-item">
+            <a class="page-link"
+               href="?page={{ num }}&q={{ search }}&class={{ class_filter }}&cleared={{ cleared_filter }}">
+              {{ num }}
+            </a>
+          </li>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link"
+             href="?page={{ page_obj.next_page_number }}&q={{ search }}&class={{ class_filter }}&cleared={{ cleared_filter }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+          <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+        </li>
+        {% endif %}
+
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-cash-coin fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700 mb-1">No fee assessments found</div>
+    {% if search or class_filter or cleared_filter %}
+    <div class="small mb-3">Try adjusting your filters.</div>
+    <a href="{% url 'academics:term_detail_assessment_fees' term.pk %}"
+       class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+    {% else %}
+    <div class="small">No fee statements have been generated for this term yet.</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

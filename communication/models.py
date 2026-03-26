@@ -6,6 +6,7 @@
 
 from django.db import models
 from academics.base import TimeStampedModel
+from authentication.models import CustomUser
 
 
 class ParentsRequest(TimeStampedModel):
@@ -37,7 +38,7 @@ class ParentsRequest(TimeStampedModel):
     reference_number = models.CharField(max_length=20, unique=True,
                            help_text='Auto-generated e.g. REQ2025001')
     parent           = models.ForeignKey(
-                           'accounts.Parent',
+                           CustomUser,
                            on_delete=models.CASCADE,
                            related_name='requests'
                        )
@@ -60,7 +61,7 @@ class ParentsRequest(TimeStampedModel):
     status           = models.CharField(max_length=20, choices=STATUS_CHOICES,
                            default='pending')
     assigned_to      = models.ForeignKey(
-                           'accounts.User',
+                           CustomUser,
                            on_delete=models.SET_NULL,
                            null=True, blank=True,
                            related_name='assigned_requests',
@@ -97,7 +98,7 @@ class ParentsRequestReply(TimeStampedModel):
                       related_name='replies'
                   )
     replied_by  = models.ForeignKey(
-                      'accounts.User',
+                      CustomUser,
                       on_delete=models.CASCADE,
                       related_name='request_replies'
                   )

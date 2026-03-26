@@ -7,6 +7,7 @@
 
 from django.db import models
 from academics.base import TimeStampedModel
+from authentication.models import CustomUser
 
 
 class SchoolSetting(models.Model):
@@ -128,7 +129,7 @@ class SchoolRequirement(TimeStampedModel):
     is_compulsory  = models.BooleanField(default=True)
     is_published   = models.BooleanField(default=False)
     created_by     = models.ForeignKey(
-                         'accounts.User',
+                         CustomUser,
                          on_delete=models.SET_NULL,
                          null=True,
                          related_name='requirements_created'
@@ -180,7 +181,7 @@ class SchoolAnnouncement(TimeStampedModel):
                        related_name='announcements'
                    )
     posted_by    = models.ForeignKey(
-                       'accounts.User',
+                       CustomUser,
                        on_delete=models.SET_NULL,
                        null=True,
                        related_name='announcements_posted'
@@ -240,7 +241,7 @@ class SchoolEvent(TimeStampedModel):
     attachment      = models.FileField(upload_to='events/', blank=True, null=True,
                           help_text='Event notice, invitation, or programme')
     organized_by    = models.ForeignKey(
-                          'accounts.User',
+                          CustomUser,
                           on_delete=models.SET_NULL,
                           null=True,
                           related_name='events_organized'
@@ -279,7 +280,7 @@ class SchoolCalendar(TimeStampedModel):
                         help_text='Visible to parents and staff on the portal')
     published_at  = models.DateTimeField(null=True, blank=True)
     created_by    = models.ForeignKey(
-                        'accounts.User',
+                        CustomUser,
                         on_delete=models.SET_NULL,
                         null=True,
                         related_name='calendars_created'

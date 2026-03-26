@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block title %}Edit — {{ assessment.title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:list' %}" class="text-secondary">Assessments</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:detail' assessment.pk %}" class="text-secondary">
+    {{ assessment.title|truncatechars:30 }}
+  </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">Edit</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">Edit Assessment</h4>
+    <p class="text-muted small mb-0">{{ assessment.title }}</p>
+  </div>
+  <a href="{% url 'assessments:detail' assessment.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to Detail
+  </a>
+</div>
+
+
+{% with p=post a=assessment %}
+
+<form method="post" enctype="multipart/form-data" novalidate>
+{% csrf_token %}
+
+<div class="row g-4">
+
+  <div class="col-12 col-lg-8">
+
+    {# ── Core Details ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-clipboard me-2 text-primary"></i>Core Details
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">Title <span class="text-danger">*</span></label>
+            <input type="text" name="title"
+              class="form-control {% if errors.title %}is-invalid{% endif %}"
+              value="{{ p.title|default:a.title }}"
+              maxlength="200"/>
+            {% if errors.title %}<div class="invalid-feedback">{{ errors.title }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Assessment Type <span class="text-danger">*</span></label>
+            <select name="assessment_type"
+              class="form-select {% if errors.assessment_type %}is-invalid{% endif %}">
+              {% for key, label in type_choices %}
+              <option value="{{ key }}"
+                {% if p %}
+                  {% if p.assessment_type == key %}selected{% endif %}
+                {% else %}
+                  {% if a.assessment_type == key %}selected{% endif %}
+                {% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.assessment_type %}<div class="invalid-feedback">{{ errors.assessment_type }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Term <span class="text-danger">*</span></label>
+            <select name="term"
+              class="form-select {% if errors.term %}is-invalid{% endif %}">
+              {% for term in terms %}
+              <option value="{{ term.pk }}"
+                {% if p %}
+                  {% if p.term == term.pk|stringformat:"s" %}selected{% endif %}
+                {% else %}
+                  {% if a.term_id == term.pk %}selected{% endif %}
+                {% endif %}>
+                {{ term }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.term %}<div class="invalid-feedback">{{ errors.term }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Academic Year <span class="text-danger">*</span></label>
+            <input type="text" name="academic_year"
+              class="form-control font-monospace {% if errors.academic_year %}is-invalid{% endif %}"
+              value="{{ p.academic_year|default:a.academic_year }}"
+              placeholder="2025/2026" maxlength="9"/>
+            {% if errors.academic_year %}<div class="invalid-feedback">{{ errors.academic_year }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Month <span class="text-danger">*</span></label>
+            <select name="month"
+              class="form-select {% if errors.month %}is-invalid{% endif %}">
+              {% for num, name in month_choices %}
+              <option value="{{ num }}"
+                {% if p %}
+                  {% if p.month == num|stringformat:"s" %}selected{% endif %}
+                {% else %}
+                  {% if a.month == num %}selected{% endif %}
+                {% endif %}>
+                {{ name }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.month %}<div class="invalid-feedback">{{ errors.month }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Total Marks <span class="text-danger">*</span></label>
+            <input type="number" name="total_marks"
+              class="form-control {% if errors.total_marks %}is-invalid{% endif %}"
+              value="{{ p.total_marks|default:a.total_marks }}"
+              min="1" max="9999" step="0.5"/>
+            {% if errors.total_marks %}<div class="invalid-feedback">{{ errors.total_marks }}</div>{% endif %}
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">Description / Instructions</label>
+            <textarea name="description" class="form-control" rows="3"
+            >{{ p.description|default:a.description }}</textarea>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-calendar3 me-2 text-warning"></i>Dates &amp; Timing
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Date Given <span class="text-danger">*</span></label>
+            <input type="date" name="date_given"
+              class="form-control {% if errors.date_given %}is-invalid{% endif %}"
+              value="{{ p.date_given|default:a.date_given|date:'Y-m-d' }}"/>
+            {% if errors.date_given %}<div class="invalid-feedback">{{ errors.date_given }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Duration (minutes)</label>
+            <input type="number" name="duration_minutes"
+              class="form-control"
+              value="{{ p.duration_minutes|default:a.duration_minutes }}"
+              min="1" max="600"/>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Due Date</label>
+            <input type="date" name="date_due" class="form-control"
+              value="{{ p.date_due|default:a.date_due|date:'Y-m-d' }}"/>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Results Release Date</label>
+            <input type="date" name="date_results_released" class="form-control"
+              value="{{ p.date_results_released|default:a.date_results_released|date:'Y-m-d' }}"/>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-paperclip me-2 text-secondary"></i>Attachments
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Exam Paper</label>
+            {% if a.paper_file %}
+            <div class="mb-2">
+              <a href="{{ a.paper_file.url }}" target="_blank" class="small text-primary fw-700">
+                <i class="bi bi-file-earmark me-1"></i>Current file
+              </a>
+            </div>
+            {% endif %}
+            <input type="file" name="paper_file" class="form-control"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"/>
+            <div class="form-text">Upload to replace existing file.</div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Marking Scheme</label>
+            {% if a.marking_scheme %}
+            <div class="mb-2">
+              <a href="{{ a.marking_scheme.url }}" target="_blank" class="small text-primary fw-700">
+                <i class="bi bi-file-earmark me-1"></i>Current file
+              </a>
+            </div>
+            {% endif %}
+            <input type="file" name="marking_scheme" class="form-control"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"/>
+            <div class="form-text">Upload to replace existing file.</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+ 
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-toggle-on me-2 text-success"></i>Visibility &amp; Status
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch"
+                id="is_published" name="is_published" value="1"
+                {% if p %}{% if p.is_published %}checked{% endif %}{% else %}{% if a.is_published %}checked{% endif %}{% endif %}/>
+              <label class="form-check-label fw-700" for="is_published">
+                Published to Teachers
+              </label>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch"
+                id="results_published" name="results_published" value="1"
+                {% if p %}{% if p.results_published %}checked{% endif %}{% else %}{% if a.results_published %}checked{% endif %}{% endif %}/>
+              <label class="form-check-label fw-700" for="results_published">
+                Results Visible to Parents
+              </label>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-journal-text me-2 text-secondary"></i>Internal Notes
+        </h6>
+      </div>
+      <div class="card-body">
+        <textarea name="notes" class="form-control" rows="3"
+        >{{ p.notes|default:a.notes }}</textarea>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 pb-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i>Save Changes
+      </button>
+      <a href="{% url 'assessments:detail' a.pk %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+
+  </div>
+
+
+  <div class="col-12 col-lg-4">
+    <div class="card border-0 bg-light sticky-top" style="top:76px;">
+      <div class="card-body small">
+        <div class="fw-700 text-muted text-uppercase mb-3" style="font-size:0.72rem;">
+          Current Values
+        </div>
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted fw-700">Type</dt>
+          <dd class="col-7">{{ a.get_assessment_type_display }}</dd>
+          <dt class="col-5 text-muted fw-700">Term</dt>
+          <dd class="col-7">{{ a.term }}</dd>
+          <dt class="col-5 text-muted fw-700">Year</dt>
+          <dd class="col-7">{{ a.academic_year }}</dd>
+          <dt class="col-5 text-muted fw-700">Date Given</dt>
+          <dd class="col-7">{{ a.date_given|date:"d M Y" }}</dd>
+          <dt class="col-5 text-muted fw-700">Total Marks</dt>
+          <dd class="col-7">{{ a.total_marks }}</dd>
+          <dt class="col-5 text-muted fw-700">Published</dt>
+          <dd class="col-7">
+            {% if a.is_published %}
+            <span class="badge bg-success rounded-pill">Yes</span>
+            {% else %}
+            <span class="badge bg-secondary rounded-pill">No</span>
+            {% endif %}
+          </dd>
+          <dt class="col-5 text-muted fw-700">Results Out</dt>
+          <dd class="col-7">
+            {% if a.results_published %}
+            <span class="badge bg-info rounded-pill">Yes</span>
+            {% else %}
+            <span class="badge bg-secondary rounded-pill">No</span>
+            {% endif %}
+          </dd>
+          <dt class="col-5 text-muted fw-700">Students Sat</dt>
+          <dd class="col-7">{{ a.total_students_sat }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+</div>{# /row #}
+</form>
+
+{% endwith %}
+{% endblock %}
