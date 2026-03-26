@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_staff %}All Requests{% else %}My Requests{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">
+  {% if is_staff %}Parent Requests{% else %}My Requests{% endif %}
+</li>
+{% endblock %}
+
+{% block content %}
+
+{# ══════════════════════════════════════════════════════
+   PAGE HEADER
+   Context: is_staff (bool)
+══════════════════════════════════════════════════════ #}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">
+      {% if is_staff %}Parent Requests{% else %}My Requests{% endif %}
+    </h4>
+    <p class="text-muted small mb-0">
+      {% if is_staff %}
+        All formal requests and inquiries submitted by parents and guardians.
+      {% else %}
+        Track your requests and see replies from the school.
+      {% endif %}
+    </p>
+  </div>
+  <a href="{% url 'requests:add' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>New Request
+  </a>
+</div>
+
+{# ══════════════════════════════════════════════════════
+   STAT CARDS
+   Context: total, pending, resolved, urgent
+══════════════════════════════════════════════════════ #}
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-sm-3">
+    <div class="stat-card">
+      <div class="stat-value text-dark">{{ total|default:"0" }}</div>
+      <div class="stat-label">Total</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-3">
+    <div class="stat-card">
+      <div class="stat-value text-warning">{{ pending|default:"0" }}</div>
+      <div class="stat-label">Pending</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-3">
+    <div class="stat-card">
+      <div class="stat-value text-success">{{ resolved|default:"0" }}</div>
+      <div class="stat-label">Resolved</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-3">
+    <div class="stat-card">
+      <div class="stat-value text-danger">{{ urgent|default:"0" }}</div>
+      <div class="stat-label">Urgent</div>
+    </div>
+  </div>
+
+</div>
+
+{# ══════════════════════════════════════════════════════
+   FILTER BAR
+   Context: status_choices, type_choices,
+            filter_status, filter_type, filter_urgent, search
+══════════════════════════════════════════════════════ #}
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-12 col-md-4">
+        <label class="form-label fw-700 small mb-1">Search</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white">
+            <i class="bi bi-search text-secondary"></i>
+          </span>
+          <input
+            type="text" name="q" class="form-control"
+            value="{{ search }}"
+            placeholder="Reference number or subject…"
+          />
+        </div>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All Statuses</option>
+          {% for key, label in status_choices %}
+          <option value="{{ key }}" {% if filter_status == key %}selected{% endif %}>
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Type</label>
+        <select name="request_type" class="form-select form-select-sm">
+          <option value="">All Types</option>
+          {% for key, label in type_choices %}
+          <option value="{{ key }}" {% if filter_type == key %}selected{% endif %}>
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Priority</label>
+        <select name="urgent" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if filter_urgent == '1' %}selected{% endif %}>
+            Urgent Only
+          </option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill">
+          <i class="bi bi-funnel me-1"></i>Filter
+        </button>
+        {% if search or filter_status or filter_type or filter_urgent %}
+        <a href="{% url 'requests:list' %}"
+           class="btn btn-outline-secondary btn-sm" title="Clear filters">
+          <i class="bi bi-x-lg"></i>
+        </a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# Status quick-filter pills #}
+<div class="d-flex gap-2 flex-wrap mb-3">
+  <a href="{% url 'requests:list' %}{% if search %}?q={{ search }}{% endif %}"
+     class="btn btn-sm {% if not filter_status %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+    All
+  </a>
+  {% for key, label in status_choices %}
+  <a href="?status={{ key }}{% if search %}&q={{ search }}{% endif %}{% if filter_type %}&request_type={{ filter_type }}{% endif %}{% if filter_urgent %}&urgent={{ filter_urgent }}{% endif %}"
+     class="btn btn-sm {% if filter_status == key %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+    {{ label }}
+  </a>
+  {% endfor %}
+  <a href="?urgent=1{% if search %}&q={{ search }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}{% if filter_type %}&request_type={{ filter_type }}{% endif %}"
+     class="btn btn-sm {% if filter_urgent == '1' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+    <i class="bi bi-exclamation-triangle me-1"></i>Urgent
+  </a>
+</div>
+
+{# ══════════════════════════════════════════════════════
+   REQUESTS TABLE / CARD LIST
+   Context: requests (qs of ParentsRequest)
+   Fields: reference_number, parent (→ get_full_name, parent_id),
+           student (optional), request_type, subject,
+           is_urgent, status, assigned_to, created_at,
+           replies (related manager for unread count)
+══════════════════════════════════════════════════════ #}
+<div class="card">
+
+  <div class="card-header d-flex align-items-center justify-content-between py-3">
+    <span class="fw-700">
+      {{ requests|length }} request{{ requests|length|pluralize }}
+      {% if search or filter_status or filter_type or filter_urgent %}
+      <span class="text-muted fw-400 small ms-1">(filtered)</span>
+      {% endif %}
+    </span>
+  </div>
+
+  {% if requests %}
+
+  {# ── Desktop table ── #}
+  <div class="table-responsive d-none d-md-block">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Reference</th>
+          {% if is_staff %}<th>Parent</th>{% endif %}
+          <th>Subject</th>
+          <th>Type</th>
+          <th>Student</th>
+          <th>Status</th>
+          <th>Assigned To</th>
+          <th>Date</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in requests %}
+        <tr class="{% if req.is_urgent %}table-warning{% endif %}">
+
+          {# Reference + urgent flag #}
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              {% if req.is_urgent %}
+              <i class="bi bi-exclamation-triangle-fill text-danger flex-shrink-0"
+                 title="Urgent"></i>
+              {% endif %}
+              <a href="{% url 'requests:detail' req.reference_number %}"
+                 class="fw-700 font-monospace text-dark text-decoration-none">
+                {{ req.reference_number }}
+              </a>
+            </div>
+          </td>
+
+          {# Parent — staff view only #}
+          {% if is_staff %}
+          <td>
+            <div class="fw-600 lh-sm">{{ req.parent.get_full_name }}</div>
+            {% if req.parent.parent_id %}
+            <div class="text-muted" style="font-size:0.72rem;">
+              <code>{{ req.parent.parent_id }}</code>
+            </div>
+            {% endif %}
+          </td>
+          {% endif %}
+
+          {# Subject #}
+          <td>
+            <a href="{% url 'requests:detail' req.reference_number %}"
+               class="text-dark fw-600">
+              {{ req.subject|truncatechars:55 }}
+            </a>
+            {# Unread reply indicator for staff #}
+            {% if is_staff %}
+            {% with unread=req.replies.filter.count %}
+            {% endwith %}
+            {% endif %}
+          </td>
+
+          {# Type #}
+          <td>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              {{ req.get_request_type_display }}
+            </span>
+          </td>
+
+          {# Student #}
+          <td class="text-muted small">
+            {% if req.student %}
+            {{ req.student.last_name }}, {{ req.student.first_name }}
+            {% else %}
+            —
+            {% endif %}
+          </td>
+
+          {# Status #}
+          <td>
+            {% if req.status == 'pending' %}
+            <span class="badge bg-warning text-dark rounded-pill">Pending</span>
+            {% elif req.status == 'reviewed' %}
+            <span class="badge bg-info text-white rounded-pill">In Progress</span>
+            {% elif req.status == 'resolved' %}
+            <span class="badge bg-success rounded-pill">Resolved</span>
+            {% elif req.status == 'closed' %}
+            <span class="badge bg-secondary rounded-pill">Closed</span>
+            {% elif req.status == 'rejected' %}
+            <span class="badge bg-danger rounded-pill">Rejected</span>
+            {% else %}
+            <span class="badge bg-secondary rounded-pill">{{ req.get_status_display }}</span>
+            {% endif %}
+          </td>
+
+          {# Assigned to — staff only #}
+          <td class="text-muted small">
+            {% if req.assigned_to %}
+            {{ req.assigned_to.get_full_name }}
+            {% else %}
+            <span class="text-muted">Unassigned</span>
+            {% endif %}
+          </td>
+
+          {# Date #}
+          <td class="text-muted small text-nowrap">
+            {{ req.created_at|date:"d M Y" }}
+          </td>
+
+          {# Actions #}
+          <td class="text-end">
+            <a href="{% url 'requests:detail' req.reference_number %}"
+               class="btn btn-sm btn-outline-secondary" title="View thread">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# ── Mobile card list ── #}
+  <div class="d-md-none">
+    {% for req in requests %}
+    <div class="border-bottom p-3 {% if req.is_urgent %}bg-warning-subtle{% endif %}">
+      <div class="d-flex align-items-start justify-content-between mb-1">
+        <div class="d-flex align-items-center gap-2">
+          {% if req.is_urgent %}
+          <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+          {% endif %}
+          <code class="small fw-700">{{ req.reference_number }}</code>
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle"
+                style="font-size:0.68rem;">
+            {{ req.get_request_type_display }}
+          </span>
+        </div>
+        {% if req.status == 'pending' %}
+        <span class="badge bg-warning text-dark rounded-pill">Pending</span>
+        {% elif req.status == 'reviewed' %}
+        <span class="badge bg-info rounded-pill">In Progress</span>
+        {% elif req.status == 'resolved' %}
+        <span class="badge bg-success rounded-pill">Resolved</span>
+        {% elif req.status == 'closed' %}
+        <span class="badge bg-secondary rounded-pill">Closed</span>
+        {% elif req.status == 'rejected' %}
+        <span class="badge bg-danger rounded-pill">Rejected</span>
+        {% endif %}
+      </div>
+      <a href="{% url 'requests:detail' req.reference_number %}"
+         class="fw-700 text-dark d-block mb-1">
+        {{ req.subject|truncatechars:70 }}
+      </a>
+      <div class="text-muted small d-flex gap-3 flex-wrap">
+        {% if is_staff %}<span>{{ req.parent.get_full_name }}</span>{% endif %}
+        {% if req.student %}<span>Re: {{ req.student.first_name }}</span>{% endif %}
+        <span>{{ req.created_at|date:"d M Y" }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  {# Empty state #}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700 mb-1">No requests found</div>
+    {% if search or filter_status or filter_type or filter_urgent %}
+    <div class="small mb-3">Try adjusting your filters.</div>
+    <a href="{% url 'requests:list' %}" class="btn btn-sm btn-outline-secondary">
+      Clear Filters
+    </a>
+    {% else %}
+    <div class="small mb-3">
+      {% if is_staff %}
+        No requests have been submitted yet.
+      {% else %}
+        You haven't submitted any requests yet. Use the button above to send one.
+      {% endif %}
+    </div>
+    <a href="{% url 'requests:add' %}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>New Request
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,563 @@
+{% extends "base.html" %}
+
+{% block title %}{{ parent_request.reference_number }} — {{ parent_request.subject|truncatechars:40 }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'requests:list' %}" class="text-secondary">
+    {% if is_staff %}Parent Requests{% else %}My Requests{% endif %}
+  </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">
+  {{ parent_request.reference_number }}
+</li>
+{% endblock %}
+
+{% block content %}
+
+{# ══════════════════════════════════════════════════════════════
+   PAGE HEADER
+   Context: parent_request (ParentsRequest), is_staff,
+            status_choices
+══════════════════════════════════════════════════════════════ #}
+<div class="d-flex align-items-start justify-content-between mb-4 gap-3 flex-wrap">
+
+  <div>
+    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+      <code class="fw-800 text-dark" style="font-size:1rem;">
+        {{ parent_request.reference_number }}
+      </code>
+      {# Urgency #}
+      {% if parent_request.is_urgent %}
+      <span class="badge bg-danger">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>Urgent
+      </span>
+      {% endif %}
+      {# Type #}
+      <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+        {{ parent_request.get_request_type_display }}
+      </span>
+      {# Status #}
+      {% if parent_request.status == 'pending' %}
+      <span class="badge bg-warning text-dark rounded-pill">Pending</span>
+      {% elif parent_request.status == 'reviewed' %}
+      <span class="badge bg-info rounded-pill">In Progress</span>
+      {% elif parent_request.status == 'resolved' %}
+      <span class="badge bg-success rounded-pill">Resolved</span>
+      {% elif parent_request.status == 'closed' %}
+      <span class="badge bg-secondary rounded-pill">Closed</span>
+      {% elif parent_request.status == 'rejected' %}
+      <span class="badge bg-danger rounded-pill">Rejected</span>
+      {% endif %}
+    </div>
+    <h4 class="fw-800 mb-1">{{ parent_request.subject }}</h4>
+    <div class="text-muted small d-flex gap-3 flex-wrap">
+      <span>
+        <i class="bi bi-person me-1"></i>
+        {{ parent_request.parent.get_full_name }}
+        {% if is_staff and parent_request.parent.parent_id %}
+        <code class="ms-1">{{ parent_request.parent.parent_id }}</code>
+        {% endif %}
+      </span>
+      {% if parent_request.student %}
+      <span>
+        <i class="bi bi-person-heart me-1"></i>
+        Re: {{ parent_request.student.last_name }},
+        {{ parent_request.student.first_name }}
+      </span>
+      {% endif %}
+      <span>
+        <i class="bi bi-calendar3 me-1"></i>
+        {{ parent_request.created_at|date:"d M Y, H:i" }}
+      </span>
+      {% if parent_request.resolved_at %}
+      <span class="text-success">
+        <i class="bi bi-check-circle me-1"></i>
+        Resolved {{ parent_request.resolved_at|date:"d M Y" }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <a href="{% url 'requests:list' %}" class="btn btn-outline-secondary btn-sm flex-shrink-0">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+
+</div>
+
+{# ══════════════════════════════════════════════════════════════
+   MAIN CONTENT AREA  (two-column on lg+)
+══════════════════════════════════════════════════════════════ #}
+<div class="row g-4">
+
+  {# ═══════════════════════════════════════════════
+     LEFT COL — thread
+  ═══════════════════════════════════════════════ #}
+  <div class="col-12 col-lg-8">
+
+    {# ── ORIGINAL REQUEST MESSAGE ── #}
+    <div class="card mb-3">
+      <div class="card-header py-3 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+          {# Sender avatar #}
+          <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-800 flex-shrink-0"
+               style="width:38px;height:38px;font-size:0.8rem;">
+            {{ parent_request.parent.first_name|first|upper }}{{ parent_request.parent.last_name|first|upper }}
+          </div>
+          <div>
+            <div class="fw-700 lh-sm">{{ parent_request.parent.get_full_name }}</div>
+            <div class="text-muted" style="font-size:0.72rem;">
+              {{ parent_request.created_at|date:"d M Y, H:i" }}
+              <span class="ms-2 badge bg-dark" style="font-size:0.65rem;">Original Message</span>
+            </div>
+          </div>
+        </div>
+        {% if parent_request.attachment %}
+        <a href="{{ parent_request.attachment.url }}" target="_blank"
+           class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-paperclip me-1"></i>Attachment
+        </a>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <p class="mb-0" style="white-space:pre-wrap;line-height:1.75;">{{ parent_request.message }}</p>
+      </div>
+    </div>
+
+    {# ── REPLY THREAD ──
+       Context: replies (ParentsRequestReply qs — already filtered by
+                is_internal for parents; all for staff)
+       Fields: replied_by, message, is_internal, is_read_by_parent,
+               read_at, attachment, created_at
+    ── #}
+    {% if replies %}
+    <div class="mb-3">
+      {% for reply in replies %}
+      <div class="card mb-2
+        {% if reply.is_internal %}border-warning-subtle bg-warning-subtle{% endif %}">
+        <div class="card-header py-2 d-flex align-items-center justify-content-between
+          {% if reply.is_internal %}bg-warning-subtle border-warning-subtle{% endif %}">
+
+          <div class="d-flex align-items-center gap-2">
+            {# Avatar — colour distinguishes staff from parent #}
+            {% if reply.replied_by.user_type == 'parent' %}
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-800 flex-shrink-0"
+                 style="width:34px;height:34px;font-size:0.75rem;">
+              {{ reply.replied_by.first_name|first|upper }}{{ reply.replied_by.last_name|first|upper }}
+            </div>
+            {% else %}
+            <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-800 flex-shrink-0"
+                 style="width:34px;height:34px;font-size:0.75rem;">
+              {{ reply.replied_by.first_name|first|upper }}{{ reply.replied_by.last_name|first|upper }}
+            </div>
+            {% endif %}
+
+            <div>
+              <div class="fw-700 lh-sm small">
+                {{ reply.replied_by.get_full_name }}
+                {% if reply.replied_by.user_type != 'parent' %}
+                <span class="text-muted fw-400">(School)</span>
+                {% endif %}
+              </div>
+              <div class="text-muted" style="font-size:0.7rem;">
+                {{ reply.created_at|date:"d M Y, H:i" }}
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            {# Internal note badge — staff only #}
+            {% if is_staff and reply.is_internal %}
+            <span class="badge bg-warning text-dark border border-warning"
+                  style="font-size:0.68rem;">
+              <i class="bi bi-lock-fill me-1"></i>Internal Note
+            </span>
+            {% endif %}
+            {# Read receipt for staff #}
+            {% if is_staff and not reply.is_internal %}
+              {% if reply.is_read_by_parent %}
+              <span class="text-success" style="font-size:0.72rem;" title="Read by parent {{ reply.read_at|date:'d M Y, H:i' }}">
+                <i class="bi bi-check2-all me-1"></i>Read
+              </span>
+              {% else %}
+              <span class="text-muted" style="font-size:0.72rem;">
+                <i class="bi bi-check2 me-1"></i>Sent
+              </span>
+              {% endif %}
+            {% endif %}
+            {# Attachment #}
+            {% if reply.attachment %}
+            <a href="{{ reply.attachment.url }}" target="_blank"
+               class="btn btn-sm btn-outline-secondary py-0 px-2"
+               style="font-size:0.75rem;">
+              <i class="bi bi-paperclip"></i>
+            </a>
+            {% endif %}
+          </div>
+
+        </div>
+        <div class="card-body py-3">
+          <p class="mb-0 small" style="white-space:pre-wrap;line-height:1.7;">
+            {{ reply.message }}
+          </p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-4 text-muted mb-3">
+      <i class="bi bi-chat-dots fs-2 d-block mb-1 opacity-25"></i>
+      <div class="small fw-600">No replies yet.</div>
+      <div class="small">
+        {% if is_staff %}
+          Use the form below to respond to this request.
+        {% else %}
+          The school will reply here soon.
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ══════════════════════════════════════════════════════════════
+       REPLY FORM
+       POST to: requests:reply (ref=parent_request.reference_number)
+       Context: reply_errors, reply_post,
+                is_staff (extra: is_internal toggle, new_status select),
+                status_choices
+
+       Guard: parents cannot reply on closed/rejected (view blocks it,
+              but we also hide the form to be clear)
+    ══════════════════════════════════════════════════════════════ #}
+    {% if is_staff or parent_request.status not in 'closed,rejected' %}
+    <div class="card
+      {% if is_staff %}border-0 bg-light{% endif %}">
+      <div class="card-header py-3
+        {% if is_staff %}bg-light border-bottom{% endif %}">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-reply me-2 text-primary"></i>
+          {% if is_staff %}Post a Reply{% else %}Add a Message{% endif %}
+        </h6>
+      </div>
+      <div class="card-body">
+
+        <form method="post"
+              action="{% url 'requests:reply' parent_request.reference_number %}"
+              enctype="multipart/form-data"
+              novalidate>
+          {% csrf_token %}
+
+          {# Message #}
+          <div class="mb-3">
+            <label class="form-label fw-700 small">
+              Message <span class="text-danger">*</span>
+            </label>
+            <textarea
+              name="message"
+              class="form-control {% if reply_errors.message %}is-invalid{% endif %}"
+              rows="5"
+              placeholder="{% if is_staff %}Write your reply to the parent. For internal notes tick the box below.{% else %}Add more information or ask a follow-up question.{% endif %}"
+            >{{ reply_post.message|default:'' }}</textarea>
+            {% if reply_errors.message %}
+            <div class="invalid-feedback">{{ reply_errors.message }}</div>
+            {% endif %}
+          </div>
+
+          {# Attachment #}
+          <div class="mb-3">
+            <label class="form-label fw-700 small">Attachment (optional)</label>
+            <input type="file" name="attachment" class="form-control"
+                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"/>
+            <div class="form-text">PDF, DOCX, JPG or PNG.</div>
+          </div>
+
+          {# ── STAFF ONLY: Internal toggle + status change ── #}
+          {% if is_staff %}
+          <div class="row g-3 mb-3">
+
+            <div class="col-12 col-sm-6">
+              <div class="p-3 rounded border bg-white">
+                <div class="form-check form-switch mb-0">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    role="switch"
+                    id="is_internal"
+                    name="is_internal"
+                    value="1"
+                    {% if reply_post.is_internal %}checked{% endif %}
+                  />
+                  <label class="form-check-label fw-700 small" for="is_internal">
+                    <i class="bi bi-lock-fill text-warning me-1"></i>Internal Note
+                  </label>
+                </div>
+                <div class="form-text ms-5 mt-1">
+                  Internal notes are <strong>never visible</strong> to the parent.
+                  Use for staff-only comments or handover notes.
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700 small">
+                Update Request Status
+              </label>
+              <select name="new_status" class="form-select">
+                <option value="">— Keep current status —</option>
+                {% for key, label in status_choices %}
+                <option value="{{ key }}"
+                  {% if reply_post.new_status == key %}selected{% endif %}
+                  {% if parent_request.status == key %}
+                  {% comment %}mark current with indicator below{% endcomment %}
+                  {% endif %}>
+                  {% if parent_request.status == key %}▶ {% endif %}{{ label }}
+                </option>
+                {% endfor %}
+              </select>
+              <div class="form-text">
+                Changing the status updates the request record immediately on post.
+              </div>
+              {% if reply_errors.new_status %}
+              <div class="text-danger small mt-1">{{ reply_errors.new_status }}</div>
+              {% endif %}
+            </div>
+
+          </div>
+          {% endif %}
+
+          {# Submit row #}
+          <div class="d-flex gap-2 align-items-center flex-wrap">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-send me-1"></i>
+              {% if is_staff %}Post Reply{% else %}Send Message{% endif %}
+            </button>
+            {% if is_staff %}
+            <span class="text-muted small">
+              <i class="bi bi-info-circle me-1"></i>
+              The parent will be notified unless "Internal Note" is ticked.
+            </span>
+            {% endif %}
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+
+    {% else %}
+    {# Closed / Rejected — no reply allowed for parents #}
+    <div class="alert alert-secondary d-flex align-items-center gap-2">
+      <i class="bi bi-lock fs-5 flex-shrink-0"></i>
+      <div>
+        This request is <strong>{{ parent_request.get_status_display }}</strong>
+        and is no longer accepting replies.
+        {% if parent_request.status == 'rejected' %}
+        If you believe this was in error, please submit a new request.
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>{# /col-lg-8 #}
+
+  {# ═══════════════════════════════════════════════
+     RIGHT COL — metadata sidebar
+  ═══════════════════════════════════════════════ #}
+  <div class="col-12 col-lg-4">
+
+    {# ── Request Info Card ── #}
+    <div class="card mb-3">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-info-circle me-2 text-primary"></i>Request Details
+        </h6>
+      </div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:0.7rem;">Reference</dt>
+          <dd class="col-7"><code class="fw-700">{{ parent_request.reference_number }}</code></dd>
+
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:0.7rem;">Type</dt>
+          <dd class="col-7">{{ parent_request.get_request_type_display }}</dd>
+
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:0.7rem;">Status</dt>
+          <dd class="col-7">
+            {% if parent_request.status == 'pending' %}
+            <span class="badge bg-warning text-dark">Pending</span>
+            {% elif parent_request.status == 'reviewed' %}
+            <span class="badge bg-info">In Progress</span>
+            {% elif parent_request.status == 'resolved' %}
+            <span class="badge bg-success">Resolved</span>
+            {% elif parent_request.status == 'closed' %}
+            <span class="badge bg-secondary">Closed</span>
+            {% elif parent_request.status == 'rejected' %}
+            <span class="badge bg-danger">Rejected</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:0.7rem;">Priority</dt>
+          <dd class="col-7">
+            {% if parent_request.is_urgent %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>Urgent
+            </span>
+            {% else %}
+            <span class="text-muted">Normal</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:0.7rem;">Submitted</dt>
+          <dd class="col-7 text-muted">{{ parent_request.created_at|date:"d M Y, H:i" }}</dd>
+
+          {% if parent_request.resolved_at %}
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:0.7rem;">Resolved</dt>
+          <dd class="col-7 text-success">{{ parent_request.resolved_at|date:"d M Y" }}</dd>
+          {% endif %}
+
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:0.7rem;">Replies</dt>
+          <dd class="col-7 fw-700">{{ replies|length }}</dd>
+
+        </dl>
+      </div>
+    </div>
+
+    {# ── Parent Card ── #}
+    <div class="card mb-3">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-person me-2 text-success"></i>Parent / Guardian
+        </h6>
+      </div>
+      <div class="card-body small">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-800 flex-shrink-0"
+               style="width:40px;height:40px;font-size:0.85rem;">
+            {{ parent_request.parent.first_name|first|upper }}{{ parent_request.parent.last_name|first|upper }}
+          </div>
+          <div>
+            <div class="fw-700">{{ parent_request.parent.get_full_name }}</div>
+            {% if parent_request.parent.parent_id %}
+            <code class="text-muted" style="font-size:0.72rem;">
+              {{ parent_request.parent.parent_id }}
+            </code>
+            {% endif %}
+          </div>
+        </div>
+        {% if parent_request.parent.phone %}
+        <div class="text-muted mb-1">
+          <i class="bi bi-phone me-1"></i>{{ parent_request.parent.phone }}
+        </div>
+        {% endif %}
+        {% if parent_request.parent.email %}
+        <div class="text-muted">
+          <i class="bi bi-envelope me-1"></i>{{ parent_request.parent.email }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Student Card (if linked) ── #}
+    {% if parent_request.student %}
+    <div class="card mb-3">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-person-heart me-2 text-info"></i>Student Concerned
+        </h6>
+      </div>
+      <div class="card-body small">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <div class="rounded-circle bg-info-subtle text-info d-flex align-items-center justify-content-center fw-800 flex-shrink-0"
+               style="width:38px;height:38px;font-size:0.8rem;">
+            {{ parent_request.student.first_name|first|upper }}{{ parent_request.student.last_name|first|upper }}
+          </div>
+          <div>
+            <div class="fw-700">
+              {{ parent_request.student.last_name }},
+              {{ parent_request.student.first_name }}
+            </div>
+            {% if parent_request.student.student_id %}
+            <code class="text-muted" style="font-size:0.72rem;">
+              {{ parent_request.student.student_id }}
+            </code>
+            {% endif %}
+          </div>
+        </div>
+        {% if parent_request.student.current_class %}
+        <div class="text-muted">
+          <i class="bi bi-building me-1"></i>
+          {{ parent_request.student.current_class.display_name }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── Assignment Card (staff only) ── #}
+    {% if is_staff %}
+    <div class="card mb-3">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-person-check me-2 text-warning"></i>Assigned To
+        </h6>
+      </div>
+      <div class="card-body small">
+        {% if parent_request.assigned_to %}
+        <div class="d-flex align-items-center gap-2">
+          <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-800 flex-shrink-0"
+               style="width:34px;height:34px;font-size:0.75rem;">
+            {{ parent_request.assigned_to.first_name|first|upper }}{{ parent_request.assigned_to.last_name|first|upper }}
+          </div>
+          <div>
+            <div class="fw-700">{{ parent_request.assigned_to.get_full_name }}</div>
+            <div class="text-muted" style="font-size:0.72rem;">
+              {{ parent_request.assigned_to.email|default:"" }}
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <span class="text-muted">Unassigned</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Internal Notes Card (staff only) ── #}
+    {% if parent_request.internal_notes %}
+    <div class="card border-warning-subtle mb-3">
+      <div class="card-header py-3 bg-warning-subtle border-warning-subtle">
+        <h6 class="fw-700 mb-0 text-warning">
+          <i class="bi bi-lock-fill me-2"></i>Internal Notes
+          <span class="badge bg-warning text-dark ms-2 small fw-600">Staff Only</span>
+        </h6>
+      </div>
+      <div class="card-body small text-secondary">
+        <p class="mb-0" style="white-space:pre-wrap;">
+          {{ parent_request.internal_notes }}
+        </p>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── Attachment ── #}
+    {% if parent_request.attachment %}
+    <div class="card mb-3">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-paperclip me-2 text-secondary"></i>Original Attachment
+        </h6>
+      </div>
+      <div class="card-body">
+        <a href="{{ parent_request.attachment.url }}" target="_blank"
+           class="btn btn-sm btn-outline-secondary w-100">
+          <i class="bi bi-file-earmark-arrow-down me-2"></i>Download Attachment
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% endif %}{# /is_staff #}
+
+  </div>{# /col-lg-4 #}
+
+</div>{# /row #}
+
+{% endblock %}

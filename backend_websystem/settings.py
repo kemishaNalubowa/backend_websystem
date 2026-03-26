@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure--9bm(6^dlzqeiq-4j^tj@6+s%a=+5w4eaj@glypsrgvv)_0^*q'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = True 
 
 ALLOWED_HOSTS = ['dash.localhost', "localhost"]
 

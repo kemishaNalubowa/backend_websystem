@@ -11,7 +11,7 @@ urlpatterns = [
         views.assessment_list,
         name='list'
     ),
-    path(
+    path( 
         'add/',
         views.add_assessment,
         name='add'

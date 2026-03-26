@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}New Request{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'requests:list' %}" class="text-secondary">
+    {% if is_staff %}Parent Requests{% else %}My Requests{% endif %}
+  </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">New Request</li>
+{% endblock %}
+
+{% block content %}
+
+{# ══════════════════════════════════════════════════════
+   PAGE HEADER
+   Context: is_staff (bool)
+══════════════════════════════════════════════════════ #}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">New Request</h4>
+    <p class="text-muted small mb-0">
+      {% if is_staff %}
+        Submit a formal request on behalf of a parent or guardian.
+      {% else %}
+        Submit a formal request or inquiry to the school.
+      {% endif %}
+    </p>
+  </div>
+  <a href="{% url 'requests:list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+{% csrf_token %}
+
+<div class="row g-4">
+
+  {# ════════════════════════ LEFT — main form ════════════════════════ #}
+  <div class="col-12 col-lg-8">
+
+    {# ── STAFF ONLY: Parent & Student Selection ── #}
+    {% if is_staff %}
+    <div class="card mb-4 border-info-subtle">
+      <div class="card-header py-3 bg-info-subtle border-info-subtle">
+        <h6 class="fw-700 mb-0 text-info">
+          <i class="bi bi-person-badge me-2"></i>Staff: Select Parent &amp; Student
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Parent / Guardian <span class="text-danger">*</span>
+            </label>
+            <select
+              name="parent_id"
+              class="form-select {% if errors.parent_id %}is-invalid{% endif %}"
+            >
+              <option value="">— Select parent —</option>
+              {# parents queryset is not in context — staff must search #}
+              {# The view resolves via POST parent_id; this is a free-text hint #}
+              {% if post.parent_id %}
+              <option value="{{ post.parent_id }}" selected>
+                (previously selected ID: {{ post.parent_id }})
+              </option>
+              {% endif %}
+            </select>
+            <div class="form-text">
+              Enter the parent's ID (e.g. <code>PAR20250001</code>) or select from the
+              dropdown. Only users with a parent account will appear.
+            </div>
+            {% if errors.parent_id %}
+            <div class="invalid-feedback d-block">{{ errors.parent_id }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Student (optional)</label>
+            <select name="student_id" class="form-select">
+              <option value="">— Not linked to a specific student —</option>
+              {% if post.student_id %}
+              <option value="{{ post.student_id }}" selected>
+                (previously selected student ID: {{ post.student_id }})
+              </option>
+              {% endif %}
+            </select>
+            <div class="form-text">
+              Link this request to a specific child if applicable.
+            </div>
+            {% if errors.student_id %}
+            <div class="text-danger small mt-1">{{ errors.student_id }}</div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+    {% else %}
+    {# PARENT: hidden student_id field (optional, submitted blank by default) #}
+    <input type="hidden" name="student_id" value="{{ post.student_id|default:'' }}"/>
+    {% endif %}
+
+    {# ── Request Details ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-envelope-open me-2 text-primary"></i>Request Details
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          {# Request type #}
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Request Type <span class="text-danger">*</span>
+            </label>
+            <select
+              name="request_type"
+              class="form-select {% if errors.request_type %}is-invalid{% endif %}"
+            >
+              <option value="">— Select type —</option>
+              {% for key, label in request_types %}
+              <option value="{{ key }}"
+                {% if post.request_type == key %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.request_type %}
+            <div class="invalid-feedback">{{ errors.request_type }}</div>
+            {% endif %}
+          </div>
+
+          {# Urgency #}
+          <div class="col-12 col-sm-6 d-flex align-items-end pb-1">
+            <div class="form-check form-switch">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="is_urgent"
+                name="is_urgent"
+                value="1"
+                {% if post.is_urgent %}checked{% endif %}
+              />
+              <label class="form-check-label fw-700" for="is_urgent">
+                <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>
+                Mark as Urgent
+              </label>
+            </div>
+          </div>
+
+          {# Subject #}
+          <div class="col-12">
+            <label class="form-label fw-700 small">
+              Subject <span class="text-danger">*</span>
+            </label>
+            <input
+              type="text"
+              name="subject"
+              class="form-control {% if errors.subject %}is-invalid{% endif %}"
+              value="{{ post.subject|default:'' }}"
+              placeholder='e.g. "Leave of absence for {{ request.user.get_full_name }}"'
+              maxlength="200"
+            />
+            {% if errors.subject %}
+            <div class="invalid-feedback">{{ errors.subject }}</div>
+            {% endif %}
+          </div>
+
+          {# Message #}
+          <div class="col-12">
+            <label class="form-label fw-700 small">
+              Message <span class="text-danger">*</span>
+            </label>
+            <textarea
+              name="message"
+              class="form-control {% if errors.message %}is-invalid{% endif %}"
+              rows="7"
+              placeholder="Write your full request or inquiry here. Include as much relevant detail as possible — dates, names, context, and what outcome you are requesting."
+            >{{ post.message|default:'' }}</textarea>
+            {% if errors.message %}
+            <div class="invalid-feedback">{{ errors.message }}</div>
+            {% endif %}
+          </div>
+
+          {# Attachment #}
+          <div class="col-12">
+            <label class="form-label fw-700 small">Supporting Document (optional)</label>
+            <input
+              type="file"
+              name="attachment"
+              class="form-control"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            />
+            <div class="form-text">
+              Attach a medical certificate, transfer letter, or any other
+              relevant document. PDF, DOCX, JPG, or PNG.
+            </div>
+            {% if errors.attachment %}
+            <div class="text-danger small mt-1">{{ errors.attachment }}</div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Submit ── #}
+    <div class="d-flex gap-2 pb-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-send me-1"></i>Submit Request
+      </button>
+      <a href="{% url 'requests:list' %}" class="btn btn-outline-secondary">
+        Cancel
+      </a>
+    </div>
+
+  </div>{# /col-lg-8 #}
+
+  {# ════════════════════════ RIGHT — guidance ════════════════════════ #}
+  <div class="col-12 col-lg-4">
+
+    <div class="card border-primary-subtle sticky-top" style="top:76px;">
+      <div class="card-header bg-primary-subtle border-primary-subtle py-3">
+        <h6 class="fw-700 mb-0 text-primary">
+          <i class="bi bi-lightbulb me-2"></i>Request Types Guide
+        </h6>
+      </div>
+      <div class="card-body small text-secondary">
+
+        <dl class="mb-0">
+          <dt class="fw-700 text-dark">Leave / Absence</dt>
+          <dd class="mb-2">
+            Notify the school in advance about a planned absence. Include
+            dates and reason. Attach a medical note if sick leave.
+          </dd>
+
+          <dt class="fw-700 text-dark">Meeting Request</dt>
+          <dd class="mb-2">
+            Request a face-to-face meeting with a teacher, class tutor,
+            or the head teacher.
+          </dd>
+
+          <dt class="fw-700 text-dark">Complaint</dt>
+          <dd class="mb-2">
+            Raise a concern about bullying, teaching quality, discipline,
+            or any other school matter.
+          </dd>
+
+          <dt class="fw-700 text-dark">Fees Enquiry</dt>
+          <dd class="mb-2">
+            Ask about fee balances, payment plans, or receipts.
+          </dd>
+
+          <dt class="fw-700 text-dark">Academic Performance</dt>
+          <dd class="mb-2">
+            Request a report, ask about your child's progress, or discuss
+            subject difficulties.
+          </dd>
+
+          <dt class="fw-700 text-dark">Health / Medical</dt>
+          <dd class="mb-2">
+            Notify the school of a medical condition, allergy, or medication
+            your child requires.
+          </dd>
+
+          <dt class="fw-700 text-dark">Transfer Request</dt>
+          <dd class="mb-0">
+            Request to transfer your child to or from this school. Attach
+            any relevant letters.
+          </dd>
+        </dl>
+
+      </div>
+    </div>
+
+    {# Urgency hint #}
+    <div class="alert alert-warning border border-warning-subtle mt-3 small">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      <strong>Urgent requests</strong> are flagged at the top of the staff queue
+      and typically receive a same-day response. Use this only when genuinely
+      time-sensitive.
+    </div>
+
+  </div>
+
+</div>{# /row #}
+</form>
+
+{% endblock %}

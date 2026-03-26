@@ -38,13 +38,13 @@ def _get_select_context():
     (dropdown lists for FK fields).
     """
     from academics.models import Term, SchoolClass, Subject
-    from accounts.models  import Teacher
+    from accounts.models  import CustomUser
 
     return {
         'terms':         Term.objects.all(),
         'classes':       SchoolClass.objects.all(),
         'subjects':      Subject.objects.all(),
-        'teachers':      Teacher.objects.select_related('user').all(),
+        'teachers':      CustomUser.objects.select_related('user').all(),
         'type_choices':  ASSESSMENT_TYPE_CHOICES,
         'month_choices': MONTH_CHOICES,
         'venue_choices': AssessmentClass.VENUE_CHOICES,
