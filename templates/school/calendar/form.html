@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'school:calendar_list' %}" class="text-secondary">Calendars</a></li>
+{% if action == 'edit' %}
+<li class="breadcrumb-item"><a href="{% url 'school:calendar_detail' calendar.pk %}" class="text-secondary">{{ calendar.title|truncatechars:28 }}</a></li>
+<li class="breadcrumb-item active">Edit</li>
+{% else %}
+<li class="breadcrumb-item active">Add</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ form_title }}</h4>
+    <p class="text-muted small mb-0">
+      {% if action == 'edit' %}Update this calendar entry. Uniqueness enforced: one calendar per term.
+      {% else %}Add a new academic calendar. One per term is enforced.{% endif %}
+    </p>
+  </div>
+  {% if action == 'edit' %}
+  <a href="{% url 'school:calendar_detail' calendar.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+  {% else %}
+  <a href="{% url 'school:calendar_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+  {% endif %}
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+{% csrf_token %}
+<div class="row g-4">
+
+  <div class="col-12 col-lg-8">
+
+    {# Core details #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-calendar3 me-2 text-primary"></i>Calendar Details</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">Title <span class="text-danger">*</span></label>
+            <input type="text" name="title"
+              class="form-control {% if errors.title %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.title|default:'' }}{% elif action == 'edit' %}{{ calendar.title }}{% endif %}"
+              placeholder='e.g. "Term 1 2026 Academic Calendar"' maxlength="200"/>
+            {% if errors.title %}<div class="invalid-feedback">{{ errors.title }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Academic Year <span class="text-danger">*</span></label>
+            <input type="text" name="academic_year"
+              class="form-control font-monospace {% if errors.academic_year %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.academic_year|default:'' }}{% elif action == 'edit' %}{{ calendar.academic_year }}{% else %}{{ current_year }}{% endif %}"
+              placeholder="2025/2026" maxlength="9"/>
+            <div class="form-text">Format: YYYY/YYYY e.g. 2025/2026</div>
+            {% if errors.academic_year %}<div class="invalid-feedback">{{ errors.academic_year }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Term <span class="text-danger">*</span></label>
+            <select name="term" class="form-select {% if errors.term %}is-invalid{% endif %}">
+              <option value="">— Select term —</option>
+              {% for t in all_terms %}
+              <option value="{{ t.pk }}"
+                {% if post %}{% if post.term == t.pk|stringformat:"s" %}selected{% endif %}
+                {% elif action == 'edit' %}{% if calendar.term_id == t.pk %}selected{% endif %}
+                {% else %}{% if current_term and t.pk == current_term.pk %}selected{% endif %}{% endif %}>
+                Term {{ t.name }} — {{ t.academic_year }}{% if t.is_current %} (Current){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.term %}<div class="invalid-feedback">{{ errors.term }}</div>{% endif %}
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">Description <span class="text-muted fw-400">(optional)</span></label>
+            <textarea name="description" class="form-control" rows="4"
+              placeholder="Brief description of what this calendar covers."
+            >{% if post %}{{ post.description|default:'' }}{% elif action == 'edit' %}{{ calendar.description }}{% endif %}</textarea>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# Document upload #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Calendar Document <span class="text-muted fw-400 small">(optional)</span></h6>
+      </div>
+      <div class="card-body">
+        {% if action == 'edit' and calendar.document %}
+        <div class="d-flex align-items-center gap-3 mb-3 p-2 bg-light rounded border">
+          <i class="bi bi-file-earmark-pdf text-danger fs-5 flex-shrink-0"></i>
+          <div class="flex-fill">
+            <div class="fw-700 small">Current document</div>
+            <a href="{{ calendar.document.url }}" target="_blank" class="small text-primary">Download / Preview</a>
+          </div>
+          <label class="form-check mb-0">
+            <input type="checkbox" class="form-check-input" name="clear_document" value="1"/>
+            <span class="small text-danger fw-600 ms-1">Remove document</span>
+          </label>
+        </div>
+        {% endif %}
+        <input type="file" name="document" class="form-control"
+               accept=".pdf,.jpg,.jpeg,.png"/>
+        <div class="form-text">
+          Upload a PDF scan or image of the printed calendar.
+          Parents can download this from the portal.
+        </div>
+      </div>
+    </div>
+
+    {# Flags #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-toggle-on me-2 text-success"></i>Visibility &amp; Status</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12 col-sm-6">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="is_published" name="is_published" value="1"
+                {% if post %}{% if post.is_published %}checked{% endif %}
+                {% elif action == 'edit' %}{% if calendar.is_published %}checked{% endif %}{% endif %}/>
+              <label class="form-check-label fw-700" for="is_published">Published</label>
+            </div>
+            <div class="form-text ms-5">Visible to parents and staff on the portal.</div>
+          </div>
+          <div class="col-12 col-sm-6">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="is_active" name="is_active" value="1"
+                {% if post %}{% if post.is_active %}checked{% endif %}
+                {% elif action == 'edit' %}{% if calendar.is_active %}checked{% endif %}
+                {% else %}checked{% endif %}/>
+              <label class="form-check-label fw-700" for="is_active">Active</label>
+            </div>
+            <div class="form-text ms-5">Inactive calendars are hidden from public views but kept on record.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 pb-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi {% if action == 'edit' %}bi-check-lg{% else %}bi-plus-lg{% endif %} me-1"></i>
+        {% if action == 'edit' %}Save Changes{% else %}Create Calendar{% endif %}
+      </button>
+      {% if action == 'edit' %}
+      <a href="{% url 'school:calendar_detail' calendar.pk %}" class="btn btn-outline-secondary">Cancel</a>
+      {% else %}
+      <a href="{% url 'school:calendar_list' %}" class="btn btn-outline-secondary">Cancel</a>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {# Right: snapshot + guide #}
+  <div class="col-12 col-lg-4">
+    {% if action == 'edit' %}
+    <div class="card bg-light border-0 mb-4">
+      <div class="card-body small">
+        <div class="fw-700 text-muted text-uppercase mb-3" style="font-size:.72rem;">Current Values</div>
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted fw-700">Term</dt><dd class="col-7">Term {{ calendar.term.name }}</dd>
+          <dt class="col-5 text-muted fw-700">Year</dt><dd class="col-7 font-monospace">{{ calendar.academic_year }}</dd>
+          <dt class="col-5 text-muted fw-700">Published</dt>
+          <dd class="col-7">{% if calendar.is_published %}<span class="badge bg-success rounded-pill">Yes</span>{% else %}<span class="badge bg-secondary rounded-pill">Draft</span>{% endif %}</dd>
+          <dt class="col-5 text-muted fw-700">Active</dt>
+          <dd class="col-7">{% if calendar.is_active %}<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Yes</span>{% else %}<span class="badge bg-secondary rounded-pill">No</span>{% endif %}</dd>
+          <dt class="col-5 text-muted fw-700">Document</dt>
+          <dd class="col-7">{% if calendar.document %}<span class="text-success fw-700"><i class="bi bi-check-circle me-1"></i>Yes</span>{% else %}<span class="text-muted">None</span>{% endif %}</dd>
+          {% if calendar.published_at %}
+          <dt class="col-5 text-muted fw-700">Published At</dt>
+          <dd class="col-7 text-muted">{{ calendar.published_at|date:"d M Y" }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card border-primary-subtle sticky-top" style="top:76px;">
+      <div class="card-header bg-primary-subtle py-3">
+        <h6 class="fw-700 mb-0 text-primary"><i class="bi bi-lightbulb me-2"></i>Guide</h6>
+      </div>
+      <div class="card-body small text-secondary">
+        <dt class="fw-700 text-dark">Academic Year</dt>
+        <dd class="mb-2">Enter in the format <code>2025/2026</code>. This is for display purposes and does not affect date calculations.</dd>
+        <dt class="fw-700 text-dark">One per term</dt>
+        <dd class="mb-2">Only one calendar is allowed per term. If a calendar for that term already exists you will see a validation error.</dd>
+        <dt class="fw-700 text-dark">Document</dt>
+        <dd class="mb-0">Upload the PDF or image of the school's printed calendar. Parents can download it from the portal page.</dd>
+      </div>
+    </div>
+  </div>
+
+</div>
+</form>
+{% endblock %}

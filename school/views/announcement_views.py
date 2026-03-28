@@ -152,10 +152,10 @@ def announcement_list(request):
         item._is_expired = (
             item.expires_at is not None and item.expires_at < now
         )
-        item._is_active = item.is_published and not item._is_expired
-        item._priority_order = PRIORITY_ORDER.get(item.priority, 99)
-        item._audience_label = AUDIENCE_LABELS.get(item.audience, item.audience)
-        item._priority_label = PRIORITY_LABELS.get(item.priority, item.priority)
+        item.is_active = item.is_published and not item._is_expired
+        item.priority_order = PRIORITY_ORDER.get(item.priority, 99)
+        item.audience_label = AUDIENCE_LABELS.get(item.audience, item.audience)
+        item.priority_label = PRIORITY_LABELS.get(item.priority, item.priority)
 
     stats = get_announcement_list_stats()
 

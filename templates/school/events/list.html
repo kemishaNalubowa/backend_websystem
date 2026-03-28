@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}Events{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Events</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">School Events</h4>
+    <p class="text-muted small mb-0">All upcoming, active and past events</p>
+  </div>
+  <a href="{% url 'school:event_add' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Add Event
+  </a>
+</div>
+
+{# ── Stat cards — from get_event_list_stats() ── #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-dark">{{ total|default:"0" }}</div>
+      <div class="stat-label">Total</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-primary">{{ upcoming|default:"0" }}</div>
+      <div class="stat-label">Upcoming</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-success">{{ active_count|default:"0" }}</div>
+      <div class="stat-label">Active Now</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-secondary">{{ finished|default:"0" }}</div>
+      <div class="stat-label">Finished</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-info">{{ published|default:"0" }}</div>
+      <div class="stat-label">Published</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-muted">{{ draft|default:"0" }}</div>
+      <div class="stat-label">Draft</div>
+    </div>
+  </div>
+</div>
+
+{# ── Status quick pills ── #}
+<div class="d-flex gap-2 flex-wrap mb-3">
+  <a href="{% url 'school:event_list' %}" class="btn btn-sm {% if not status_filter %}btn-dark{% else %}btn-outline-secondary{% endif %}">All</a>
+  <a href="?status=upcoming" class="btn btn-sm {% if status_filter == 'upcoming' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Upcoming</a>
+  <a href="?status=active"   class="btn btn-sm {% if status_filter == 'active' %}btn-success{% else %}btn-outline-secondary{% endif %}">Active Now</a>
+  <a href="?status=finished" class="btn btn-sm {% if status_filter == 'finished' %}btn-dark{% else %}btn-outline-secondary{% endif %}">Finished</a>
+</div>
+
+{# ── Filter bar ── #}
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-12 col-md-3">
+        <label class="form-label fw-700 small mb-1">Search</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-secondary"></i></span>
+          <input type="text" name="q" class="form-control" value="{{ search }}"
+                 placeholder="Title, description or venue…"/>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Type</label>
+        <select name="type" class="form-select form-select-sm">
+          <option value="">All Types</option>
+          {% for key, label in event_type_choices %}
+          <option value="{{ key }}" {% if type_filter == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Scope</label>
+        <select name="scope" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="whole" {% if scope_filter == 'whole' %}selected{% endif %}>Whole School</option>
+          <option value="class" {% if scope_filter == 'class' %}selected{% endif %}>Class-Specific</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Year</label>
+        <select name="year" class="form-select form-select-sm">
+          <option value="">All Years</option>
+          {% for yr in years %}
+          <option value="{{ yr }}" {% if year_filter == yr|stringformat:"s" %}selected{% endif %}>{{ yr }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Published</label>
+        <select name="published" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if published_filter == '1' %}selected{% endif %}>Published</option>
+          <option value="0" {% if published_filter == '0' %}selected{% endif %}>Draft</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-1 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-funnel"></i></button>
+        {% if search or type_filter or scope_filter or year_filter or month_filter or published_filter or class_filter %}
+        <a href="{% url 'school:event_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i></a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# ── Events table — items annotated with _status, _duration, _days_until_start ── #}
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between py-3">
+    <span class="fw-700">{{ page_obj.paginator.count }} event{{ page_obj.paginator.count|pluralize }}</span>
+  </div>
+
+  {% if events %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Event</th>
+          <th>Type</th>
+          <th>Dates</th>
+          <th>Venue</th>
+          <th>Scope</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for event in events %}
+        <tr>
+          <td>
+            <a href="{% url 'school:event_detail' event.pk %}" class="fw-700 text-dark">
+              {{ event.title|truncatechars:55 }}
+            </a>
+            {% if event.attachment %}<i class="bi bi-paperclip text-muted ms-1 small"></i>{% endif %}
+          </td>
+          <td>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              {{ event.get_event_type_display }}
+            </span>
+          </td>
+          <td class="text-muted small text-nowrap">
+            {{ event.start_date|date:"d M" }}
+            {% if event.start_date != event.end_date %} – {{ event.end_date|date:"d M Y" }}{% else %}{{ event.start_date|date:", Y" }}{% endif %}
+          </td>
+          <td class="text-muted small">{{ event.venue|truncatechars:30|default:"—" }}</td>
+          <td>
+            {% if event.is_whole_school %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">School-wide</span>
+            {% else %}
+            <span class="badge bg-info-subtle text-info border border-info-subtle">Class</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if not event.is_published %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Draft</span>
+            {% elif event.status == 'upcoming' %}
+            <span class="badge bg-primary rounded-pill">Upcoming</span>
+            {% elif event.status == 'active' %}
+            <span class="badge bg-success rounded-pill"><i class="bi bi-circle-fill me-1" style="font-size:.4rem;"></i>Active</span>
+            {% else %}
+            <span class="badge bg-secondary rounded-pill">Finished</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{% url 'school:event_detail' event.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+              <a href="{% url 'school:event_edit' event.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+              <form method="post" action="{% url 'school:event_toggle_published' event.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}"/>
+                <button type="submit" class="btn btn-sm {% if event.is_published %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                  <i class="bi {% if event.is_published %}bi-eye-slash{% else %}bi-check-circle{% endif %}"></i>
+                </button>
+              </form>
+              <a href="{% url 'school:event_delete' event.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between py-3">
+    <small class="text-muted">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</small>
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&type={{ type_filter }}&status={{ status_filter }}&scope={{ scope_filter }}&published={{ published_filter }}&year={{ year_filter }}"><i class="bi bi-chevron-left"></i></a></li>{% else %}<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>{% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}<li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}<li class="page-item"><a class="page-link" href="?page={{ num }}&q={{ search }}&type={{ type_filter }}&status={{ status_filter }}&scope={{ scope_filter }}&published={{ published_filter }}&year={{ year_filter }}">{{ num }}</a></li>{% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&type={{ type_filter }}&status={{ status_filter }}&scope={{ scope_filter }}&published={{ published_filter }}&year={{ year_filter }}"><i class="bi bi-chevron-right"></i></a></li>{% else %}<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-calendar-event fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700 mb-1">No events found</div>
+    {% if search or type_filter or status_filter or scope_filter %}
+    <a href="{% url 'school:event_list' %}" class="btn btn-sm btn-outline-secondary mt-2">Clear Filters</a>
+    {% else %}
+    <a href="{% url 'school:event_add' %}" class="btn btn-sm btn-primary mt-2"><i class="bi bi-plus-lg me-1"></i>Add Event</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

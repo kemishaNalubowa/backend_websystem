@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Requirements{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Requirements</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">School Requirements</h4>
+    <p class="text-muted small mb-0">Stationery lists, uniforms, books and equipment required of students</p>
+  </div>
+  <a href="{% url 'school:requirement_add' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Add Requirement
+  </a>
+</div>
+
+{# Stat cards — from get_requirement_list_stats() #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card"><div class="stat-value text-dark">{{ total|default:"0" }}</div><div class="stat-label">Total</div></div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card"><div class="stat-value text-success">{{ published|default:"0" }}</div><div class="stat-label">Published</div></div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card"><div class="stat-value text-secondary">{{ draft|default:"0" }}</div><div class="stat-label">Draft</div></div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card"><div class="stat-value text-danger">{{ compulsory|default:"0" }}</div><div class="stat-label">Compulsory</div></div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card"><div class="stat-value text-info">{{ school_wide|default:"0" }}</div><div class="stat-label">School-wide</div></div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card"><div class="stat-value text-primary">{{ class_specific|default:"0" }}</div><div class="stat-label">Class-Specific</div></div>
+  </div>
+</div>
+
+{# Filter bar #}
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-12 col-md-3">
+        <label class="form-label fw-700 small mb-1">Search</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-secondary"></i></span>
+          <input type="text" name="q" class="form-control" value="{{ search }}" placeholder="Title or description…"/>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Category</label>
+        <select name="category" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for key, label in category_choices %}
+          <option value="{{ key }}" {% if category_filter == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Published</label>
+        <select name="published" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if published_filter == '1' %}selected{% endif %}>Published</option>
+          <option value="0" {% if published_filter == '0' %}selected{% endif %}>Draft</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Compulsory</label>
+        <select name="compulsory" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if compulsory_filter == '1' %}selected{% endif %}>Compulsory</option>
+          <option value="0" {% if compulsory_filter == '0' %}selected{% endif %}>Optional</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Scope</label>
+        <select name="scope" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="wide"  {% if scope_filter == 'wide' %}selected{% endif %}>School-wide</option>
+          <option value="class" {% if scope_filter == 'class' %}selected{% endif %}>Class-Specific</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-1 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-funnel"></i></button>
+        {% if search or category_filter or published_filter or compulsory_filter or term_filter or class_filter or scope_filter %}
+        <a href="{% url 'school:requirement_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i></a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# Table #}
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between py-3">
+    <span class="fw-700">{{ page_obj.paginator.count }} requirement{{ page_obj.paginator.count|pluralize }}</span>
+  </div>
+
+  {% if requirements %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Title</th>
+          <th>Category</th>
+          <th>Class</th>
+          <th>Term</th>
+          <th>Cost (UGX)</th>
+          <th>Compulsory</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in requirements %}
+        <tr>
+          <td>
+            <div class="fw-700">{{ req.title|truncatechars:55 }}</div>
+            {% if req.description %}
+            <div class="text-muted small text-truncate" style="max-width:200px;">{{ req.description|truncatechars:50 }}</div>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              {{ req.get_category_display }}
+            </span>
+          </td>
+          <td class="text-muted small">{{ req.school_class.display_name|default:"All Classes" }}</td>
+          <td class="text-muted small">{{ req.term|default:"—" }}</td>
+          <td class="font-monospace text-muted small">
+            {% if req.estimated_cost %}{{ req.estimated_cost|floatformat:0 }}{% else %}—{% endif %}
+          </td>
+          <td>
+            {% if req.is_compulsory %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Required</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Optional</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if req.is_published %}
+            <span class="badge bg-success rounded-pill">Published</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Draft</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{% url 'school:requirement_edit' req.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+              <form method="post" action="{% url 'school:requirement_duplicate' req.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Duplicate">
+                  <i class="bi bi-copy"></i>
+                </button>
+              </form>
+              <form method="post" action="{% url 'school:requirement_toggle_published' req.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}"/>
+                <button type="submit" class="btn btn-sm {% if req.is_published %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                  <i class="bi {% if req.is_published %}bi-eye-slash{% else %}bi-check-circle{% endif %}"></i>
+                </button>
+              </form>
+              <a href="{% url 'school:requirement_delete' req.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between py-3">
+    <small class="text-muted">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</small>
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&category={{ category_filter }}&published={{ published_filter }}&compulsory={{ compulsory_filter }}&scope={{ scope_filter }}"><i class="bi bi-chevron-left"></i></a></li>{% else %}<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>{% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}<li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}<li class="page-item"><a class="page-link" href="?page={{ num }}&q={{ search }}&category={{ category_filter }}&published={{ published_filter }}&compulsory={{ compulsory_filter }}&scope={{ scope_filter }}">{{ num }}</a></li>{% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&category={{ category_filter }}&published={{ published_filter }}&compulsory={{ compulsory_filter }}&scope={{ scope_filter }}"><i class="bi bi-chevron-right"></i></a></li>{% else %}<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-list-check fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700 mb-1">No requirements found</div>
+    {% if search or category_filter or published_filter or compulsory_filter or scope_filter %}
+    <a href="{% url 'school:requirement_list' %}" class="btn btn-sm btn-outline-secondary mt-2">Clear Filters</a>
+    {% else %}
+    <a href="{% url 'school:requirement_add' %}" class="btn btn-sm btn-primary mt-2"><i class="bi bi-plus-lg me-1"></i>Add Requirement</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

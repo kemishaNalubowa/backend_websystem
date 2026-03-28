@@ -6,7 +6,7 @@
 # Include in root urls.py as:
 #   path('school/', include('school.urls', namespace='school'))
 # ─────────────────────────────────────────────────────────────────────────────
-
+ 
 from django.urls import path
 
 from school.views.setting_views import (

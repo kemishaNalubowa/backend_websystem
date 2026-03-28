@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'school:requirement_list' %}" class="text-secondary">Requirements</a></li>
+{% if action == 'edit' %}<li class="breadcrumb-item active">Edit</li>
+{% else %}<li class="breadcrumb-item active">Add</li>{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ form_title }}</h4>
+    <p class="text-muted small mb-0">
+      {% if action == 'edit' %}Update this requirement. Use Duplicate on the list to copy across terms.
+      {% else %}Fill in the details. Leave class blank for a school-wide requirement.{% endif %}
+    </p>
+  </div>
+  <a href="{% url 'school:requirement_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+</div>
+
+<form method="post" novalidate>
+{% csrf_token %}
+<div class="row g-4">
+
+  <div class="col-12 col-lg-8">
+
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-list-check me-2 text-primary"></i>Requirement Details</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">Title <span class="text-danger">*</span></label>
+            <input type="text" name="title"
+              class="form-control {% if errors.title %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.title|default:'' }}{% elif action == 'edit' %}{{ requirement.title }}{% endif %}"
+              placeholder="e.g. 2 x 200-page exercise books per subject" maxlength="200"/>
+            {% if errors.title %}<div class="invalid-feedback">{{ errors.title }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Category <span class="text-danger">*</span></label>
+            <select name="category" class="form-select {% if errors.category %}is-invalid{% endif %}">
+              <option value="">— Select —</option>
+              {% for key, label in category_choices %}
+              <option value="{{ key }}"
+                {% if post %}{% if post.category == key %}selected{% endif %}
+                {% elif action == 'edit' %}{% if requirement.category == key %}selected{% endif %}{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.category %}<div class="invalid-feedback">{{ errors.category }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Estimated Cost (UGX) <span class="text-muted fw-400">(optional)</span></label>
+            <div class="input-group">
+              <span class="input-group-text bg-light fw-700">UGX</span>
+              <input type="text" name="estimated_cost"
+                class="form-control font-monospace {% if errors.estimated_cost %}is-invalid{% endif %}"
+                value="{% if post %}{{ post.estimated_cost|default:'' }}{% elif action == 'edit' and requirement.estimated_cost %}{{ requirement.estimated_cost|floatformat:0 }}{% endif %}"
+                placeholder="e.g. 15000"/>
+              {% if errors.estimated_cost %}<div class="invalid-feedback">{{ errors.estimated_cost }}</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">Description <span class="text-danger">*</span></label>
+            <textarea name="description" class="form-control {% if errors.description %}is-invalid{% endif %}" rows="5"
+              placeholder="Specify exactly what students should bring or buy. Be as clear as possible for parents."
+            >{% if post %}{{ post.description|default:'' }}{% elif action == 'edit' %}{{ requirement.description }}{% endif %}</textarea>
+            {% if errors.description %}<div class="invalid-feedback">{{ errors.description }}</div>{% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-building me-2 text-info"></i>Scope — Class &amp; Term</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Class <span class="text-muted fw-400">(optional)</span></label>
+            <select name="school_class" class="form-select">
+              <option value="">School-wide (all classes)</option>
+              <optgroup label="Nursery">
+                {% for cls in all_classes %}{% if cls.section == 'nursery' %}
+                <option value="{{ cls.pk }}"
+                  {% if post %}{% if post.school_class == cls.pk|stringformat:"s" %}selected{% endif %}
+                  {% elif action == 'edit' %}{% if requirement.school_class_id == cls.pk %}selected{% endif %}{% endif %}>
+                  {{ cls.display_name }}
+                </option>
+                {% endif %}{% endfor %}
+              </optgroup>
+              <optgroup label="Primary">
+                {% for cls in all_classes %}{% if cls.section == 'primary' %}
+                <option value="{{ cls.pk }}"
+                  {% if post %}{% if post.school_class == cls.pk|stringformat:"s" %}selected{% endif %}
+                  {% elif action == 'edit' %}{% if requirement.school_class_id == cls.pk %}selected{% endif %}{% endif %}>
+                  {{ cls.display_name }}
+                </option>
+                {% endif %}{% endfor %}
+              </optgroup>
+            </select>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Term <span class="text-muted fw-400">(optional)</span></label>
+            <select name="term" class="form-select">
+              <option value="">— All Terms —</option>
+              {% for t in all_terms %}
+              <option value="{{ t.pk }}"
+                {% if post %}{% if post.term == t.pk|stringformat:"s" %}selected{% endif %}
+                {% elif action == 'edit' %}{% if requirement.term_id == t.pk %}selected{% endif %}
+                {% else %}{% if current_term and t.pk == current_term.pk %}selected{% endif %}{% endif %}>
+                Term {{ t.name }} — {{ t.academic_year }}{% if t.is_current %} (Current){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-toggle-on me-2 text-success"></i>Flags</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12 col-sm-6">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="is_compulsory" name="is_compulsory" value="1"
+                {% if post %}{% if post.is_compulsory %}checked{% endif %}
+                {% elif action == 'edit' %}{% if requirement.is_compulsory %}checked{% endif %}
+                {% else %}checked{% endif %}/>
+              <label class="form-check-label fw-700" for="is_compulsory">Compulsory</label>
+            </div>
+            <div class="form-text ms-5">Required for all students in the selected class.</div>
+          </div>
+          <div class="col-12 col-sm-6">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="is_published" name="is_published" value="1"
+                {% if post %}{% if post.is_published %}checked{% endif %}
+                {% elif action == 'edit' %}{% if requirement.is_published %}checked{% endif %}{% endif %}/>
+              <label class="form-check-label fw-700" for="is_published">Published</label>
+            </div>
+            <div class="form-text ms-5">Visible to parents on the portal when published.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 pb-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi {% if action == 'edit' %}bi-check-lg{% else %}bi-plus-lg{% endif %} me-1"></i>
+        {% if action == 'edit' %}Save Changes{% else %}Add Requirement{% endif %}
+      </button>
+      <a href="{% url 'school:requirement_list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+
+  </div>
+
+  <div class="col-12 col-lg-4">
+    {% if action == 'edit' %}
+    <div class="card bg-light border-0 mb-4">
+      <div class="card-body small">
+        <div class="fw-700 text-muted text-uppercase mb-3" style="font-size:.72rem;">Current Values</div>
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted fw-700">Category</dt><dd class="col-7">{{ requirement.get_category_display }}</dd>
+          <dt class="col-5 text-muted fw-700">Class</dt><dd class="col-7">{{ requirement.school_class.display_name|default:"All Classes" }}</dd>
+          <dt class="col-5 text-muted fw-700">Term</dt><dd class="col-7">{{ requirement.term|default:"—" }}</dd>
+          <dt class="col-5 text-muted fw-700">Compulsory</dt><dd class="col-7">{% if requirement.is_compulsory %}Yes{% else %}No{% endif %}</dd>
+          <dt class="col-5 text-muted fw-700">Published</dt><dd class="col-7">{% if requirement.is_published %}<span class="badge bg-success rounded-pill">Yes</span>{% else %}<span class="badge bg-secondary rounded-pill">Draft</span>{% endif %}</dd>
+        </dl>
+      </div>
+    </div>
+    {% endif %}
+    <div class="card border-primary-subtle sticky-top" style="top:76px;">
+      <div class="card-header bg-primary-subtle py-3"><h6 class="fw-700 mb-0 text-primary"><i class="bi bi-lightbulb me-2"></i>Guide</h6></div>
+      <div class="card-body small text-secondary">
+        <dt class="fw-700 text-dark">Scope</dt>
+        <dd class="mb-2">Leave <em>Class</em> blank to apply this requirement to all classes. Leave <em>Term</em> blank for a standing requirement not tied to a specific term.</dd>
+        <dt class="fw-700 text-dark">Duplicate</dt>
+        <dd class="mb-0">Use the <strong>Duplicate</strong> button on the list to copy a requirement across terms without re-typing everything.</dd>
+      </div>
+    </div>
+  </div>
+
+</div>
+</form>
+{% endblock %}

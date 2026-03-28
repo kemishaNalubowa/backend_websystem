@@ -96,10 +96,10 @@ def annotate_events(events, today: date | None = None) -> list:
     today = today or date.today()
     result = []
     for ev in events:
-        ev._status      = get_event_status(ev, today)
-        ev._type_label  = EVENT_TYPE_LABELS.get(ev.event_type, ev.event_type)
-        ev._days_away   = (ev.start_date - today).days   # negative = in the past
-        ev._duration    = (ev.end_date - ev.start_date).days + 1
+        ev.status      = get_event_status(ev, today)
+        ev.type_label  = EVENT_TYPE_LABELS.get(ev.event_type, ev.event_type)
+        ev.days_away   = (ev.start_date - today).days   # negative = in the past
+        ev.duration    = (ev.end_date - ev.start_date).days + 1
         result.append(ev)
     return result
 

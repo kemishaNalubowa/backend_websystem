@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'school:event_list' %}" class="text-secondary">Events</a></li>
+{% if action == 'edit' %}
+<li class="breadcrumb-item"><a href="{% url 'school:event_detail' event.pk %}" class="text-secondary">{{ event.title|truncatechars:30 }}</a></li>
+<li class="breadcrumb-item active">Edit</li>
+{% else %}
+<li class="breadcrumb-item active">Add Event</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ form_title }}</h4>
+    <p class="text-muted small mb-0">
+      {% if action == 'edit' %}Update event details. M2M classes are updated alongside the record.
+      {% else %}Set dates, venue, audience and type below.{% endif %}
+    </p>
+  </div>
+  {% if action == 'edit' %}
+  <a href="{% url 'school:event_detail' event.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+  {% else %}
+  <a href="{% url 'school:event_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+  {% endif %}
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+{% csrf_token %}
+<div class="row g-4">
+
+  {# ── LEFT ── #}
+  <div class="col-12 col-lg-8">
+
+    {# Core #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-calendar-event me-2 text-primary"></i>Event Details</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">Title <span class="text-danger">*</span></label>
+            <input type="text" name="title"
+              class="form-control {% if errors.title %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.title|default:'' }}{% elif action == 'edit' %}{{ event.title }}{% endif %}"
+              placeholder="e.g. Sports Day 2026 — Inter-House Championship" maxlength="200"/>
+            {% if errors.title %}<div class="invalid-feedback">{{ errors.title }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Event Type <span class="text-danger">*</span></label>
+            <select name="event_type" class="form-select {% if errors.event_type %}is-invalid{% endif %}">
+              <option value="">— Select type —</option>
+              {% for key, label in event_type_choices %}
+              <option value="{{ key }}"
+                {% if post %}{% if post.event_type == key %}selected{% endif %}
+                {% elif action == 'edit' %}{% if event.event_type == key %}selected{% endif %}{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.event_type %}<div class="invalid-feedback">{{ errors.event_type }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Venue</label>
+            <input type="text" name="venue"
+              class="form-control"
+              value="{% if post %}{{ post.venue|default:'' }}{% elif action == 'edit' %}{{ event.venue }}{% endif %}"
+              placeholder="e.g. School Playground, Assembly Hall" maxlength="200"/>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">Description</label>
+            <textarea name="description" class="form-control" rows="4"
+              placeholder="Additional details about the event (optional)."
+            >{% if post %}{{ post.description|default:'' }}{% elif action == 'edit' %}{{ event.description }}{% endif %}</textarea>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# Dates & Times #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-clock me-2 text-warning"></i>Dates &amp; Times</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-6">
+            <label class="form-label fw-700 small">Start Date <span class="text-danger">*</span></label>
+            <input type="date" name="start_date"
+              class="form-control {% if errors.start_date %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.start_date|default:'' }}{% elif action == 'edit' %}{{ event.start_date|date:'Y-m-d' }}{% endif %}"/>
+            {% if errors.start_date %}<div class="invalid-feedback">{{ errors.start_date }}</div>{% endif %}
+          </div>
+
+          <div class="col-6">
+            <label class="form-label fw-700 small">End Date <span class="text-danger">*</span></label>
+            <input type="date" name="end_date"
+              class="form-control {% if errors.end_date %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.end_date|default:'' }}{% elif action == 'edit' %}{{ event.end_date|date:'Y-m-d' }}{% endif %}"/>
+            {% if errors.end_date %}<div class="invalid-feedback">{{ errors.end_date }}</div>{% endif %}
+          </div>
+
+          <div class="col-6">
+            <label class="form-label fw-700 small">Start Time</label>
+            <input type="time" name="start_time" class="form-control"
+              value="{% if post %}{{ post.start_time|default:'' }}{% elif action == 'edit' and event.start_time %}{{ event.start_time|time:'H:i' }}{% endif %}"/>
+          </div>
+
+          <div class="col-6">
+            <label class="form-label fw-700 small">End Time</label>
+            <input type="time" name="end_time" class="form-control"
+              value="{% if post %}{{ post.end_time|default:'' }}{% elif action == 'edit' and event.end_time %}{{ event.end_time|time:'H:i' }}{% endif %}"/>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# Scope & Classes #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-people me-2 text-info"></i>Scope</h6>
+      </div>
+      <div class="card-body">
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" role="switch"
+            id="is_whole_school" name="is_whole_school" value="1"
+            {% if post %}{% if post.is_whole_school %}checked{% endif %}
+            {% elif action == 'edit' %}{% if event.is_whole_school %}checked{% endif %}
+            {% else %}checked{% endif %}/>
+          <label class="form-check-label fw-700" for="is_whole_school">Whole School Event</label>
+        </div>
+        <div class="form-text mb-3">
+          Uncheck to select specific classes. The M2M link is only saved when
+          <em>Whole School</em> is unchecked.
+        </div>
+        <div class="row g-2">
+          {% for cls in all_classes %}
+          <div class="col-6 col-sm-4 col-md-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox"
+                name="school_classes" id="cls_{{ cls.pk }}" value="{{ cls.pk }}"
+                {% if cls.pk in selected_class_ids %}checked{% endif %}/>
+              <label class="form-check-label small fw-600" for="cls_{{ cls.pk }}">
+                {{ cls.display_name }}
+              </label>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# Attachment & visibility #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-paperclip me-2 text-secondary"></i>Attachment &amp; Visibility</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12 col-sm-6">
+            {% if action == 'edit' and event.attachment %}
+            <label class="form-label fw-700 small">Current Attachment</label>
+            <div class="d-flex align-items-center gap-2 mb-2 p-2 bg-light rounded border">
+              <i class="bi bi-file-earmark text-secondary"></i>
+              <a href="{{ event.attachment.url }}" target="_blank" class="small text-primary fw-700">Download</a>
+              <label class="form-check ms-auto mb-0">
+                <input type="checkbox" class="form-check-input" name="clear_attachment" value="1"/> <span class="small text-danger fw-600">Remove</span>
+              </label>
+            </div>
+            {% endif %}
+            <label class="form-label fw-700 small">
+              {% if action == 'edit' and event.attachment %}Replace File{% else %}Attachment{% endif %}
+            </label>
+            <input type="file" name="attachment" class="form-control"
+                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"/>
+            <div class="form-text">Event notice, programme or invitation.</div>
+          </div>
+          <div class="col-12 col-sm-6 d-flex align-items-center">
+            <div class="form-check form-switch mt-3">
+              <input class="form-check-input" type="checkbox" role="switch"
+                id="is_published" name="is_published" value="1"
+                {% if post %}{% if post.is_published %}checked{% endif %}
+                {% elif action == 'edit' %}{% if event.is_published %}checked{% endif %}{% endif %}/>
+              <label class="form-check-label fw-700" for="is_published">Published</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Organiser #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-person-workspace me-2 text-success"></i>Organiser</h6>
+      </div>
+      <div class="card-body">
+        <select name="organized_by" class="form-select">
+          <option value="">— Not assigned —</option>
+          {% for staff in all_staff %}
+          <option value="{{ staff.pk }}"
+            {% if post %}{% if post.organized_by == staff.pk|stringformat:"s" %}selected{% endif %}
+            {% elif action == 'edit' %}{% if event.organized_by_id == staff.pk %}selected{% endif %}{% endif %}>
+            {{ staff.get_full_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 pb-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi {% if action == 'edit' %}bi-check-lg{% else %}bi-plus-lg{% endif %} me-1"></i>
+        {% if action == 'edit' %}Save Changes{% else %}Create Event{% endif %}
+      </button>
+      {% if action == 'edit' %}
+      <a href="{% url 'school:event_detail' event.pk %}" class="btn btn-outline-secondary">Cancel</a>
+      {% else %}
+      <a href="{% url 'school:event_list' %}" class="btn btn-outline-secondary">Cancel</a>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {# ── RIGHT ── #}
+  <div class="col-12 col-lg-4">
+    {% if action == 'edit' %}
+    <div class="card bg-light border-0 mb-4">
+      <div class="card-body small">
+        <div class="fw-700 text-muted text-uppercase mb-3" style="font-size:.72rem;">Current Values</div>
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted fw-700">Type</dt><dd class="col-7">{{ event.get_event_type_display }}</dd>
+          <dt class="col-5 text-muted fw-700">Starts</dt><dd class="col-7">{{ event.start_date|date:"d M Y" }}</dd>
+          <dt class="col-5 text-muted fw-700">Ends</dt><dd class="col-7">{{ event.end_date|date:"d M Y" }}</dd>
+          <dt class="col-5 text-muted fw-700">Scope</dt><dd class="col-7">{% if event.is_whole_school %}School-wide{% else %}Class-specific{% endif %}</dd>
+          <dt class="col-5 text-muted fw-700">Published</dt><dd class="col-7">{% if event.is_published %}<span class="badge bg-success rounded-pill">Yes</span>{% else %}<span class="badge bg-secondary rounded-pill">Draft</span>{% endif %}</dd>
+        </dl>
+      </div>
+    </div>
+    {% endif %}
+    <div class="card border-primary-subtle sticky-top" style="top:76px;">
+      <div class="card-header bg-primary-subtle py-3">
+        <h6 class="fw-700 mb-0 text-primary"><i class="bi bi-lightbulb me-2"></i>Guide</h6>
+      </div>
+      <div class="card-body small text-secondary">
+        <dt class="fw-700 text-dark">Whole School vs Class</dt>
+        <dd class="mb-2">Toggle <em>Whole School</em> to include every class. Uncheck to select specific classes below.</dd>
+        <dt class="fw-700 text-dark">Dates</dt>
+        <dd class="mb-2">Multi-day events: set Start Date and End Date spanning the full duration.</dd>
+        <dt class="fw-700 text-dark">Attachment</dt>
+        <dd class="mb-0">Upload a PDF notice or programme that parents and staff can download from the event page.</dd>
+      </div>
+    </div>
+  </div>
+
+</div>
+</form>
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}School Calendars{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Calendars</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">School Calendars</h4>
+    <p class="text-muted small mb-0">Published academic calendars by term and year</p>
+  </div>
+  <a href="{% url 'school:calendar_add' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Add Calendar
+  </a>
+</div>
+
+{# ── Stat cards — from get_calendar_list_stats()
+   Keys: total, published, draft, active, inactive,
+         with_document, without_document
+── #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card"><div class="stat-value text-dark">{{ total|default:"0" }}</div><div class="stat-label">Total</div></div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card"><div class="stat-value text-success">{{ published|default:"0" }}</div><div class="stat-label">Published</div></div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card"><div class="stat-value text-secondary">{{ draft|default:"0" }}</div><div class="stat-label">Draft</div></div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card"><div class="stat-value text-primary">{{ active|default:"0" }}</div><div class="stat-label">Active</div></div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card"><div class="stat-value text-muted">{{ inactive|default:"0" }}</div><div class="stat-label">Inactive</div></div>
+  </div>
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card"><div class="stat-value text-info">{{ with_document|default:"0" }}</div><div class="stat-label">With Document</div></div>
+  </div>
+</div>
+
+{# ── Filter bar
+   GET params: q, year, term, published, active, document
+   Context: all_terms
+── #}
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-12 col-md-3">
+        <label class="form-label fw-700 small mb-1">Search</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-secondary"></i></span>
+          <input type="text" name="q" class="form-control" value="{{ search }}"
+                 placeholder="Title, description or year…"/>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Term</label>
+        <select name="term" class="form-select form-select-sm">
+          <option value="">All Terms</option>
+          {% for t in all_terms %}
+          <option value="{{ t.pk }}" {% if term_filter == t.pk|stringformat:"s" %}selected{% endif %}>
+            Term {{ t.name }} ({{ t.academic_year }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Published</label>
+        <select name="published" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if published_filter == '1' %}selected{% endif %}>Published</option>
+          <option value="0" {% if published_filter == '0' %}selected{% endif %}>Draft</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Active</label>
+        <select name="active" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if active_filter == '1' %}selected{% endif %}>Active</option>
+          <option value="0" {% if active_filter == '0' %}selected{% endif %}>Inactive</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Document</label>
+        <select name="document" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if document_filter == '1' %}selected{% endif %}>Has Document</option>
+          <option value="0" {% if document_filter == '0' %}selected{% endif %}>No Document</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-1 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-funnel"></i></button>
+        {% if search or term_filter or published_filter or active_filter or document_filter or year_filter %}
+        <a href="{% url 'school:calendar_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i></a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# ── Table ── #}
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between py-3">
+    <span class="fw-700">{{ page_obj.paginator.count }} calendar{{ page_obj.paginator.count|pluralize }}</span>
+  </div>
+
+  {% if calendars %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Title</th>
+          <th>Term</th>
+          <th>Year</th>
+          <th>Document</th>
+          <th>Published</th>
+          <th>Active</th>
+          <th>Created By</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cal in calendars %}
+        <tr class="{% if not cal.is_active %}opacity-75{% endif %}">
+
+          <td>
+            <a href="{% url 'school:calendar_detail' cal.pk %}" class="fw-700 text-dark">
+              {{ cal.title|truncatechars:55 }}
+            </a>
+            {% if cal.description %}
+            <div class="text-muted small text-truncate" style="max-width:220px;">{{ cal.description|truncatechars:50 }}</div>
+            {% endif %}
+          </td>
+
+          <td class="text-muted small">Term {{ cal.term.name }}</td>
+
+          <td class="fw-600 font-monospace small">{{ cal.academic_year }}</td>
+
+          <td>
+            {% if cal.document %}
+            <a href="{{ cal.document.url }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2">
+              <i class="bi bi-file-earmark-arrow-down"></i>
+            </a>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if cal.is_published %}
+            <span class="badge bg-success rounded-pill">Published</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Draft</span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if cal.is_active %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Active</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Inactive</span>
+            {% endif %}
+          </td>
+
+          <td class="text-muted small">{{ cal.created_by.get_full_name|default:"—" }}</td>
+
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{% url 'school:calendar_detail' cal.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+              <a href="{% url 'school:calendar_edit' cal.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+              <form method="post" action="{% url 'school:calendar_toggle_published' cal.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}"/>
+                <button type="submit" class="btn btn-sm {% if cal.is_published %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                  <i class="bi {% if cal.is_published %}bi-eye-slash{% else %}bi-check-circle{% endif %}"></i>
+                </button>
+              </form>
+              <form method="post" action="{% url 'school:calendar_toggle_active' cal.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}"/>
+                <button type="submit" class="btn btn-sm {% if cal.is_active %}btn-outline-dark{% else %}btn-outline-info{% endif %}" title="{% if cal.is_active %}Deactivate{% else %}Activate{% endif %}">
+                  <i class="bi {% if cal.is_active %}bi-toggle-on{% else %}bi-toggle-off{% endif %}"></i>
+                </button>
+              </form>
+              <a href="{% url 'school:calendar_delete' cal.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between py-3">
+    <small class="text-muted">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</small>
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&term={{ term_filter }}&published={{ published_filter }}&active={{ active_filter }}&document={{ document_filter }}"><i class="bi bi-chevron-left"></i></a></li>{% else %}<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>{% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}<li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}<li class="page-item"><a class="page-link" href="?page={{ num }}&q={{ search }}&term={{ term_filter }}&published={{ published_filter }}&active={{ active_filter }}&document={{ document_filter }}">{{ num }}</a></li>{% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&term={{ term_filter }}&published={{ published_filter }}&active={{ active_filter }}&document={{ document_filter }}"><i class="bi bi-chevron-right"></i></a></li>{% else %}<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-calendar3 fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700 mb-1">No calendars found</div>
+    {% if search or term_filter or published_filter or active_filter or document_filter %}
+    <a href="{% url 'school:calendar_list' %}" class="btn btn-sm btn-outline-secondary mt-2">Clear Filters</a>
+    {% else %}
+    <a href="{% url 'school:calendar_add' %}" class="btn btn-sm btn-primary mt-2"><i class="bi bi-plus-lg me-1"></i>Add Calendar</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'school:event_list' %}" class="text-secondary">Events</a></li>
+<li class="breadcrumb-item active">{{ event.title|truncatechars:35 }}</li>
+{% endblock %}
+
+{% block content %}
+
+{# Prev / Next from get_event_detail_stats() #}
+{% if prev_event or next_event %}
+<div class="d-flex justify-content-between mb-3">
+  {% if prev_event %}<a href="{% url 'school:event_detail' prev_event.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left me-1"></i>{{ prev_event.title|truncatechars:28 }}</a>{% else %}<span></span>{% endif %}
+  {% if next_event %}<a href="{% url 'school:event_detail' next_event.pk %}" class="btn btn-sm btn-outline-secondary">{{ next_event.title|truncatechars:28 }}<i class="bi bi-chevron-right ms-1"></i></a>{% endif %}
+</div>
+{% endif %}
+
+{# Header #}
+<div class="d-flex align-items-start justify-content-between mb-4 gap-3 flex-wrap">
+  <div>
+    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+      <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ event.get_event_type_display }}</span>
+      {% if not event.is_published %}
+      <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Draft</span>
+      {% elif status == 'upcoming' %}
+      <span class="badge bg-primary rounded-pill">Upcoming</span>
+      {% elif status == 'active' %}
+      <span class="badge bg-success rounded-pill"><i class="bi bi-circle-fill me-1" style="font-size:.4rem;"></i>Active Now</span>
+      {% else %}
+      <span class="badge bg-secondary rounded-pill">Finished</span>
+      {% endif %}
+    </div>
+    <h4 class="fw-800 mb-1">{{ event.title }}</h4>
+    <div class="text-muted small d-flex gap-3 flex-wrap">
+      <span><i class="bi bi-calendar3 me-1"></i>{{ event.start_date|date:"d M Y" }}{% if event.start_date != event.end_date %} – {{ event.end_date|date:"d M Y" }}{% endif %}</span>
+      {% if event.start_time %}<span><i class="bi bi-clock me-1"></i>{{ event.start_time|time:"H:i" }}{% if event.end_time %} – {{ event.end_time|time:"H:i" }}{% endif %}</span>{% endif %}
+      {% if event.venue %}<span><i class="bi bi-geo-alt me-1"></i>{{ event.venue }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'school:event_edit' event.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i>Edit</a>
+    <form method="post" action="{% url 'school:event_toggle_published' event.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm {% if event.is_published %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+        <i class="bi {% if event.is_published %}bi-eye-slash{% else %}bi-check-circle{% endif %} me-1"></i>
+        {% if event.is_published %}Unpublish{% else %}Publish{% endif %}
+      </button>
+    </form>
+    <a href="{% url 'school:event_delete' event.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+  </div>
+</div>
+
+{# Countdown / duration strip #}
+{% if days_until_start is not None or duration_days %}
+<div class="row g-3 mb-4">
+  {% if days_until_start is not None %}
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value {% if days_until_start > 0 %}text-primary{% elif days_until_start == 0 %}text-success{% else %}text-muted{% endif %}">
+        {% if days_until_start > 0 %}{{ days_until_start }}{% elif days_until_start == 0 %}Today{% else %}{{ days_until_start|cut:"-" }}{% endif %}
+      </div>
+      <div class="stat-label">{% if days_until_start > 0 %}Days Until Start{% elif days_until_start == 0 %}Starts Today{% else %}Days Since Ended{% endif %}</div>
+    </div>
+  </div>
+  {% endif %}
+  {% if duration_days %}
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-value text-info">{{ duration_days }}</div>
+      <div class="stat-label">Day{{ duration_days|pluralize }} Duration</div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="row g-4">
+  {# LEFT: content #}
+  <div class="col-12 col-lg-8">
+    {% if event.description %}
+    <div class="card mb-4">
+      <div class="card-header py-3"><h6 class="fw-700 mb-0"><i class="bi bi-text-paragraph me-2 text-primary"></i>Description</h6></div>
+      <div class="card-body">
+        <p style="white-space:pre-wrap;line-height:1.8;">{{ event.description }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Classes involved #}
+    {% if not event.is_whole_school %}
+    <div class="card mb-4">
+      <div class="card-header py-3"><h6 class="fw-700 mb-0"><i class="bi bi-building me-2 text-info"></i>Classes Involved</h6></div>
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+          {% for cls in event.school_classes.all %}
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+            {{ cls.display_name }}
+          </span>
+          {% empty %}
+          <span class="text-muted small">No specific classes linked.</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Related events #}
+    {% if related_events %}
+    <div class="card">
+      <div class="card-header py-3"><h6 class="fw-700 mb-0"><i class="bi bi-grid me-2 text-secondary"></i>Related Events</h6></div>
+      <div class="list-group list-group-flush">
+        {% for rel in related_events %}
+        <a href="{% url 'school:event_detail' rel.pk %}" class="list-group-item list-group-item-action py-2 px-3 small">
+          <div class="fw-700">{{ rel.title }}</div>
+          <div class="text-muted" style="font-size:.72rem;">{{ rel.start_date|date:"d M Y" }} · {{ rel.get_event_type_display }}</div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# RIGHT: meta #}
+  <div class="col-12 col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header py-3"><h6 class="fw-700 mb-0"><i class="bi bi-info-circle me-2 text-primary"></i>Event Details</h6></div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Type</dt>
+          <dd class="col-7">{{ event.get_event_type_display }}</dd>
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Start</dt>
+          <dd class="col-7">{{ event.start_date|date:"d M Y" }}</dd>
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">End</dt>
+          <dd class="col-7">{{ event.end_date|date:"d M Y" }}</dd>
+          {% if event.start_time %}
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Time</dt>
+          <dd class="col-7">{{ event.start_time|time:"H:i" }}{% if event.end_time %} – {{ event.end_time|time:"H:i" }}{% endif %}</dd>
+          {% endif %}
+          {% if event.venue %}
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Venue</dt>
+          <dd class="col-7">{{ event.venue }}</dd>
+          {% endif %}
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Scope</dt>
+          <dd class="col-7">
+            {% if event.is_whole_school %}<span class="badge bg-success-subtle text-success border border-success-subtle">School-wide</span>
+            {% else %}<span class="badge bg-info-subtle text-info border border-info-subtle">{{ event.school_classes.count }} class{{ event.school_classes.count|pluralize:"es" }}</span>{% endif %}
+          </dd>
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Status</dt>
+          <dd class="col-7">{% if event.is_published %}<span class="badge bg-success rounded-pill">Published</span>{% else %}<span class="badge bg-secondary rounded-pill">Draft</span>{% endif %}</dd>
+          {% if event.organized_by %}
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.68rem;">Organiser</dt>
+          <dd class="col-7">{{ event.organized_by.get_full_name }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+    {% if event.attachment %}
+    <div class="card border-0 bg-light">
+      <div class="card-body">
+        <a href="{{ event.attachment.url }}" target="_blank" class="btn btn-outline-primary w-100 btn-sm">
+          <i class="bi bi-file-earmark-arrow-down me-2"></i>Download Event Programme
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

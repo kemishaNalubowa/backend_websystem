@@ -12,6 +12,7 @@ urlpatterns = [
     path("assessments/", include("assessments.urls",  namespace="assessments")),
     path("communication/", include("communication.urls",  namespace="communication")),
     path("fees/", include("fees.urls",  namespace="fees")),
+    path("school/", include("school.urls",  namespace="school")),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

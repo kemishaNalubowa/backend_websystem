@@ -30,7 +30,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from academics.models import SchoolClass
-from accounts.models import User
+from authentication.models import CustomUser
 from school.models import SchoolEvent
 from school.utils.event_utils import (
     EVENT_TYPE_LABELS,
@@ -54,8 +54,8 @@ def _get_form_lookups() -> dict:
         'all_classes':        SchoolClass.objects.filter(
                                   is_active=True
                               ).order_by('section', 'level', 'stream'),
-        'all_staff':          User.objects.filter(
-                                  role__in=('admin', 'head_teacher', 'teacher', 'staff')
+        'all_staff':          CustomUser.objects.filter(
+                                  user_type__in=('admin', 'head_teacher', 'teacher', 'staff')
                               ).order_by('last_name', 'first_name'),
         'event_type_choices': _EVENT_TYPE_CHOICES,
     }
