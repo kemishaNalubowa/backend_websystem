@@ -1,0 +1,546 @@
+{% extends "base.html" %}
+
+{% block title %}Fee Structures{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'fees:fees_list' %}" class="text-secondary">Fees</a></li>
+<li class="breadcrumb-item active" aria-current="page">Fee Structures</li>
+{% endblock %}
+
+{% block content %}
+
+{# ══════════════════════════════════════════════════════
+   PAGE HEADER
+══════════════════════════════════════════════════════ #}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">Fee Structures</h4>
+    <p class="text-muted small mb-0">All school fee structures across classes and terms</p>
+  </div>
+  <a href="{% url 'fees:fees_add' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Add Fee Structure
+  </a>
+</div>
+
+{# ══════════════════════════════════════════════════════
+   STAT CARDS
+   Context from get_fees_list_stats():
+     total, active, inactive, compulsory, optional,
+     total_amount, compulsory_amount, optional_amount,
+     highest_fee, lowest_fee, average_fee, overdue
+══════════════════════════════════════════════════════ #}
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-dark">{{ total|default:"0" }}</div>
+      <div class="stat-label">Total</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-success">{{ active|default:"0" }}</div>
+      <div class="stat-label">Active</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-secondary">{{ inactive|default:"0" }}</div>
+      <div class="stat-label">Inactive</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-primary">{{ compulsory|default:"0" }}</div>
+      <div class="stat-label">Compulsory</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-info">{{ optional|default:"0" }}</div>
+      <div class="stat-label">Optional</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-danger">{{ overdue|default:"0" }}</div>
+      <div class="stat-label">Overdue</div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Money summary banner ── #}
+<div class="card mb-4 border-0 bg-dark text-white">
+  <div class="card-body py-3">
+    <div class="row g-0 text-center">
+      <div class="col-4 border-end border-secondary">
+        <div class="small text-white-50 fw-700 text-uppercase mb-1" style="font-size:0.65rem;letter-spacing:.08em;">Total Active (UGX)</div>
+        <div class="fw-800 font-monospace" style="font-size:1.1rem;">{{ total_amount|floatformat:0 }}</div>
+      </div>
+      <div class="col-4 border-end border-secondary">
+        <div class="small text-white-50 fw-700 text-uppercase mb-1" style="font-size:0.65rem;letter-spacing:.08em;">Compulsory (UGX)</div>
+        <div class="fw-800 font-monospace text-success" style="font-size:1.1rem;">{{ compulsory_amount|floatformat:0 }}</div>
+      </div>
+      <div class="col-4">
+        <div class="small text-white-50 fw-700 text-uppercase mb-1" style="font-size:0.65rem;letter-spacing:.08em;">Optional (UGX)</div>
+        <div class="fw-800 font-monospace text-info" style="font-size:1.1rem;">{{ optional_amount|floatformat:0 }}</div>
+      </div>
+    </div>
+    <div class="row g-0 text-center mt-3 pt-3 border-top border-secondary">
+      <div class="col-4">
+        <div class="small text-white-50 mb-1" style="font-size:0.7rem;">Highest</div>
+        <div class="fw-700 font-monospace">{{ highest_fee|floatformat:0 }}</div>
+      </div>
+      <div class="col-4">
+        <div class="small text-white-50 mb-1" style="font-size:0.7rem;">Average</div>
+        <div class="fw-700 font-monospace">{{ average_fee|floatformat:0 }}</div>
+      </div>
+      <div class="col-4">
+        <div class="small text-white-50 mb-1" style="font-size:0.7rem;">Lowest</div>
+        <div class="fw-700 font-monospace">{{ lowest_fee|floatformat:0 }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ══════════════════════════════════════════════════════
+   BY-TYPE + BY-TERM BREAKDOWNS (side by side)
+   Context: by_type (list with label, count, total_amount)
+            by_term (list with term__name, count, total_amount)
+══════════════════════════════════════════════════════ #}
+{% if by_type or by_term %}
+<div class="row g-4 mb-4">
+
+  {% if by_type %}
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-tags me-2 text-primary"></i>By Fee Type</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Fee Type</th>
+              <th class="text-center">Structures</th>
+              <th class="text-end">Total (UGX)</th>
+              <th style="width:100px;">Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in by_type %}
+            <tr>
+              <td class="fw-700">{{ row.label }}</td>
+              <td class="text-center text-muted">{{ row.count }}</td>
+              <td class="text-end font-monospace fw-700">{{ row.total_amount|floatformat:0 }}</td>
+              <td>
+                {% if total_amount %}
+                {% widthratio row.total_amount total_amount 100 as pct %}
+                <div class="d-flex align-items-center gap-1">
+                  <div class="progress flex-fill" style="height:5px;">
+                    <div class="progress-bar bg-primary" style="width:{{ pct }}%;"></div>
+                  </div>
+                  <span class="text-muted" style="font-size:0.7rem;min-width:28px;">{{ pct }}%</span>
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if by_term %}
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-calendar3 me-2 text-success"></i>By Term (last 6)</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Term</th>
+              <th class="text-center">Structures</th>
+              <th class="text-end">Total (UGX)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in by_term %}
+            <tr>
+              <td class="fw-700">
+                Term {{ row.term__name }}
+                <span class="text-muted fw-400">({{ row.term__start_date|date:"Y" }})</span>
+              </td>
+              <td class="text-center text-muted">{{ row.count }}</td>
+              <td class="text-end font-monospace fw-700">{{ row.total_amount|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════════════════
+   CURRENT TERM FEE STRIP
+   Context: current_term, current_term_fees (qs), current_term_total
+══════════════════════════════════════════════════════ #}
+{% if current_term and current_term_fees %}
+<div class="card mb-4 border-success-subtle">
+  <div class="card-header py-3 bg-success-subtle border-success-subtle d-flex align-items-center justify-content-between">
+    <h6 class="fw-700 mb-0 text-success">
+      <i class="bi bi-circle-fill me-2" style="font-size:.55rem;"></i>
+      Current Term — Term {{ current_term.name }} ({{ current_term.academic_year }})
+    </h6>
+    <span class="fw-700 font-monospace small text-success">
+      UGX {{ current_term_total|floatformat:0 }}
+    </span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>Class</th>
+          <th>Fee Type</th>
+          <th class="text-end">Amount (UGX)</th>
+          <th>Compulsory</th>
+          <th>Active</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in current_term_fees %}
+        <tr>
+          <td class="fw-600">{{ f.school_class.display_name }}</td>
+          <td>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              {{ f.get_fees_type_display }}
+            </span>
+          </td>
+          <td class="text-end font-monospace fw-700">{{ f.amount|floatformat:0 }}</td>
+          <td>
+            {% if f.is_compulsory %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Required</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Optional</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if f.is_active %}
+            <span class="badge bg-success rounded-pill">Active</span>
+            {% else %}
+            <span class="badge bg-secondary rounded-pill">Inactive</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════════════════
+   FILTER BAR
+   All 8 GET params: q, type, term, class, section,
+                     active, compulsory, overdue
+   Context: fees_type_choices, class_level_choices, terms
+══════════════════════════════════════════════════════ #}
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-12 col-md-4">
+        <label class="form-label fw-700 small mb-1">Search</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-secondary"></i></span>
+          <input type="text" name="q" class="form-control" value="{{ search }}"
+                 placeholder="Fee type name or description…"/>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Fee Type</label>
+        <select name="type" class="form-select form-select-sm">
+          <option value="">All Types</option>
+          {% for key, label in fees_type_choices %}
+          <option value="{{ key }}" {% if type_filter == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Term</label>
+        <select name="term" class="form-select form-select-sm">
+          <option value="">All Terms</option>
+          {% for t in terms %}
+          <option value="{{ t.pk }}" {% if term_filter == t.pk|stringformat:"s" %}selected{% endif %}>
+            Term {{ t.name }} ({{ t.academic_year }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Class</label>
+        <select name="class" class="form-select form-select-sm">
+          <option value="">All Classes</option>
+          {% for key, label in class_level_choices %}
+          <option value="{{ key }}" {% if class_filter == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Section</label>
+        <select name="section" class="form-select form-select-sm">
+          <option value="">All Sections</option>
+          <option value="nursery" {% if section_filter == 'nursery' %}selected{% endif %}>Nursery</option>
+          <option value="primary" {% if section_filter == 'primary' %}selected{% endif %}>Primary</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Status</label>
+        <select name="active" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if active_filter == '1' %}selected{% endif %}>Active</option>
+          <option value="0" {% if active_filter == '0' %}selected{% endif %}>Inactive</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Compulsory</label>
+        <select name="compulsory" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if compulsory_filter == '1' %}selected{% endif %}>Compulsory</option>
+          <option value="0" {% if compulsory_filter == '0' %}selected{% endif %}>Optional</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Overdue</label>
+        <select name="overdue" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if overdue_filter == '1' %}selected{% endif %}>Overdue Only</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill">
+          <i class="bi bi-funnel me-1"></i>Filter
+        </button>
+        {% if search or type_filter or term_filter or class_filter or section_filter or active_filter or compulsory_filter or overdue_filter %}
+        <a href="{% url 'fees:fees_list' %}" class="btn btn-outline-secondary btn-sm" title="Clear">
+          <i class="bi bi-x-lg"></i>
+        </a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# ══════════════════════════════════════════════════════
+   FEE STRUCTURES TABLE
+   Context: fees (annotated list — _type_label, _is_overdue)
+            page_obj
+   Fields: school_class, term, fees_type (_type_label),
+           amount, due_date (_is_overdue), is_compulsory,
+           is_active, description
+══════════════════════════════════════════════════════ #}
+<div class="card">
+
+  <div class="card-header d-flex align-items-center justify-content-between py-3">
+    <span class="fw-700">
+      {{ page_obj.paginator.count }} fee structure{{ page_obj.paginator.count|pluralize }}
+      {% if search or type_filter or term_filter or class_filter or section_filter or active_filter or compulsory_filter or overdue_filter %}
+      <span class="text-muted fw-400 small ms-1">(filtered)</span>
+      {% endif %}
+    </span>
+    {% if page_obj.paginator.count %}
+    <span class="text-muted small">
+      Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if fees %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Class</th>
+          <th>Term</th>
+          <th>Fee Type</th>
+          <th class="text-end">Amount (UGX)</th>
+          <th>Due Date</th>
+          <th>Compulsory</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fee in fees %}
+        <tr class="{% if fee._is_overdue %}table-warning{% elif not fee.is_active %}opacity-75{% endif %}">
+
+          <td class="fw-700">{{ fee.school_class.display_name }}</td>
+
+          <td class="text-muted small">
+            Term {{ fee.term.name }}
+            <span class="d-block" style="font-size:0.72rem;">{{ fee.term.academic_year }}</span>
+          </td>
+
+          <td>
+            <a href="{% url 'fees:fees_detail' fee.pk %}"
+               class="fw-700 text-dark text-decoration-none">
+              {{ fee._type_label }}
+            </a>
+            {% if fee.description %}
+            <div class="text-muted text-truncate small" style="max-width:200px;">
+              {{ fee.description }}
+            </div>
+            {% endif %}
+          </td>
+
+          <td class="text-end fw-800 font-monospace">{{ fee.amount|floatformat:0 }}</td>
+
+          <td class="small text-nowrap">
+            {% if fee.due_date %}
+              {% if fee._is_overdue %}
+              <span class="text-danger fw-700">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                {{ fee.due_date|date:"d M Y" }}
+              </span>
+              {% else %}
+              <span class="text-muted">{{ fee.due_date|date:"d M Y" }}</span>
+              {% endif %}
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if fee.is_compulsory %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Required</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Optional</span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if fee.is_active %}
+            <span class="badge bg-success rounded-pill">Active</span>
+            {% else %}
+            <span class="badge bg-secondary rounded-pill">Inactive</span>
+            {% endif %}
+          </td>
+
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{% url 'fees:fees_detail' fee.pk %}"
+                 class="btn btn-sm btn-outline-secondary" title="View">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'fees:fees_edit' fee.pk %}"
+                 class="btn btn-sm btn-outline-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form method="post" action="{% url 'fees:fees_toggle_active' fee.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}"/>
+                <button type="submit"
+                  class="btn btn-sm {% if fee.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+                  title="{% if fee.is_active %}Deactivate{% else %}Activate{% endif %}">
+                  <i class="bi {% if fee.is_active %}bi-toggle-on{% else %}bi-toggle-off{% endif %}"></i>
+                </button>
+              </form>
+              <a href="{% url 'fees:fees_delete' fee.pk %}"
+                 class="btn btn-sm btn-outline-danger" title="Delete">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Pagination — preserves all 8 filters #}
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between py-3">
+    <small class="text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</small>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&type={{ type_filter }}&term={{ term_filter }}&class={{ class_filter }}&section={{ section_filter }}&active={{ active_filter }}&compulsory={{ compulsory_filter }}&overdue={{ overdue_filter }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&q={{ search }}&type={{ type_filter }}&term={{ term_filter }}&class={{ class_filter }}&section={{ section_filter }}&active={{ active_filter }}&compulsory={{ compulsory_filter }}&overdue={{ overdue_filter }}">
+              {{ num }}
+            </a>
+          </li>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&type={{ type_filter }}&term={{ term_filter }}&class={{ class_filter }}&section={{ section_filter }}&active={{ active_filter }}&compulsory={{ compulsory_filter }}&overdue={{ overdue_filter }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
+        {% endif %}
+
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-cash-coin fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700 mb-1">No fee structures found</div>
+    {% if search or type_filter or term_filter or class_filter or section_filter or active_filter or compulsory_filter or overdue_filter %}
+    <div class="small mb-3">Try adjusting your filters.</div>
+    <a href="{% url 'fees:fees_list' %}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+    {% else %}
+    <div class="small mb-3">No fee structures have been created yet.</div>
+    <a href="{% url 'fees:fees_add' %}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Add Fee Structure
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

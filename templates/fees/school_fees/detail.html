@@ -1,0 +1,440 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'fees:fees_list' %}" class="text-secondary">Fee Structures</a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">{{ fees_type_label }}</li>
+{% endblock %}
+
+{% block content %}
+
+
+<div class="d-flex align-items-start justify-content-between mb-4 gap-3 flex-wrap">
+
+  <div>
+    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+      <h4 class="fw-800 mb-0">{{ fees_type_label }}</h4>
+      {% if fee.is_active %}
+      <span class="badge bg-success rounded-pill">Active</span>
+      {% else %}
+      <span class="badge bg-secondary rounded-pill">Inactive</span>
+      {% endif %}
+      {% if fee.is_compulsory %}
+      <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Compulsory</span>
+      {% else %}
+      <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Optional</span>
+      {% endif %}
+      {% if is_overdue %}
+      <span class="badge bg-danger">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        Overdue {{ days_overdue }} day{{ days_overdue|pluralize }}
+      </span>
+      {% endif %}
+    </div>
+    <div class="text-muted small d-flex gap-3 flex-wrap">
+      <span><i class="bi bi-building me-1"></i>{{ fee.school_class.display_name }}</span>
+      <span><i class="bi bi-calendar3 me-1"></i>Term {{ fee.term.name }} — {{ fee.term.academic_year }}</span>
+      <span class="fw-700 text-dark font-monospace">
+        <i class="bi bi-cash-coin me-1 fw-400"></i>UGX {{ fee.amount|floatformat:0 }}
+      </span>
+      {% if fee.due_date %}
+      <span class="{% if is_overdue %}text-danger fw-700{% endif %}">
+        <i class="bi bi-calendar-event me-1"></i>Due {{ fee.due_date|date:"d M Y" }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Action buttons #}
+  <div class="d-flex gap-2 flex-wrap align-items-start">
+    <a href="{% url 'fees:fees_edit' fee.pk %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+
+    <form method="post" action="{% url 'fees:fees_duplicate' fee.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-copy me-1"></i>Duplicate
+      </button>
+    </form>
+
+    <form method="post" action="{% url 'fees:fees_toggle_active' fee.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}"/>
+      <button type="submit"
+        class="btn btn-sm {% if fee.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+        <i class="bi {% if fee.is_active %}bi-toggle-on{% else %}bi-toggle-off{% endif %} me-1"></i>
+        {% if fee.is_active %}Deactivate{% else %}Activate{% endif %}
+      </button>
+    </form>
+
+    <a href="{% url 'fees:fees_delete' fee.pk %}" class="btn btn-sm btn-outline-danger">
+      <i class="bi bi-trash me-1"></i>Delete
+    </a>
+  </div>
+
+</div>
+
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-success">{{ total_collected|floatformat:0 }}</div>
+      <div class="stat-label">Collected (UGX)</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-primary">{{ collection_rate }}%</div>
+      <div class="stat-label">Collection Rate</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-dark">{{ payment_count }}</div>
+      <div class="stat-label">Payments Made</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-info">{{ student_count }}</div>
+      <div class="stat-label">Students in Class</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-success">{{ paid_student_count }}</div>
+      <div class="stat-label">Paid</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-danger">{{ unpaid_student_count }}</div>
+      <div class="stat-label">Not Yet Paid</div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Collection progress bar ── #}
+<div class="card mb-4 border-0 bg-dark text-white">
+  <div class="card-body py-3">
+    <div class="row g-0 text-center mb-3">
+      <div class="col-4 border-end border-secondary">
+        <div class="small text-white-50 mb-1" style="font-size:.7rem;">Fee Amount / Student</div>
+        <div class="fw-800 font-monospace">UGX {{ fee.amount|floatformat:0 }}</div>
+      </div>
+      <div class="col-4 border-end border-secondary">
+        <div class="small text-white-50 mb-1" style="font-size:.7rem;">Expected Total</div>
+        <div class="fw-800 font-monospace text-info">UGX {{ expected_total|floatformat:0 }}</div>
+      </div>
+      <div class="col-4">
+        <div class="small text-white-50 mb-1" style="font-size:.7rem;">Shortfall</div>
+        <div class="fw-800 font-monospace text-danger">UGX {{ shortfall|floatformat:0 }}</div>
+      </div>
+    </div>
+    {% if expected_total %}
+    <div class="px-1">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="small text-white-50">Collection progress</span>
+        <span class="small fw-700">{{ collection_rate }}%</span>
+      </div>
+      <div class="progress" style="height:8px;background:rgba(255,255,255,0.15);">
+        <div class="progress-bar
+          {% if collection_rate >= 80 %}bg-success
+          {% elif collection_rate >= 50 %}bg-warning
+          {% else %}bg-danger{% endif %}"
+             style="width:{{ collection_rate }}%;"
+             role="progressbar"
+             aria-valuenow="{{ collection_rate }}"
+             aria-valuemin="0" aria-valuemax="100">
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+
+<div class="row g-4 mb-4">
+
+  {# Fee structure details #}
+  <div class="col-12 col-md-4">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-info-circle me-2 text-primary"></i>Fee Details
+        </h6>
+      </div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.7rem;">Class</dt>
+          <dd class="col-7 fw-700">{{ fee.school_class.display_name }}</dd>
+
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.7rem;">Term</dt>
+          <dd class="col-7">Term {{ fee.term.name }} — {{ fee.term.academic_year }}</dd>
+
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.7rem;">Type</dt>
+          <dd class="col-7">{{ fees_type_label }}</dd>
+
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.7rem;">Amount</dt>
+          <dd class="col-7 fw-800 font-monospace text-success">UGX {{ fee.amount|floatformat:0 }}</dd>
+
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.7rem;">Due Date</dt>
+          <dd class="col-7 {% if is_overdue %}text-danger fw-700{% else %}text-muted{% endif %}">
+            {% if fee.due_date %}{{ fee.due_date|date:"d M Y" }}{% else %}—{% endif %}
+            {% if is_overdue %}
+            <span class="d-block text-danger small">{{ days_overdue }} day{{ days_overdue|pluralize }} overdue</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.7rem;">Compulsory</dt>
+          <dd class="col-7">
+            {% if fee.is_compulsory %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Yes</span>
+            {% else %}<span class="text-muted">No</span>{% endif %}
+          </dd>
+
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.7rem;">Active</dt>
+          <dd class="col-7">
+            {% if fee.is_active %}
+            <span class="badge bg-success rounded-pill">Yes</span>
+            {% else %}
+            <span class="badge bg-secondary rounded-pill">No</span>
+            {% endif %}
+          </dd>
+
+          {% if fee.description %}
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.7rem;">Notes</dt>
+          <dd class="col-7">{{ fee.description }}</dd>
+          {% endif %}
+
+          <dt class="col-5 text-muted fw-700 text-uppercase" style="font-size:.7rem;">Created</dt>
+          <dd class="col-7 text-muted">{{ fee.created_at|date:"d M Y" }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  {# Payment method breakdown #}
+  <div class="col-12 col-md-4">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-credit-card me-2 text-success"></i>By Payment Method
+        </h6>
+      </div>
+      {% if by_method %}
+      <div class="card-body">
+        {% for row in by_method %}
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="d-flex align-items-center gap-2">
+            {% if row.payment_method == 'cash' %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">Cash</span>
+            {% elif row.payment_method == 'mtn_momo' %}
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">MTN MoMo</span>
+            {% elif row.payment_method == 'airtel_money' %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Airtel</span>
+            {% elif row.payment_method == 'bank' %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Bank</span>
+            {% elif row.payment_method == 'cheque' %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Cheque</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ row.payment_method|title }}</span>
+            {% endif %}
+            <span class="small text-muted">{{ row.count }} payment{{ row.count|pluralize }}</span>
+          </div>
+          <span class="font-monospace fw-700 small">{{ row.total|floatformat:0 }}</span>
+        </div>
+        {% if total_collected %}
+        {% widthratio row.total total_collected 100 as mpct %}
+        <div class="progress mb-3" style="height:4px;">
+          <div class="progress-bar bg-primary" style="width:{{ mpct }}%;"></div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-body text-center py-4 text-muted">
+        <i class="bi bi-credit-card fs-2 d-block mb-1 opacity-25"></i>
+        <div class="small">No payments recorded yet.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Sibling fee structures — same class + term #}
+  <div class="col-12 col-md-4">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-diagram-3 me-2 text-warning"></i>
+          Other Fees — {{ fee.school_class.display_name }}
+        </h6>
+      </div>
+      {% if siblings %}
+      <div class="list-group list-group-flush">
+        {% for s in siblings %}
+        <a href="{% url 'fees:fees_detail' s.pk %}"
+           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3">
+          <div>
+            <div class="fw-600 small">{{ s.get_fees_type_display }}</div>
+            <div class="text-muted" style="font-size:.72rem;">
+              {% if s.is_compulsory %}Compulsory{% else %}Optional{% endif %}
+              {% if not s.is_active %} · Inactive{% endif %}
+            </div>
+          </div>
+          <span class="font-monospace fw-700 small">{{ s.amount|floatformat:0 }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-body text-center py-4 text-muted">
+        <i class="bi bi-diagram-3 fs-2 d-block mb-1 opacity-25"></i>
+        <div class="small">No other fees for this class and term.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<div class="card mb-4">
+  <div class="card-header py-3">
+    <h6 class="fw-700 mb-0">
+      <i class="bi bi-clock-history me-2 text-info"></i>
+      Recent Payments
+      <span class="text-muted fw-400 small">(last 10)</span>
+    </h6>
+  </div>
+  {% if recent_payments %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>Student</th>
+          <th>Date</th>
+          <th>Method</th>
+          <th class="text-end">Amount (UGX)</th>
+          <th>Received By</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in recent_payments %}
+        <tr>
+          <td>
+            <div class="fw-700 lh-sm">{{ p.student.last_name }}, {{ p.student.first_name }}</div>
+            <div class="text-muted" style="font-size:.72rem;">{{ p.student.student_id|default:"" }}</div>
+          </td>
+          <td class="text-muted text-nowrap">{{ p.payment_date|date:"d M Y" }}</td>
+          <td>
+            {% if p.payment_method == 'cash' %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">Cash</span>
+            {% elif p.payment_method == 'mtn_momo' %}
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">MTN MoMo</span>
+            {% elif p.payment_method == 'airtel_money' %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Airtel</span>
+            {% elif p.payment_method == 'bank' %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Bank</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+              {{ p.get_payment_method_display|default:p.payment_method|title }}
+            </span>
+            {% endif %}
+          </td>
+          <td class="text-end fw-700 font-monospace">{{ p.amount_paid|floatformat:0 }}</td>
+          <td class="text-muted">{{ p.received_by.get_full_name|default:"—" }}</td>
+          <td>
+            {% if p.status == 'confirmed' %}
+            <span class="badge bg-success rounded-pill">Confirmed</span>
+            {% elif p.status == 'pending' %}
+            <span class="badge bg-warning text-dark rounded-pill">Pending</span>
+            {% elif p.status == 'reversed' %}
+            <span class="badge bg-danger rounded-pill">Reversed</span>
+            {% else %}
+            <span class="badge bg-secondary rounded-pill">{{ p.get_status_display|default:p.status }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-center py-4 text-muted">
+    <i class="bi bi-receipt fs-2 d-block mb-1 opacity-25"></i>
+    <div class="small">No payments recorded against this fee structure yet.</div>
+  </div>
+  {% endif %}
+</div>
+
+
+{% if same_type_others %}
+<div class="card">
+  <div class="card-header py-3">
+    <h6 class="fw-700 mb-0">
+      <i class="bi bi-bar-chart me-2 text-secondary"></i>
+      {{ fees_type_label }} — Other Classes This Term
+      <span class="text-muted fw-400 small">(benchmarking)</span>
+    </h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>Class</th>
+          <th>Section</th>
+          <th class="text-end">Amount (UGX)</th>
+          <th>Compulsory</th>
+          <th>Active</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {# Highlight current fee row first #}
+        <tr class="table-primary">
+          <td class="fw-800">{{ fee.school_class.display_name }}</td>
+          <td>
+            <span class="badge bg-primary text-white">
+              {{ fee.school_class.get_section_display }} (this)
+            </span>
+          </td>
+          <td class="text-end fw-800 font-monospace">{{ fee.amount|floatformat:0 }}</td>
+          <td>{% if fee.is_compulsory %}<span class="badge bg-danger-subtle text-danger border border-danger-subtle">Yes</span>{% else %}<span class="text-muted">No</span>{% endif %}</td>
+          <td>{% if fee.is_active %}<span class="badge bg-success rounded-pill">Yes</span>{% else %}<span class="badge bg-secondary rounded-pill">No</span>{% endif %}</td>
+          <td></td>
+        </tr>
+        {% for other in same_type_others %}
+        <tr>
+          <td class="fw-700">{{ other.school_class.display_name }}</td>
+          <td>
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+              {{ other.school_class.get_section_display }}
+            </span>
+          </td>
+          <td class="text-end font-monospace fw-700">{{ other.amount|floatformat:0 }}</td>
+          <td>{% if other.is_compulsory %}<span class="badge bg-danger-subtle text-danger border border-danger-subtle">Yes</span>{% else %}<span class="text-muted">No</span>{% endif %}</td>
+          <td>{% if other.is_active %}<span class="badge bg-success rounded-pill">Yes</span>{% else %}<span class="badge bg-secondary rounded-pill">No</span>{% endif %}</td>
+          <td class="text-end">
+            <a href="{% url 'fees:fees_detail' other.pk %}" class="btn btn-sm btn-outline-secondary py-0">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

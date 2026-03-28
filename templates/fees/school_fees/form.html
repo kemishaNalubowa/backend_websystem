@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'fees:fees_list' %}" class="text-secondary">Fee Structures</a>
+</li>
+{% if action == 'edit' %}
+<li class="breadcrumb-item">
+  <a href="{% url 'fees:fees_detail' fee.pk %}" class="text-secondary">
+    {{ fee.get_fees_type_display }}
+  </a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">Edit</li>
+{% else %}
+<li class="breadcrumb-item active" aria-current="page">Add</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ form_title }}</h4>
+    <p class="text-muted small mb-0">
+      {% if action == 'edit' %}
+        Update the details for this fee structure.
+        Uniqueness is enforced: one fee type per class per term.
+      {% else %}
+        Create a new fee structure for a class and term.
+        One fee type per class per term is allowed.
+      {% endif %}
+    </p>
+  </div>
+  {% if action == 'edit' %}
+  <a href="{% url 'fees:fees_detail' fee.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to Detail
+  </a>
+  {% else %}
+  <a href="{% url 'fees:fees_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to List
+  </a>
+  {% endif %}
+</div>
+
+<form method="post" novalidate>
+{% csrf_token %}
+
+<div class="row g-4">
+
+  <div class="col-12 col-lg-8">
+
+    {# ── Scope: Class + Term ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-building me-2 text-primary"></i>Scope — Class &amp; Term
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Class <span class="text-danger">*</span>
+            </label>
+            <select name="school_class"
+              class="form-select {% if errors.school_class %}is-invalid{% endif %}">
+              <option value="">— Select class —</option>
+              {# Group by section #}
+              <optgroup label="Nursery">
+                {% for cls in all_classes %}
+                  {% if cls.section == 'nursery' %}
+                  <option value="{{ cls.pk }}"
+                    {% if post %}
+                      {% if post.school_class == cls.pk|stringformat:"s" %}selected{% endif %}
+                    {% elif action == 'edit' %}
+                      {% if fee.school_class_id == cls.pk %}selected{% endif %}
+                    {% endif %}>
+                    {{ cls.display_name }}
+                  </option>
+                  {% endif %}
+                {% endfor %}
+              </optgroup>
+              <optgroup label="Primary">
+                {% for cls in all_classes %}
+                  {% if cls.section == 'primary' %}
+                  <option value="{{ cls.pk }}"
+                    {% if post %}
+                      {% if post.school_class == cls.pk|stringformat:"s" %}selected{% endif %}
+                    {% elif action == 'edit' %}
+                      {% if fee.school_class_id == cls.pk %}selected{% endif %}
+                    {% endif %}>
+                    {{ cls.display_name }}
+                  </option>
+                  {% endif %}
+                {% endfor %}
+              </optgroup>
+            </select>
+            {% if errors.school_class %}
+            <div class="invalid-feedback">{{ errors.school_class }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Term <span class="text-danger">*</span>
+            </label>
+            <select name="term"
+              class="form-select {% if errors.term %}is-invalid{% endif %}">
+              <option value="">— Select term —</option>
+              {% for t in all_terms %}
+              <option value="{{ t.pk }}"
+                {% if post %}
+                  {% if post.term == t.pk|stringformat:"s" %}selected{% endif %}
+                {% elif action == 'edit' %}
+                  {% if fee.term_id == t.pk %}selected{% endif %}
+                {% else %}
+                  {% if current_term and t.pk == current_term.pk %}selected{% endif %}
+                {% endif %}>
+                Term {{ t.name }} — {{ t.academic_year }}
+                {% if t.is_current %} (Current){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.term %}
+            <div class="invalid-feedback">{{ errors.term }}</div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Fee details ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-cash-coin me-2 text-success"></i>Fee Details
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          {# Fee type #}
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Fee Type <span class="text-danger">*</span>
+            </label>
+            <select name="fees_type"
+              class="form-select {% if errors.fees_type %}is-invalid{% endif %}">
+              <option value="">— Select type —</option>
+              {% for key, label in fees_type_choices %}
+              <option value="{{ key }}"
+                {% if post %}
+                  {% if post.fees_type == key %}selected{% endif %}
+                {% elif action == 'edit' %}
+                  {% if fee.fees_type == key %}selected{% endif %}
+                {% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">One fee type per class per term is enforced.</div>
+            {% if errors.fees_type %}
+            <div class="invalid-feedback">{{ errors.fees_type }}</div>
+            {% endif %}
+          </div>
+
+          {# Amount #}
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Amount (UGX) <span class="text-danger">*</span>
+            </label>
+            <div class="input-group {% if errors.amount %}is-invalid{% endif %}">
+              <span class="input-group-text bg-light fw-700">UGX</span>
+              <input
+                type="text"
+                name="amount"
+                class="form-control font-monospace {% if errors.amount %}is-invalid{% endif %}"
+                value="{% if post %}{{ post.amount|default:'' }}{% elif action == 'edit' %}{{ fee.amount|floatformat:0 }}{% endif %}"
+                placeholder="e.g. 250000"
+              />
+            </div>
+            <div class="form-text">Enter amount in Uganda Shillings. No commas needed.</div>
+            {% if errors.amount %}
+            <div class="invalid-feedback d-block">{{ errors.amount }}</div>
+            {% endif %}
+          </div>
+
+          {# Due date #}
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Due Date</label>
+            <input
+              type="date"
+              name="due_date"
+              class="form-control {% if errors.due_date %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.due_date|default:'' }}{% elif action == 'edit' and fee.due_date %}{{ fee.due_date|date:'Y-m-d' }}{% endif %}"
+            />
+            <div class="form-text">Payment deadline. Leave blank if no fixed deadline.</div>
+            {% if errors.due_date %}
+            <div class="invalid-feedback">{{ errors.due_date }}</div>
+            {% endif %}
+          </div>
+
+          {# Description #}
+          <div class="col-12">
+            <label class="form-label fw-700 small">Description</label>
+            <textarea
+              name="description"
+              class="form-control"
+              rows="3"
+              placeholder="Optional notes about this fee e.g. covers two books and one exercise book per subject"
+            >{% if post %}{{ post.description|default:'' }}{% elif action == 'edit' %}{{ fee.description }}{% endif %}</textarea>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Flags ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-toggle-on me-2 text-info"></i>Flags
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <div class="form-check form-switch">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="is_compulsory"
+                name="is_compulsory"
+                value="1"
+                {% if post %}
+                  {% if post.is_compulsory %}checked{% endif %}
+                {% elif action == 'edit' %}
+                  {% if fee.is_compulsory %}checked{% endif %}
+                {% else %}
+                  checked
+                {% endif %}
+              />
+              <label class="form-check-label fw-700" for="is_compulsory">
+                Compulsory for all students
+              </label>
+            </div>
+            <div class="form-text ms-5">
+              Compulsory fees are included in the auto-generated fee
+              assessment total for every student in this class.
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <div class="form-check form-switch">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="is_active"
+                name="is_active"
+                value="1"
+                {% if post %}
+                  {% if post.is_active %}checked{% endif %}
+                {% elif action == 'edit' %}
+                  {% if fee.is_active %}checked{% endif %}
+                {% else %}
+                  checked
+                {% endif %}
+              />
+              <label class="form-check-label fw-700" for="is_active">
+                Active
+              </label>
+            </div>
+            <div class="form-text ms-5">
+              Inactive fee structures are hidden from payment forms
+              but preserve historical records.
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Submit ── #}
+    <div class="d-flex gap-2 pb-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi {% if action == 'edit' %}bi-check-lg{% else %}bi-plus-lg{% endif %} me-1"></i>
+        {% if action == 'edit' %}Save Changes{% else %}Create Fee Structure{% endif %}
+      </button>
+      {% if action == 'edit' %}
+      <a href="{% url 'fees:fees_detail' fee.pk %}" class="btn btn-outline-secondary">Cancel</a>
+      {% else %}
+      <a href="{% url 'fees:fees_list' %}" class="btn btn-outline-secondary">Cancel</a>
+      {% endif %}
+    </div>
+
+  </div>{# /col-lg-8 #}
+
+  <div class="col-12 col-lg-4">
+
+    {# Current values snapshot (edit only) #}
+    {% if action == 'edit' %}
+    <div class="card bg-light border-0 mb-4">
+      <div class="card-body small">
+        <div class="fw-700 text-muted text-uppercase mb-3" style="font-size:.72rem;">Current Values</div>
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted fw-700">Class</dt>
+          <dd class="col-7 fw-600">{{ fee.school_class.display_name }}</dd>
+          <dt class="col-5 text-muted fw-700">Term</dt>
+          <dd class="col-7">Term {{ fee.term.name }} ({{ fee.term.academic_year }})</dd>
+          <dt class="col-5 text-muted fw-700">Type</dt>
+          <dd class="col-7">{{ fee.get_fees_type_display }}</dd>
+          <dt class="col-5 text-muted fw-700">Amount</dt>
+          <dd class="col-7 fw-800 font-monospace">{{ fee.amount|floatformat:0 }}</dd>
+          <dt class="col-5 text-muted fw-700">Due</dt>
+          <dd class="col-7">{{ fee.due_date|date:"d M Y"|default:"—" }}</dd>
+          <dt class="col-5 text-muted fw-700">Compulsory</dt>
+          <dd class="col-7">
+            {% if fee.is_compulsory %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Yes</span>
+            {% else %}<span class="text-muted">No</span>{% endif %}
+          </dd>
+          <dt class="col-5 text-muted fw-700">Active</dt>
+          <dd class="col-7">
+            {% if fee.is_active %}
+            <span class="badge bg-success rounded-pill">Yes</span>
+            {% else %}
+            <span class="badge bg-secondary rounded-pill">No</span>
+            {% endif %}
+          </dd>
+        </dl>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card border-primary-subtle sticky-top" style="top:76px;">
+      <div class="card-header bg-primary-subtle border-primary-subtle py-3">
+        <h6 class="fw-700 mb-0 text-primary">
+          <i class="bi bi-lightbulb me-2"></i>Field Guide
+        </h6>
+      </div>
+      <div class="card-body small text-secondary">
+
+        <dt class="fw-700 text-dark">Fee Type</dt>
+        <dd class="mb-2">
+          Describes what the fee covers. Only one of each type is allowed
+          per class per term — e.g. only one "Tuition Fees" for P4 in Term 1.
+        </dd>
+
+        <dt class="fw-700 text-dark">Amount</dt>
+        <dd class="mb-2">
+          The full amount each student in this class owes for this fee
+          during the selected term. Entered in Uganda Shillings (UGX).
+        </dd>
+
+        <dt class="fw-700 text-dark">Compulsory</dt>
+        <dd class="mb-2">
+          Compulsory fees are automatically summed to generate the
+          <strong>total required</strong> figure in each student's fee
+          assessment statement. Optional fees are listed separately.
+        </dd>
+
+        <dt class="fw-700 text-dark">Duplicate</dt>
+        <dd class="mb-0">
+          Use the Duplicate button on the detail page to clone this fee
+          structure to a different class or term — useful at the start
+          of each new term.
+        </dd>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>{# /row #}
+</form>
+
+{% endblock %}

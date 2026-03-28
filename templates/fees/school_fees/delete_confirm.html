@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Fee Structure — {{ type_label }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'fees:fees_list' %}" class="text-secondary">Fee Structures</a>
+</li>
+<li class="breadcrumb-item">
+  <a href="{% url 'fees:fees_detail' fee.pk %}" class="text-secondary">{{ type_label }}</a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">Delete</li>
+{% endblock %}
+
+{% block content %}
+
+
+
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+
+    <div class="card border-danger">
+      <div class="card-header bg-danger-subtle border-danger-subtle py-3">
+        <h5 class="fw-800 mb-0 text-danger">
+          <i class="bi bi-exclamation-triangle me-2"></i>Delete Fee Structure
+        </h5>
+      </div>
+      <div class="card-body">
+
+        {# ── What is being deleted ── #}
+        <p class="text-muted small mb-2">You are about to permanently delete:</p>
+
+        <div class="border rounded p-3 mb-4 bg-light">
+          <div class="fw-800 fs-5 mb-1">{{ type_label }}</div>
+          <div class="d-flex gap-3 flex-wrap text-muted small">
+            <span><i class="bi bi-building me-1"></i>{{ fee.school_class.display_name }}</span>
+            <span><i class="bi bi-calendar3 me-1"></i>Term {{ fee.term.name }} — {{ fee.term.academic_year }}</span>
+            <span class="fw-700 text-dark font-monospace">
+              UGX {{ fee.amount|floatformat:0 }}
+            </span>
+            {% if fee.is_compulsory %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Compulsory</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Optional</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {# ── Impact summary ── #}
+        <div class="alert {% if has_payments %}alert-danger{% else %}alert-warning{% endif %} mb-4">
+          <div class="fw-700 mb-2 small">
+            <i class="bi bi-database me-1"></i>Linked records that will be affected:
+          </div>
+          <div class="row g-2 small">
+            <div class="col-6">
+              <span class="text-muted">Payment records:</span>
+              <strong class="ms-1 {% if payment_count > 0 %}text-danger{% endif %}">
+                {{ payment_count }}
+              </strong>
+            </div>
+            <div class="col-6">
+              <span class="text-muted">Assessment statements (same term):</span>
+              <strong class="ms-1">{{ assessment_count }}</strong>
+            </div>
+          </div>
+        </div>
+
+
+        {% if has_payments %}
+
+        <div class="alert alert-danger mb-4">
+          <i class="bi bi-lock-fill me-2"></i>
+          <strong>Cannot delete.</strong> This fee structure has
+          <strong>{{ payment_count }} confirmed payment record{{ payment_count|pluralize }}</strong>
+          against it. Deleting it would corrupt the payment history.
+        </div>
+
+        <p class="text-muted small mb-4">
+          <strong>Deactivate instead</strong> — deactivating hides the fee from new
+          assignments and payment forms while keeping all historical records intact.
+        </p>
+
+        <div class="d-flex gap-2">
+          <a href="{% url 'fees:fees_detail' fee.pk %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Go Back
+          </a>
+          <form method="post" action="{% url 'fees:fees_toggle_active' fee.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'fees:fees_list' %}"/>
+            <button type="submit" class="btn btn-warning">
+              <i class="bi bi-toggle-off me-1"></i>Deactivate Instead
+            </button>
+          </form>
+        </div>
+
+        {% else %}
+
+        <p class="text-muted small mb-4">
+          This action <strong>cannot be undone</strong>. The fee structure
+          and any related records will be permanently removed.
+        </p>
+
+        <div class="d-flex gap-2">
+          <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-trash me-1"></i>Yes, Delete Permanently
+            </button>
+          </form>
+          <a href="{% url 'fees:fees_detail' fee.pk %}" class="btn btn-outline-secondary">
+            Cancel
+          </a>
+        </div>
+
+        {% endif %}
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

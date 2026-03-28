@@ -169,8 +169,8 @@ def fees_list(request):
     # Annotate each item with type label and overdue flag for template
     items = list(page_obj.object_list)
     for item in items:
-        item._type_label = FEES_TYPE_LABELS.get(item.fees_type, item.fees_type)
-        item._is_overdue = (
+        item.type_label = FEES_TYPE_LABELS.get(item.fees_type, item.fees_type)
+        item.is_overdue = (
             item.due_date is not None
             and item.due_date < today
             and item.is_active

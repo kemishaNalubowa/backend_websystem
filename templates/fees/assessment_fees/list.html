@@ -1,0 +1,602 @@
+{% extends "base.html" %}
+
+{% block title %}Fee Assessments{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'fees:fees_list' %}" class="text-secondary">Fees</a></li>
+<li class="breadcrumb-item active" aria-current="page">Fee Assessments</li>
+{% endblock %}
+
+{% block content %}
+
+
+<div class="d-flex align-items-center justify-content-between mb-4 gap-3 flex-wrap">
+  <div>
+    <h4 class="fw-800 mb-0">Fee Assessments</h4>
+    <p class="text-muted small mb-0">
+      Per-student fee statements — total required, paid and outstanding balance
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'fees:assessment_fees_add' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Add Single
+    </a>
+    <button type="button" class="btn btn-primary btn-sm"
+            data-bs-toggle="modal" data-bs-target="#bulkGenerateModal">
+      <i class="bi bi-lightning-charge me-1"></i>Bulk Generate
+    </button>
+  </div>
+</div>
+
+
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-dark">{{ total|default:"0" }}</div>
+      <div class="stat-label">Total Students</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-success">{{ cleared|default:"0" }}</div>
+      <div class="stat-label">
+        Cleared
+        {% if cleared_pct %}
+        <span class="d-block fw-700 text-success" style="font-size:.8rem;text-transform:none;letter-spacing:0;">
+          {{ cleared_pct }}%
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-danger">{{ outstanding|default:"0" }}</div>
+      <div class="stat-label">Outstanding</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-primary">{{ collection_rate|default:"0" }}%</div>
+      <div class="stat-label">Collection Rate</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-warning">{{ discounted|default:"0" }}</div>
+      <div class="stat-label">Discounted</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-danger" style="font-size:1.3rem;">{{ total_balance|floatformat:0 }}</div>
+      <div class="stat-label">Balance (UGX)</div>
+    </div>
+  </div>
+
+</div>
+
+{# Money banner #}
+<div class="card mb-4 border-0 bg-dark text-white">
+  <div class="card-body py-3">
+    <div class="row g-0 text-center">
+      <div class="col-3 border-end border-secondary">
+        <div class="small text-white-50 mb-1" style="font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;">Required</div>
+        <div class="fw-800 font-monospace" style="font-size:1rem;">{{ total_required|floatformat:0 }}</div>
+      </div>
+      <div class="col-3 border-end border-secondary">
+        <div class="small text-white-50 mb-1" style="font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;">Paid</div>
+        <div class="fw-800 font-monospace text-success" style="font-size:1rem;">{{ total_paid|floatformat:0 }}</div>
+      </div>
+      <div class="col-3 border-end border-secondary">
+        <div class="small text-white-50 mb-1" style="font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;">Balance</div>
+        <div class="fw-800 font-monospace text-danger" style="font-size:1rem;">{{ total_balance|floatformat:0 }}</div>
+      </div>
+      <div class="col-3">
+        <div class="small text-white-50 mb-1" style="font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;">Discounts</div>
+        <div class="fw-800 font-monospace text-warning" style="font-size:1rem;">{{ total_discount|floatformat:0 }}</div>
+      </div>
+    </div>
+    {% if total_required %}
+    <div class="px-1 mt-3">
+      <div class="d-flex justify-content-between mb-1">
+        <span class="small text-white-50">Collection progress</span>
+        <span class="small fw-700">{{ collection_rate }}%</span>
+      </div>
+      <div class="progress" style="height:6px;background:rgba(255,255,255,0.15);">
+        <div class="progress-bar {% if collection_rate >= 80 %}bg-success{% elif collection_rate >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+             style="width:{{ collection_rate }}%;"></div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if by_class or defaulters %}
+<div class="row g-4 mb-4">
+
+  {% if by_class %}
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-building me-2 text-primary"></i>By Class</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Class</th>
+              <th class="text-center">Students</th>
+              <th class="text-center">Cleared</th>
+              <th class="text-end">Balance (UGX)</th>
+              <th style="width:90px;">Rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in by_class %}
+            <tr>
+              <td class="fw-700">
+                {{ row.student__current_class__level|upper }}
+                {% if row.student__current_class__stream %}{{ row.student__current_class__stream|upper }}{% endif %}
+              </td>
+              <td class="text-center">{{ row.count }}</td>
+              <td class="text-center">
+                <span class="text-success fw-700">{{ row.cleared_count }}</span>
+                <span class="text-muted">/{{ row.count }}</span>
+              </td>
+              <td class="text-end font-monospace fw-700
+                {% if row.sum_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                {{ row.sum_balance|floatformat:0 }}
+              </td>
+              <td>
+                {% if row.count %}
+                {% widthratio row.cleared_count row.count 100 as cpct %}
+                <div class="d-flex align-items-center gap-1">
+                  <div class="progress flex-fill" style="height:5px;">
+                    <div class="progress-bar {% if cpct >= 80 %}bg-success{% elif cpct >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                         style="width:{{ cpct }}%;"></div>
+                  </div>
+                  <span class="text-muted" style="font-size:.68rem;min-width:26px;">{{ cpct }}%</span>
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if defaulters %}
+  <div class="col-12 col-lg-6">
+    <div class="card h-100 border-danger-subtle">
+      <div class="card-header py-3 bg-danger-subtle border-danger-subtle">
+        <h6 class="fw-700 mb-0 text-danger">
+          <i class="bi bi-exclamation-triangle me-2"></i>Top Defaulters
+          <span class="text-muted fw-400 small">(highest balance first, max 10)</span>
+        </h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Student</th>
+              <th>Class</th>
+              <th class="text-end">Balance (UGX)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in defaulters %}
+            <tr>
+              <td>
+                <a href="{% url 'fees:assessment_fees_detail' d.pk %}" class="fw-700 text-dark">
+                  {{ d.student.last_name }}, {{ d.student.first_name }}
+                </a>
+                <div class="text-muted" style="font-size:.72rem;">{{ d.student.student_id|default:"" }}</div>
+              </td>
+              <td>
+                {% if d.student.current_class %}
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                  {{ d.student.current_class.display_name }}
+                </span>
+                {% else %}—{% endif %}
+              </td>
+              <td class="text-end font-monospace fw-800 text-danger">{{ d.balance|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
+{% if current_term and current_term_stats %}
+<div class="card mb-4 border-success-subtle">
+  <div class="card-header py-3 bg-success-subtle border-success-subtle d-flex align-items-center justify-content-between">
+    <h6 class="fw-700 mb-0 text-success">
+      <i class="bi bi-circle-fill me-2" style="font-size:.5rem;"></i>
+      Current Term — Term {{ current_term.name }} ({{ current_term.academic_year }})
+    </h6>
+    <span class="badge bg-success">{{ current_term_stats.collection_rate }}% collected</span>
+  </div>
+  <div class="card-body py-3">
+    <div class="row g-3 text-center small">
+      <div class="col-6 col-sm-3">
+        <div class="fw-800 text-dark" style="font-size:1.3rem;">{{ current_term_stats.count|default:"0" }}</div>
+        <div class="text-muted">Students</div>
+      </div>
+      <div class="col-6 col-sm-3">
+        <div class="fw-800 text-success" style="font-size:1.3rem;">{{ current_term_stats.cleared_count|default:"0" }}</div>
+        <div class="text-muted">Cleared</div>
+      </div>
+      <div class="col-6 col-sm-3">
+        <div class="fw-800 font-monospace text-primary" style="font-size:1rem;">{{ current_term_stats.sum_paid|floatformat:0 }}</div>
+        <div class="text-muted">Paid (UGX)</div>
+      </div>
+      <div class="col-6 col-sm-3">
+        <div class="fw-800 font-monospace text-danger" style="font-size:1rem;">{{ current_term_stats.sum_balance|floatformat:0 }}</div>
+        <div class="text-muted">Balance (UGX)</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-12 col-md-4">
+        <label class="form-label fw-700 small mb-1">Search Student</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-secondary"></i></span>
+          <input type="text" name="q" class="form-control" value="{{ search }}"
+                 placeholder="First name, last name or student ID…"/>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Term</label>
+        <select name="term" class="form-select form-select-sm">
+          <option value="">All Terms</option>
+          {% for t in terms %}
+          <option value="{{ t.pk }}" {% if term_filter == t.pk|stringformat:"s" %}selected{% endif %}>
+            Term {{ t.name }} ({{ t.academic_year }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Class</label>
+        <select name="class" class="form-select form-select-sm">
+          <option value="">All Classes</option>
+          {% for key, label in class_level_choices %}
+          <option value="{{ key }}" {% if class_filter == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Section</label>
+        <select name="section" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="nursery" {% if section_filter == 'nursery' %}selected{% endif %}>Nursery</option>
+          <option value="primary" {% if section_filter == 'primary' %}selected{% endif %}>Primary</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Clearance</label>
+        <select name="cleared" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if cleared_filter == '1' %}selected{% endif %}>Cleared</option>
+          <option value="0" {% if cleared_filter == '0' %}selected{% endif %}>Outstanding</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Discount</label>
+        <select name="discount" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if discount_filter == '1' %}selected{% endif %}>Has Discount</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill">
+          <i class="bi bi-funnel me-1"></i>Filter
+        </button>
+        {% if search or term_filter or class_filter or section_filter or cleared_filter or discount_filter %}
+        <a href="{% url 'fees:assessment_fees_list' %}" class="btn btn-outline-secondary btn-sm" title="Clear">
+          <i class="bi bi-x-lg"></i>
+        </a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<div class="card">
+
+  <div class="card-header d-flex align-items-center justify-content-between py-3">
+    <span class="fw-700">
+      {{ page_obj.paginator.count }} record{{ page_obj.paginator.count|pluralize }}
+      {% if search or term_filter or class_filter or section_filter or cleared_filter or discount_filter %}
+      <span class="text-muted fw-400 small ms-1">(filtered)</span>
+      {% endif %}
+    </span>
+    {% if page_obj.paginator.count %}
+    <span class="text-muted small">
+      Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if assessments %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Student</th>
+          <th>Class</th>
+          <th>Term</th>
+          <th class="text-end">Required (UGX)</th>
+          <th class="text-end">Paid (UGX)</th>
+          <th class="text-end">Balance (UGX)</th>
+          <th class="text-center">Status</th>
+          <th>Last Payment</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for af in assessments %}
+        <tr class="{% if af.is_cleared %}table-success{% endif %}">
+
+          <td>
+            <a href="{% url 'fees:assessment_fees_detail' af.pk %}" class="fw-700 text-dark">
+              {{ af.student.last_name }}, {{ af.student.first_name }}
+            </a>
+            {% if af.discount_amount %}
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle ms-1"
+                  style="font-size:.65rem;" title="Has discount">
+              <i class="bi bi-tag-fill"></i>
+            </span>
+            {% endif %}
+            <div class="text-muted" style="font-size:.72rem;">{{ af.student.student_id|default:"" }}</div>
+          </td>
+
+          <td>
+            {% if af.student.current_class %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              {{ af.student.current_class.display_name }}
+            </span>
+            {% else %}<span class="text-muted small">—</span>{% endif %}
+          </td>
+
+          <td class="text-muted small">
+            Term {{ af.term.name }}
+            <span class="d-block" style="font-size:.72rem;">{{ af.term.academic_year }}</span>
+          </td>
+
+          <td class="text-end font-monospace fw-600">{{ af.total_required|floatformat:0 }}</td>
+
+          <td class="text-end font-monospace fw-600 text-success">{{ af.total_paid|floatformat:0 }}</td>
+
+          <td class="text-end font-monospace fw-800
+            {% if af.balance == 0 %}text-success{% elif af.balance > 0 %}text-danger{% else %}text-muted{% endif %}">
+            {{ af.balance|floatformat:0 }}
+          </td>
+
+          <td class="text-center">
+            {% if af.is_cleared %}
+            <span class="badge bg-success rounded-pill">Cleared</span>
+            {% else %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">
+              Due
+            </span>
+            {% endif %}
+          </td>
+
+          <td class="text-muted small text-nowrap">
+            {% if af.last_payment_date %}{{ af.last_payment_date|date:"d M Y" }}{% else %}—{% endif %}
+          </td>
+
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{% url 'fees:assessment_fees_detail' af.pk %}"
+                 class="btn btn-sm btn-outline-secondary" title="View">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'fees:assessment_fees_edit' af.pk %}"
+                 class="btn btn-sm btn-outline-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form method="post" action="{% url 'fees:assessment_fees_recalculate' af.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}"/>
+                <button type="submit" class="btn btn-sm btn-outline-info" title="Recalculate from payments">
+                  <i class="bi bi-arrow-repeat"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between py-3">
+    <small class="text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</small>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&term={{ term_filter }}&class={{ class_filter }}&section={{ section_filter }}&cleared={{ cleared_filter }}&discount={{ discount_filter }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&q={{ search }}&term={{ term_filter }}&class={{ class_filter }}&section={{ section_filter }}&cleared={{ cleared_filter }}&discount={{ discount_filter }}">{{ num }}</a>
+          </li>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&term={{ term_filter }}&class={{ class_filter }}&section={{ section_filter }}&cleared={{ cleared_filter }}&discount={{ discount_filter }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-cash-coin fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700 mb-1">No assessment records found</div>
+    {% if search or term_filter or class_filter or section_filter or cleared_filter or discount_filter %}
+    <div class="small mb-3">Try adjusting your filters.</div>
+    <a href="{% url 'fees:assessment_fees_list' %}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+    {% else %}
+    <div class="small mb-3">Use Bulk Generate to create statements for a whole class at once.</div>
+    <button type="button" class="btn btn-sm btn-primary"
+            data-bs-toggle="modal" data-bs-target="#bulkGenerateModal">
+      <i class="bi bi-lightning-charge me-1"></i>Bulk Generate
+    </button>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+<div class="modal fade" id="bulkGenerateModal" tabindex="-1"
+     aria-labelledby="bulkGenerateModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-800" id="bulkGenerateModalLabel">
+          <i class="bi bi-lightning-charge-fill text-warning me-2"></i>Bulk Generate Fee Assessments
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'fees:assessment_fees_bulk_generate' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+
+          <p class="text-muted small mb-4">
+            Generates a fee assessment statement for every active student in the
+            selected class and term. The <strong>total required</strong> is automatically
+            set to the sum of all compulsory fee structures for that class and term.
+          </p>
+
+          <div class="mb-3">
+            <label class="form-label fw-700 small">
+              Class <span class="text-danger">*</span>
+            </label>
+            <select name="school_class" class="form-select" required>
+              <option value="">— Select class —</option>
+              <optgroup label="Nursery">
+                {% for key, label in class_level_choices %}
+                  {% if key in "baby,middle,top" %}
+                  <option value="{{ key }}">{{ label }}</option>
+                  {% endif %}
+                {% endfor %}
+              </optgroup>
+              <optgroup label="Primary">
+                {% for key, label in class_level_choices %}
+                  {% if key not in "baby,middle,top" %}
+                  <option value="{{ key }}">{{ label }}</option>
+                  {% endif %}
+                {% endfor %}
+              </optgroup>
+            </select>
+            <div class="form-text">
+              The view resolves the SchoolClass instance from the level key.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-700 small">
+              Term <span class="text-danger">*</span>
+            </label>
+            <select name="term" class="form-select" required>
+              <option value="">— Select term —</option>
+              {% for t in terms %}
+              <option value="{{ t.pk }}" {% if current_term and t.pk == current_term.pk %}selected{% endif %}>
+                Term {{ t.name }} — {{ t.academic_year }}
+                {% if t.is_current %} (Current){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-700 small">Existing Records</label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="overwrite"
+                       id="overwrite_no" value="0" checked/>
+                <label class="form-check-label fw-600 small" for="overwrite_no">
+                  Skip existing (safe — only create new)
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="overwrite"
+                       id="overwrite_yes" value="1"/>
+                <label class="form-check-label fw-600 small" for="overwrite_yes">
+                  Overwrite existing records
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert-info border-info-subtle py-2 small mb-0">
+            <i class="bi bi-info-circle me-1"></i>
+            <strong>total_paid</strong> is synced from actual payment records at generation time.
+            Discounts and notes on existing records are preserved unless you choose Overwrite.
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary"
+                  data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-lightning-charge me-1"></i>Generate Now
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

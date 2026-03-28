@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 
-app_name = 'requests'
+app_name = 'communication'
 
 urlpatterns = [
     # List all requests (filtered by role automatically in the view)

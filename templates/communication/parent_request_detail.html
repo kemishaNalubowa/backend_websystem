@@ -4,7 +4,7 @@
 
 {% block breadcrumb %}
 <li class="breadcrumb-item">
-  <a href="{% url 'requests:list' %}" class="text-secondary">
+  <a href="{% url 'communication:list' %}" class="text-secondary">
     {% if is_staff %}Parent Requests{% else %}My Requests{% endif %}
   </a>
 </li>
@@ -15,11 +15,7 @@
 
 {% block content %}
 
-{# ══════════════════════════════════════════════════════════════
-   PAGE HEADER
-   Context: parent_request (ParentsRequest), is_staff,
-            status_choices
-══════════════════════════════════════════════════════════════ #}
+
 <div class="d-flex align-items-start justify-content-between mb-4 gap-3 flex-wrap">
 
   <div>
@@ -79,20 +75,16 @@
     </div>
   </div>
 
-  <a href="{% url 'requests:list' %}" class="btn btn-outline-secondary btn-sm flex-shrink-0">
+  <a href="{% url 'communication:list' %}" class="btn btn-outline-secondary btn-sm flex-shrink-0">
     <i class="bi bi-arrow-left me-1"></i>Back
   </a>
 
 </div>
 
-{# ══════════════════════════════════════════════════════════════
-   MAIN CONTENT AREA  (two-column on lg+)
-══════════════════════════════════════════════════════════════ #}
+
 <div class="row g-4">
 
-  {# ═══════════════════════════════════════════════
-     LEFT COL — thread
-  ═══════════════════════════════════════════════ #}
+
   <div class="col-12 col-lg-8">
 
     {# ── ORIGINAL REQUEST MESSAGE ── #}
@@ -124,12 +116,7 @@
       </div>
     </div>
 
-    {# ── REPLY THREAD ──
-       Context: replies (ParentsRequestReply qs — already filtered by
-                is_internal for parents; all for staff)
-       Fields: replied_by, message, is_internal, is_read_by_parent,
-               read_at, attachment, created_at
-    ── #}
+
     {% if replies %}
     <div class="mb-3">
       {% for reply in replies %}
@@ -218,16 +205,7 @@
     </div>
     {% endif %}
 
-    {# ══════════════════════════════════════════════════════════════
-       REPLY FORM
-       POST to: requests:reply (ref=parent_request.reference_number)
-       Context: reply_errors, reply_post,
-                is_staff (extra: is_internal toggle, new_status select),
-                status_choices
 
-       Guard: parents cannot reply on closed/rejected (view blocks it,
-              but we also hide the form to be clear)
-    ══════════════════════════════════════════════════════════════ #}
     {% if is_staff or parent_request.status not in 'closed,rejected' %}
     <div class="card
       {% if is_staff %}border-0 bg-light{% endif %}">
@@ -241,7 +219,7 @@
       <div class="card-body">
 
         <form method="post"
-              action="{% url 'requests:reply' parent_request.reference_number %}"
+              action="{% url 'communication:reply' parent_request.reference_number %}"
               enctype="multipart/form-data"
               novalidate>
           {% csrf_token %}
@@ -359,9 +337,7 @@
 
   </div>{# /col-lg-8 #}
 
-  {# ═══════════════════════════════════════════════
-     RIGHT COL — metadata sidebar
-  ═══════════════════════════════════════════════ #}
+
   <div class="col-12 col-lg-4">
 
     {# ── Request Info Card ── #}

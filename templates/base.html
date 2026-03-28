@@ -216,6 +216,29 @@
           <span class="nav-label">Classes</span>
         </a>
 
+
+        <a href="{% url 'fees:fees_list' %}" class="nav-link">
+          <span class="nav-icon"><i class="bi bi-building"></i></span>
+          <span class="nav-label">Fees</span>
+        </a>
+
+        <a href="{% url 'fees:assessment_fees_list' %}" class="nav-link">
+          <span class="nav-icon"><i class="bi bi-building"></i></span>
+          <span class="nav-label">Assessment Fees</span>
+        </a>
+
+        <a href="{% url 'fees:payment_list' %}" class="nav-link">
+          <span class="nav-icon"><i class="bi bi-building"></i></span>
+          <span class="nav-label">Fees Payments</span>
+        </a>
+
+
+        <a href="{%  url 'communication:list' %}" class="nav-link">
+          <span class="nav-icon"><i class="bi bi-building"></i></span>
+          <span class="nav-label">Parent Requests</span>
+        </a>
+
+
         <a href="{% url 'assessments:list' %}" class="nav-link">
           <span class="nav-icon"><i class="bi bi-building"></i></span>
           <span class="nav-label">Assessments</span>

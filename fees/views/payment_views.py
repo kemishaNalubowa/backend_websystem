@@ -184,7 +184,7 @@ def payment_list(request):
     items = list(page_obj.object_list)
     for item in items:
         ft = item.school_fees.fees_type if item.school_fees else ''
-        item._fee_type_label = FEES_TYPE_LABELS.get(ft, ft)
+        item.fee_type_label = FEES_TYPE_LABELS.get(ft, ft)
 
     stats = get_payment_list_stats()
 

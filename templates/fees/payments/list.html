@@ -1,0 +1,496 @@
+{% extends "base.html" %}
+
+{% block title %}Payments{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'fees:fees_list' %}" class="text-secondary">Fees</a></li>
+<li class="breadcrumb-item active" aria-current="page">Payments</li>
+{% endblock %}
+
+{% block content %}
+
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">Fee Payments</h4>
+    <p class="text-muted small mb-0">All payment records across all classes and terms</p>
+  </div>
+  <a href="{% url 'fees:payment_add' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Record Payment
+  </a>
+</div>
+
+
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-dark">{{ total|default:"0" }}</div>
+      <div class="stat-label">Total Payments</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-success" style="font-size:1.4rem;">
+        {{ total_amount|floatformat:0 }}
+      </div>
+      <div class="stat-label">Total (UGX)</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-primary">{{ today_count|default:"0" }}</div>
+      <div class="stat-label">
+        Today
+        {% if today_total %}
+        <span class="d-block fw-600 text-muted" style="font-size:0.7rem;text-transform:none;letter-spacing:0;">
+          UGX {{ today_total|floatformat:0 }}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-info" style="font-size:1.4rem;">
+        {% if current_term %}{{ current_term_total|floatformat:0 }}{% else %}—{% endif %}
+      </div>
+      <div class="stat-label">
+        This Term
+        {% if current_term %}
+        <span class="d-block fw-600 text-muted" style="font-size:0.7rem;text-transform:none;letter-spacing:0;">
+          {{ current_term_count }} payment{{ current_term_count|pluralize }}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-secondary" style="font-size:1.4rem;">{{ average_payment|floatformat:0 }}</div>
+      <div class="stat-label">Avg Payment</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-sm-4 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-value text-dark" style="font-size:1.4rem;">{{ highest_payment|floatformat:0 }}</div>
+      <div class="stat-label">Highest Single</div>
+    </div>
+  </div>
+
+</div>
+
+
+{% if by_fee_type or by_term or monthly %}
+<div class="row g-4 mb-4">
+
+  {# By fee type #}
+  {% if by_fee_type %}
+  <div class="col-12 col-lg-4">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-tags me-2 text-primary"></i>By Fee Type</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Type</th>
+              <th class="text-end">Count</th>
+              <th class="text-end">Total (UGX)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in by_fee_type %}
+            <tr>
+              <td class="fw-700">{{ row.label }}</td>
+              <td class="text-end text-muted">{{ row.count }}</td>
+              <td class="text-end font-monospace fw-700">{{ row.total|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# By term #}
+  {% if by_term %}
+  <div class="col-12 col-lg-4">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-calendar3 me-2 text-success"></i>By Term (last 6)</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Term</th>
+              <th class="text-end">Count</th>
+              <th class="text-end">Total (UGX)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in by_term %}
+            <tr>
+              <td class="fw-700">
+                Term {{ row.term__name }}
+                <span class="text-muted fw-400">({{ row.term__start_date|date:"Y" }})</span>
+              </td>
+              <td class="text-end text-muted">{{ row.count }}</td>
+              <td class="text-end font-monospace fw-700">{{ row.total|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Monthly totals #}
+  {% if monthly %}
+  <div class="col-12 col-lg-4">
+    <div class="card h-100">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-bar-chart me-2 text-warning"></i>
+          Monthly — {{ today.year }}
+        </h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Month</th>
+              <th class="text-end">Count</th>
+              <th class="text-end">Total (UGX)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in monthly %}
+            <tr>
+              <td class="fw-600">
+                {% if row.month == 1 %}January
+                {% elif row.month == 2 %}February
+                {% elif row.month == 3 %}March
+                {% elif row.month == 4 %}April
+                {% elif row.month == 5 %}May
+                {% elif row.month == 6 %}June
+                {% elif row.month == 7 %}July
+                {% elif row.month == 8 %}August
+                {% elif row.month == 9 %}September
+                {% elif row.month == 10 %}October
+                {% elif row.month == 11 %}November
+                {% elif row.month == 12 %}December
+                {% endif %}
+              </td>
+              <td class="text-end text-muted">{{ row.count }}</td>
+              <td class="text-end font-monospace fw-700">{{ row.total|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
+
+{% if recent %}
+<div class="card mb-4 border-success-subtle">
+  <div class="card-header py-3 bg-success-subtle border-success-subtle">
+    <h6 class="fw-700 mb-0 text-success">
+      <i class="bi bi-clock-history me-2"></i>10 Most Recent Payments
+    </h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>Receipt</th>
+          <th>Student</th>
+          <th>Class</th>
+          <th>Fee Type</th>
+          <th>Date</th>
+          <th class="text-end">Amount (UGX)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in recent %}
+        <tr>
+          <td><code class="fw-700">{{ p.receipt_number }}</code></td>
+          <td class="fw-600">{{ p.student.last_name }}, {{ p.student.first_name }}</td>
+          <td>
+            {% if p.school_class %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              {{ p.school_class.display_name }}
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-muted">
+            {% if p.school_fees %}{{ p.school_fees.get_fees_type_display }}{% else %}—{% endif %}
+          </td>
+          <td class="text-muted text-nowrap">{{ p.payment_date|date:"d M Y" }}</td>
+          <td class="text-end fw-700 font-monospace">{{ p.amount_paid|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-12 col-md-4">
+        <label class="form-label fw-700 small mb-1">Search</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-secondary"></i></span>
+          <input type="text" name="q" class="form-control" value="{{ search }}"
+                 placeholder="Receipt no., student name or ID…"/>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Term</label>
+        <select name="term" class="form-select form-select-sm">
+          <option value="">All Terms</option>
+          {% for t in terms %}
+          <option value="{{ t.pk }}" {% if term_filter == t.pk|stringformat:"s" %}selected{% endif %}>
+            Term {{ t.name }} ({{ t.academic_year }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Fee Type</label>
+        <select name="fee_type" class="form-select form-select-sm">
+          <option value="">All Types</option>
+          {% for key, label in fees_type_choices %}
+          <option value="{{ key }}" {% if fee_type_filter == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Class</label>
+        <select name="class" class="form-select form-select-sm">
+          <option value="">All Classes</option>
+          {% for key, label in class_level_choices %}
+          <option value="{{ key }}" {% if class_filter == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Section</label>
+        <select name="section" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="nursery" {% if section_filter == 'nursery' %}selected{% endif %}>Nursery</option>
+          <option value="primary" {% if section_filter == 'primary' %}selected{% endif %}>Primary</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Date From</label>
+        <input type="date" name="date_from" class="form-control form-control-sm"
+               value="{{ date_from_raw }}"/>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Date To</label>
+        <input type="date" name="date_to" class="form-control form-control-sm"
+               value="{{ date_to_raw }}"/>
+      </div>
+
+      <div class="col-12 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill">
+          <i class="bi bi-funnel me-1"></i>Filter
+        </button>
+        {% if search or term_filter or class_filter or section_filter or fee_type_filter or date_from_raw or date_to_raw or student_filter %}
+        <a href="{% url 'fees:payment_list' %}" class="btn btn-outline-secondary btn-sm" title="Clear">
+          <i class="bi bi-x-lg"></i>
+        </a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+
+<div class="card">
+
+  <div class="card-header d-flex align-items-center justify-content-between py-3">
+    <span class="fw-700">
+      {{ page_obj.paginator.count }} payment{{ page_obj.paginator.count|pluralize }}
+      {% if search or term_filter or class_filter or section_filter or fee_type_filter or date_from_raw or date_to_raw or student_filter %}
+      <span class="text-muted fw-400 small ms-1">(filtered)</span>
+      {% endif %}
+    </span>
+    {% if filtered_total %}
+    <span class="fw-700 font-monospace text-success small">
+      Total: UGX {{ filtered_total|floatformat:0 }}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if payments %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Receipt</th>
+          <th>Student</th>
+          <th>Class</th>
+          <th>Fee Type</th>
+          <th>Term</th>
+          <th>Date</th>
+          <th class="text-end">Amount (UGX)</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for payment in payments %}
+        <tr>
+
+          <td>
+            <a href="{% url 'fees:payment_detail' payment.pk %}"
+               class="fw-700 font-monospace text-dark text-decoration-none">
+              {{ payment.receipt_number }}
+            </a>
+          </td>
+
+          <td>
+            <div class="fw-700 lh-sm">
+              {{ payment.student.last_name }}, {{ payment.student.first_name }}
+            </div>
+            <div class="text-muted" style="font-size:0.72rem;">
+              {{ payment.student.student_id|default:"" }}
+            </div>
+          </td>
+
+          <td>
+            {% if payment.school_class %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              {{ payment.school_class.display_name }}
+            </span>
+            {% else %}<span class="text-muted small">—</span>{% endif %}
+          </td>
+
+          <td>
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+              {{ payment.fee_type_label|default:"—" }}
+            </span>
+          </td>
+
+          <td class="text-muted small">
+            Term {{ payment.term.name }}
+            <span class="d-block" style="font-size:0.72rem;">{{ payment.term.academic_year }}</span>
+          </td>
+
+          <td class="text-muted small text-nowrap">{{ payment.payment_date|date:"d M Y" }}</td>
+
+          <td class="text-end fw-800 font-monospace text-success">
+            {{ payment.amount_paid|floatformat:0 }}
+          </td>
+
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{% url 'fees:payment_detail' payment.pk %}"
+                 class="btn btn-sm btn-outline-secondary" title="View">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'fees:payment_edit' payment.pk %}"
+                 class="btn btn-sm btn-outline-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'fees:payment_delete' payment.pk %}"
+                 class="btn btn-sm btn-outline-danger" title="Delete">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Pagination — preserves all 8 filter params #}
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between py-3">
+    <small class="text-muted">
+      Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+      of {{ page_obj.paginator.count }}
+    </small>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&term={{ term_filter }}&class={{ class_filter }}&section={{ section_filter }}&fee_type={{ fee_type_filter }}&date_from={{ date_from_raw }}&date_to={{ date_to_raw }}&student={{ student_filter }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&q={{ search }}&term={{ term_filter }}&class={{ class_filter }}&section={{ section_filter }}&fee_type={{ fee_type_filter }}&date_from={{ date_from_raw }}&date_to={{ date_to_raw }}&student={{ student_filter }}">{{ num }}</a>
+          </li>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&term={{ term_filter }}&class={{ class_filter }}&section={{ section_filter }}&fee_type={{ fee_type_filter }}&date_from={{ date_from_raw }}&date_to={{ date_to_raw }}&student={{ student_filter }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-receipt fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700 mb-1">No payments found</div>
+    {% if search or term_filter or class_filter or section_filter or fee_type_filter or date_from_raw or date_to_raw or student_filter %}
+    <div class="small mb-3">Try adjusting your filters.</div>
+    <a href="{% url 'fees:payment_list' %}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+    {% else %}
+    <div class="small mb-3">No payments have been recorded yet.</div>
+    <a href="{% url 'fees:payment_add' %}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Record Payment
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

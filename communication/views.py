@@ -95,7 +95,7 @@ def add_parent_request(request):
         return redirect('requests:detail', ref=pr.reference_number)
 
     # GET
-    return render(request, 'requests/add_parent_request.html', {
+    return render(request, 'communication/add_parent_request.html', {
         'errors':        {},
         'post':          {},
         'request_types': ParentsRequest.REQUEST_TYPE_CHOICES,
@@ -121,7 +121,7 @@ def parent_requests_list(request):
         messages.error(request, 'Your account is not linked to a parent profile.')
         return redirect('dashboard')
 
-    qs = ParentsRequest.objects.select_related('parent__user', 'student', 'assigned_to')
+    qs = ParentsRequest.objects.select_related('parent', 'student', 'assigned_to')
 
     if not staff:
         qs = qs.filter(parent=parent_obj)
@@ -155,7 +155,7 @@ def parent_requests_list(request):
     resolved   = base_qs.filter(status='resolved').count()
     urgent     = base_qs.filter(is_urgent=True).count()
 
-    return render(request, 'requests/parent_requests_list.html', {
+    return render(request, 'communication/parent_requests_list.html', {
         'requests':       qs,
         'is_staff':       staff,
         'status_choices': ParentsRequest.STATUS_CHOICES,
@@ -210,7 +210,7 @@ def parent_request_detail(request, ref):
     if not staff:
         replies_qs = replies_qs.filter(is_internal=False)
 
-    return render(request, 'requests/parent_request_detail.html', {
+    return render(request, 'communication/parent_request_detail.html', {
         'parent_request':  parent_request,
         'replies':         replies_qs,
         'is_staff':        staff,
@@ -261,7 +261,7 @@ def add_parent_request_reply(request, ref):
         if not staff:
             replies_qs = replies_qs.filter(is_internal=False)
 
-        return render(request, 'requests/parent_request_detail.html', {
+        return render(request, 'communication/parent_request_detail.html', {
             'parent_request': parent_request,
             'replies':        replies_qs,
             'is_staff':       staff,

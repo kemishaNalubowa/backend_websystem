@@ -10,10 +10,7 @@
 
 {% block content %}
 
-{# ══════════════════════════════════════════════════════
-   PAGE HEADER
-   Context: is_staff (bool)
-══════════════════════════════════════════════════════ #}
+
 <div class="d-flex align-items-center justify-content-between mb-4">
   <div>
     <h4 class="fw-800 mb-0">
@@ -27,15 +24,11 @@
       {% endif %}
     </p>
   </div>
-  <a href="{% url 'requests:add' %}" class="btn btn-primary">
+  <a href="{% url 'communication:add' %}" class="btn btn-primary">
     <i class="bi bi-plus-lg me-1"></i>New Request
   </a>
 </div>
 
-{# ══════════════════════════════════════════════════════
-   STAT CARDS
-   Context: total, pending, resolved, urgent
-══════════════════════════════════════════════════════ #}
 <div class="row g-3 mb-4">
 
   <div class="col-6 col-sm-3">
@@ -68,11 +61,7 @@
 
 </div>
 
-{# ══════════════════════════════════════════════════════
-   FILTER BAR
-   Context: status_choices, type_choices,
-            filter_status, filter_type, filter_urgent, search
-══════════════════════════════════════════════════════ #}
+
 <div class="card mb-4">
   <div class="card-body py-3">
     <form method="get" class="row g-2 align-items-end">
@@ -130,7 +119,7 @@
           <i class="bi bi-funnel me-1"></i>Filter
         </button>
         {% if search or filter_status or filter_type or filter_urgent %}
-        <a href="{% url 'requests:list' %}"
+        <a href="{% url 'communication:list' %}"
            class="btn btn-outline-secondary btn-sm" title="Clear filters">
           <i class="bi bi-x-lg"></i>
         </a>
@@ -143,7 +132,7 @@
 
 {# Status quick-filter pills #}
 <div class="d-flex gap-2 flex-wrap mb-3">
-  <a href="{% url 'requests:list' %}{% if search %}?q={{ search }}{% endif %}"
+  <a href="{% url 'communication:list' %}{% if search %}?q={{ search }}{% endif %}"
      class="btn btn-sm {% if not filter_status %}btn-dark{% else %}btn-outline-secondary{% endif %}">
     All
   </a>
@@ -159,14 +148,7 @@
   </a>
 </div>
 
-{# ══════════════════════════════════════════════════════
-   REQUESTS TABLE / CARD LIST
-   Context: requests (qs of ParentsRequest)
-   Fields: reference_number, parent (→ get_full_name, parent_id),
-           student (optional), request_type, subject,
-           is_urgent, status, assigned_to, created_at,
-           replies (related manager for unread count)
-══════════════════════════════════════════════════════ #}
+
 <div class="card">
 
   <div class="card-header d-flex align-items-center justify-content-between py-3">
@@ -207,7 +189,7 @@
               <i class="bi bi-exclamation-triangle-fill text-danger flex-shrink-0"
                  title="Urgent"></i>
               {% endif %}
-              <a href="{% url 'requests:detail' req.reference_number %}"
+              <a href="{% url 'communication:detail' req.reference_number %}"
                  class="fw-700 font-monospace text-dark text-decoration-none">
                 {{ req.reference_number }}
               </a>
@@ -228,7 +210,7 @@
 
           {# Subject #}
           <td>
-            <a href="{% url 'requests:detail' req.reference_number %}"
+            <a href="{% url 'communication:detail' req.reference_number %}"
                class="text-dark fw-600">
               {{ req.subject|truncatechars:55 }}
             </a>
@@ -288,7 +270,7 @@
 
           {# Actions #}
           <td class="text-end">
-            <a href="{% url 'requests:detail' req.reference_number %}"
+            <a href="{% url 'communication:detail' req.reference_number %}"
                class="btn btn-sm btn-outline-secondary" title="View thread">
               <i class="bi bi-eye"></i>
             </a>
@@ -327,7 +309,7 @@
         <span class="badge bg-danger rounded-pill">Rejected</span>
         {% endif %}
       </div>
-      <a href="{% url 'requests:detail' req.reference_number %}"
+      <a href="{% url 'communication:detail' req.reference_number %}"
          class="fw-700 text-dark d-block mb-1">
         {{ req.subject|truncatechars:70 }}
       </a>
@@ -347,7 +329,7 @@
     <div class="fw-700 mb-1">No requests found</div>
     {% if search or filter_status or filter_type or filter_urgent %}
     <div class="small mb-3">Try adjusting your filters.</div>
-    <a href="{% url 'requests:list' %}" class="btn btn-sm btn-outline-secondary">
+    <a href="{% url 'communication:list' %}" class="btn btn-sm btn-outline-secondary">
       Clear Filters
     </a>
     {% else %}
@@ -358,7 +340,7 @@
         You haven't submitted any requests yet. Use the button above to send one.
       {% endif %}
     </div>
-    <a href="{% url 'requests:add' %}" class="btn btn-sm btn-primary">
+    <a href="{% url 'communication:add' %}" class="btn btn-sm btn-primary">
       <i class="bi bi-plus-lg me-1"></i>New Request
     </a>
     {% endif %}
