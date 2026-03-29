@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'school:school_profile' %}" class="text-secondary">School Profile</a></li>
+<li class="breadcrumb-item active">Profile Card</li>
+{% endblock %}
+
+{% block content %}
+
+
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-10 col-md-8 col-lg-6">
+
+    {# ── Profile card ── #}
+    <div class="card shadow-sm mb-4">
+
+      {# Card header — logo + name + motto #}
+      <div class="card-body text-center py-5 border-bottom">
+        {% if setting.school_logo %}
+        <img src="{{ setting.school_logo.url }}" alt="{{ setting.school_name }} logo"
+             class="rounded mb-3" style="width:96px;height:96px;object-fit:contain;background:#fff;"/>
+        {% else %}
+        <div class="rounded border bg-light d-flex align-items-center justify-content-center mx-auto mb-3"
+             style="width:96px;height:96px;">
+          <i class="bi bi-building text-muted" style="font-size:2.5rem;"></i>
+        </div>
+        {% endif %}
+
+        <h4 class="fw-800 mb-1">{{ setting.school_name }}</h4>
+
+        {% if setting.school_motto %}
+        <p class="text-muted fst-italic mb-2 small">"{{ setting.school_motto }}"</p>
+        {% endif %}
+
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ type_label }}</span>
+          <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ ownership_label }}</span>
+        </div>
+      </div>
+
+      {# Info rows #}
+      <div class="list-group list-group-flush">
+
+        <div class="list-group-item px-4 py-3 d-flex align-items-center gap-3">
+          <i class="bi bi-geo-alt text-danger flex-shrink-0" style="font-size:1.1rem;"></i>
+          <div>
+            <div class="fw-700 small">{{ setting.district }}, {{ region_label }}</div>
+            {% if setting.address %}<div class="text-muted small">{{ setting.address }}</div>{% endif %}
+          </div>
+        </div>
+
+        {% if setting.phone %}
+        <div class="list-group-item px-4 py-3 d-flex align-items-center gap-3">
+          <i class="bi bi-telephone text-success flex-shrink-0" style="font-size:1.1rem;"></i>
+          <div>
+            <a href="tel:{{ setting.phone }}" class="fw-700 small text-dark">{{ setting.phone }}</a>
+            {% if setting.alt_phone %}
+            <span class="text-muted small ms-2">/ {{ setting.alt_phone }}</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if setting.email %}
+        <div class="list-group-item px-4 py-3 d-flex align-items-center gap-3">
+          <i class="bi bi-envelope text-primary flex-shrink-0" style="font-size:1.1rem;"></i>
+          <a href="mailto:{{ setting.email }}" class="fw-700 small text-primary">{{ setting.email }}</a>
+        </div>
+        {% endif %}
+
+        {% if setting.website %}
+        <div class="list-group-item px-4 py-3 d-flex align-items-center gap-3">
+          <i class="bi bi-globe2 text-info flex-shrink-0" style="font-size:1.1rem;"></i>
+          <a href="{{ setting.website }}" target="_blank" class="fw-700 small text-primary">{{ setting.website }}</a>
+        </div>
+        {% endif %}
+
+        {# Sections: nursery / primary #}
+        <div class="list-group-item px-4 py-3 d-flex align-items-center gap-3">
+          <i class="bi bi-layers text-info flex-shrink-0" style="font-size:1.1rem;"></i>
+          <div class="d-flex gap-2 flex-wrap">
+            {% if setting.has_nursery %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">Nursery</span>
+            {% endif %}
+            {% if setting.has_primary %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Primary</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {# Current term #}
+        {% if current_term %}
+        <div class="list-group-item px-4 py-3 d-flex align-items-center gap-3">
+          <i class="bi bi-calendar3 text-warning flex-shrink-0" style="font-size:1.1rem;"></i>
+          <div>
+            <div class="fw-700 small">
+              <span class="badge bg-success rounded-pill me-1">Current</span>
+              Term {{ current_term.name }} — {{ current_term.academic_year }}
+            </div>
+            {% if current_term.start_date and current_term.end_date %}
+            <div class="text-muted small">
+              {{ current_term.start_date|date:"d M" }} – {{ current_term.end_date|date:"d M Y" }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+
+      {# Completeness nudge #}
+      {% if completeness.score < 100 %}
+      <div class="card-footer bg-warning-subtle border-warning-subtle py-3 px-4">
+        <div class="d-flex align-items-center justify-content-between gap-2">
+          <div class="small">
+            <i class="bi bi-exclamation-circle text-warning me-1"></i>
+            Profile <strong>{{ completeness.score }}%</strong> complete
+          </div>
+          <a href="{% url 'school:school_profile_edit' %}" class="btn btn-warning btn-sm py-0">
+            Complete
+          </a>
+        </div>
+        <div class="progress mt-2" style="height:4px;">
+          <div class="progress-bar bg-warning" style="width:{{ completeness.score }}%;"></div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    {# Quick actions #}
+    <div class="d-flex gap-2 justify-content-center">
+      <a href="{% url 'school:school_profile' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-eye me-1"></i>Full Profile
+      </a>
+      <a href="{% url 'school:school_profile_edit' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-pencil me-1"></i>Edit
+      </a>
+      <a href="{% url 'school:school_settings' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-gear me-1"></i>Settings
+      </a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

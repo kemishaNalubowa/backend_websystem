@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">School Profile</li>
+{% endblock %}
+
+{% block content %}
+
+
+
+{# ── Header strip ── #}
+<div class="d-flex align-items-start justify-content-between mb-4 gap-3 flex-wrap">
+  <div class="d-flex align-items-center gap-3">
+    {% if setting.school_logo %}
+    <img src="{{ setting.school_logo.url }}" alt="{{ setting.school_name }} logo"
+         class="rounded border" style="width:64px;height:64px;object-fit:contain;background:#fff;"/>
+    {% else %}
+    <div class="rounded border bg-light d-flex align-items-center justify-content-center"
+         style="width:64px;height:64px;">
+      <i class="bi bi-building fs-3 text-muted"></i>
+    </div>
+    {% endif %}
+    <div>
+      <h4 class="fw-800 mb-0">{{ setting.school_name }}</h4>
+      {% if setting.school_motto %}
+      <p class="text-muted small mb-0 fst-italic">"{{ setting.school_motto }}"</p>
+      {% endif %}
+      <div class="d-flex gap-2 flex-wrap mt-1">
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ type_label }}</span>
+        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ ownership_label }}</span>
+        <span class="badge bg-info-subtle text-info border border-info-subtle">{{ curriculum_label }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'school:school_profile_edit' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Edit Profile
+    </a>
+    <a href="{% url 'school:school_settings' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-gear me-1"></i>Settings
+    </a>
+  </div>
+</div>
+
+{# ── Summary stats strip ── #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-3">
+    <div class="stat-card">
+      <div class="stat-value text-primary">{{ student_count|default:"0" }}</div>
+      <div class="stat-label">Active Students</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-3">
+    <div class="stat-card">
+      <div class="stat-value text-success">{{ teacher_count|default:"0" }}</div>
+      <div class="stat-label">Active Teachers</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-3">
+    <div class="stat-card">
+      <div class="stat-value text-info">{{ class_count|default:"0" }}</div>
+      <div class="stat-label">Active Classes</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-3">
+    <div class="stat-card">
+      <div class="stat-value {% if completeness.score == 100 %}text-success{% elif completeness.score >= 70 %}text-warning{% else %}text-danger{% endif %}">
+        {{ completeness.score }}%
+      </div>
+      <div class="stat-label">Profile Complete</div>
+    </div>
+  </div>
+</div>
+
+{# ── Completeness nudge (only when < 100%) ── #}
+{% if completeness.score < 100 %}
+<div class="alert alert-warning border-warning-subtle d-flex gap-3 align-items-start mb-4">
+  <i class="bi bi-exclamation-circle-fill text-warning fs-5 flex-shrink-0 mt-1"></i>
+  <div>
+    <div class="fw-700 mb-1">Profile {{ completeness.score }}% complete</div>
+    <div class="small text-muted mb-2">
+      A complete profile ensures report cards, letters and portal pages display correctly.
+    </div>
+    {% if completeness.missing_fields %}
+    <div class="small">
+      <strong>Missing:</strong>
+      {{ completeness.missing_fields|join:", " }}
+    </div>
+    {% endif %}
+    <a href="{% url 'school:school_profile_edit' %}" class="btn btn-warning btn-sm mt-2">
+      <i class="bi bi-pencil me-1"></i>Complete Profile
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-12 col-lg-8">
+
+    {# ── Identity ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-building me-2 text-primary"></i>Identity</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          {# Logo #}
+          <div class="col-12 col-sm-4 text-center">
+            <div class="text-muted fw-700 text-uppercase mb-2" style="font-size:.68rem;">School Logo</div>
+            {% if setting.school_logo %}
+            <img src="{{ setting.school_logo.url }}" alt="Logo"
+                 class="img-fluid rounded border" style="max-height:120px;"/>
+            {% else %}
+            <div class="border rounded bg-light d-flex align-items-center justify-content-center text-muted"
+                 style="height:120px;">
+              <div class="text-center small"><i class="bi bi-image fs-2 d-block mb-1 opacity-25"></i>No logo</div>
+            </div>
+            {% endif %}
+          </div>
+
+          {# Stamp #}
+          <div class="col-12 col-sm-4 text-center">
+            <div class="text-muted fw-700 text-uppercase mb-2" style="font-size:.68rem;">Official Stamp</div>
+            {% if setting.school_stamp %}
+            <img src="{{ setting.school_stamp.url }}" alt="Stamp"
+                 class="img-fluid rounded border" style="max-height:120px;"/>
+            {% else %}
+            <div class="border rounded bg-light d-flex align-items-center justify-content-center text-muted"
+                 style="height:120px;">
+              <div class="text-center small"><i class="bi bi-patch-check fs-2 d-block mb-1 opacity-25"></i>No stamp</div>
+            </div>
+            {% endif %}
+          </div>
+
+          {# Signature #}
+          <div class="col-12 col-sm-4 text-center">
+            <div class="text-muted fw-700 text-uppercase mb-2" style="font-size:.68rem;">Head Teacher Signature</div>
+            {% if setting.head_teacher_signature %}
+            <img src="{{ setting.head_teacher_signature.url }}" alt="Signature"
+                 class="img-fluid rounded border" style="max-height:120px;"/>
+            {% else %}
+            <div class="border rounded bg-light d-flex align-items-center justify-content-center text-muted"
+                 style="height:120px;">
+              <div class="text-center small"><i class="bi bi-pen fs-2 d-block mb-1 opacity-25"></i>No signature</div>
+            </div>
+            {% endif %}
+          </div>
+
+          {# Name + Motto #}
+          <div class="col-12 col-sm-6">
+            <div class="text-muted fw-700 text-uppercase mb-1" style="font-size:.68rem;">School Name</div>
+            <div class="fw-700">{{ setting.school_name }}</div>
+          </div>
+          <div class="col-12 col-sm-6">
+            <div class="text-muted fw-700 text-uppercase mb-1" style="font-size:.68rem;">Motto</div>
+            <div class="fst-italic">{{ setting.school_motto|default:"—" }}</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Registration ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-award me-2 text-warning"></i>Official Registration</h6>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-sm-4 text-muted fw-700">MoES Reg. Number</dt>
+          <dd class="col-sm-8 fw-700 font-monospace">{{ setting.registration_number|default:"—" }}</dd>
+          <dt class="col-sm-4 text-muted fw-700">Established</dt>
+          <dd class="col-sm-8">{{ setting.establishment_year|default:"—" }}</dd>
+          <dt class="col-sm-4 text-muted fw-700">Ownership</dt>
+          <dd class="col-sm-8">{{ ownership_label }}</dd>
+          <dt class="col-sm-4 text-muted fw-700">Type</dt>
+          <dd class="col-sm-8">{{ type_label }}</dd>
+          <dt class="col-sm-4 text-muted fw-700">Curriculum</dt>
+          <dd class="col-sm-8">{{ curriculum_label }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    {# ── Location ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-geo-alt me-2 text-danger"></i>Location</h6>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-sm-4 text-muted fw-700">Address</dt>
+          <dd class="col-sm-8">{{ setting.address|default:"—"|linebreaksbr }}</dd>
+          <dt class="col-sm-4 text-muted fw-700">District</dt>
+          <dd class="col-sm-8 fw-700">{{ setting.district|default:"—" }}</dd>
+          <dt class="col-sm-4 text-muted fw-700">Region</dt>
+          <dd class="col-sm-8">{{ region_label }}</dd>
+          {% if setting.county %}
+          <dt class="col-sm-4 text-muted fw-700">County</dt>
+          <dd class="col-sm-8">{{ setting.county }}</dd>
+          {% endif %}
+          {% if setting.sub_county %}
+          <dt class="col-sm-4 text-muted fw-700">Sub-county</dt>
+          <dd class="col-sm-8">{{ setting.sub_county }}</dd>
+          {% endif %}
+          {% if setting.village %}
+          <dt class="col-sm-4 text-muted fw-700">Village</dt>
+          <dd class="col-sm-8">{{ setting.village }}</dd>
+          {% endif %}
+          {% if setting.po_box %}
+          <dt class="col-sm-4 text-muted fw-700">P.O. Box</dt>
+          <dd class="col-sm-8 font-monospace">{{ setting.po_box }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+    {# ── Contact ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-telephone me-2 text-success"></i>Contact</h6>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-sm-4 text-muted fw-700">Phone</dt>
+          <dd class="col-sm-8 fw-700">
+            {% if setting.phone %}<a href="tel:{{ setting.phone }}" class="text-dark">{{ setting.phone }}</a>{% else %}—{% endif %}
+          </dd>
+          {% if setting.alt_phone %}
+          <dt class="col-sm-4 text-muted fw-700">Alt. Phone</dt>
+          <dd class="col-sm-8"><a href="tel:{{ setting.alt_phone }}" class="text-muted">{{ setting.alt_phone }}</a></dd>
+          {% endif %}
+          <dt class="col-sm-4 text-muted fw-700">Email</dt>
+          <dd class="col-sm-8">
+            {% if setting.email %}<a href="mailto:{{ setting.email }}" class="text-primary">{{ setting.email }}</a>{% else %}—{% endif %}
+          </dd>
+          {% if setting.website %}
+          <dt class="col-sm-4 text-muted fw-700">Website</dt>
+          <dd class="col-sm-8"><a href="{{ setting.website }}" target="_blank" class="text-primary">{{ setting.website }}</a></dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+    {# ── Academic config ── #}
+    <div class="card">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-book me-2 text-info"></i>Academic Configuration</h6>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-sm-4 text-muted fw-700">Sections</dt>
+          <dd class="col-sm-8">
+            <div class="d-flex gap-2 flex-wrap">
+              {% if setting.has_nursery %}<span class="badge bg-success-subtle text-success border border-success-subtle">Nursery</span>{% endif %}
+              {% if setting.has_primary %}<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Primary</span>{% endif %}
+              {% if not setting.has_nursery and not setting.has_primary %}<span class="text-muted">—</span>{% endif %}
+            </div>
+          </dd>
+          {% if setting.report_footer_text %}
+          <dt class="col-sm-4 text-muted fw-700 mt-2">Report Footer</dt>
+          <dd class="col-sm-8 mt-2 text-muted fst-italic">{{ setting.report_footer_text }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+  </div>
+
+  {# ── RIGHT: quick info ── #}
+  <div class="col-12 col-lg-4">
+
+    {% if current_term %}
+    <div class="card mb-3 border-success-subtle">
+      <div class="card-header py-3 bg-success-subtle border-success-subtle">
+        <h6 class="fw-700 mb-0 text-success">
+          <i class="bi bi-circle-fill me-2" style="font-size:.5rem;"></i>Current Term
+        </h6>
+      </div>
+      <div class="card-body small">
+        <div class="fw-800 fs-5 mb-1">Term {{ current_term.name }}</div>
+        <div class="text-muted">{{ current_term.academic_year }}</div>
+        {% if current_term.start_date and current_term.end_date %}
+        <div class="text-muted mt-1">
+          {{ current_term.start_date|date:"d M" }} – {{ current_term.end_date|date:"d M Y" }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card mb-3">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-speedometer2 me-2 text-primary"></i>Profile Completeness</h6>
+      </div>
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          <div class="fw-800 fs-3 {% if completeness.score == 100 %}text-success{% elif completeness.score >= 70 %}text-warning{% else %}text-danger{% endif %}">
+            {{ completeness.score }}%
+          </div>
+          <div class="flex-fill">
+            <div class="progress" style="height:8px;">
+              <div class="progress-bar {% if completeness.score == 100 %}bg-success{% elif completeness.score >= 70 %}bg-warning{% else %}bg-danger{% endif %}"
+                   style="width:{{ completeness.score }}%;"></div>
+            </div>
+          </div>
+        </div>
+        {% if completeness.missing_fields %}
+        <div class="small text-muted mt-2">
+          <div class="fw-700 mb-1">Missing fields:</div>
+          <ul class="mb-0 ps-3">
+            {% for field in completeness.missing_fields %}
+            <li>{{ field }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% else %}
+        <div class="small text-success fw-700">
+          <i class="bi bi-check-circle-fill me-1"></i>All fields complete.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card border-0 bg-light">
+      <div class="card-body">
+        <div class="fw-700 small text-muted text-uppercase mb-3" style="font-size:.7rem;">Quick Links</div>
+        <div class="d-grid gap-2">
+          <a href="{% url 'school:school_profile_edit' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-pencil me-1"></i>Edit Full Profile
+          </a>
+          <a href="{% url 'school:school_settings' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-gear me-1"></i>Academic Settings
+          </a>
+          <a href="{% url 'school:school_profile_mini' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-card-text me-1"></i>Profile Card
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

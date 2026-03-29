@@ -82,12 +82,12 @@ def school_profile(request):
 
     # Summary stats for the header strip
     from students.models import Student
-    from accounts.models import Teacher
+    from accounts.models import CustomUser
     from academics.models import SchoolClass, Term
 
     current_term   = Term.objects.filter(is_current=True).first()
     student_count  = Student.objects.filter(is_active=True).count()
-    teacher_count  = Teacher.objects.filter(is_active=True).count()
+    teacher_count  = CustomUser.objects.filter(is_active=True, user_type="teacher").count()
     class_count    = SchoolClass.objects.filter(is_active=True).count()
 
     context = {

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Delete Calendar{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'school:calendar_list' %}" class="text-secondary">Calendars</a></li>
+<li class="breadcrumb-item"><a href="{% url 'school:calendar_detail' calendar.pk %}" class="text-secondary">{{ calendar.title|truncatechars:30 }}</a></li>
+<li class="breadcrumb-item active">Delete</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <div class="card border-danger">
+      <div class="card-header bg-danger-subtle border-danger-subtle py-3">
+        <h5 class="fw-800 mb-0 text-danger">
+          <i class="bi bi-exclamation-triangle me-2"></i>Delete Calendar
+        </h5>
+      </div>
+      <div class="card-body">
+
+        <p class="text-muted small mb-3">You are about to permanently delete:</p>
+
+        <div class="border rounded p-3 mb-4 bg-light">
+          <div class="fw-800 fs-5 mb-1">{{ calendar.title }}</div>
+          <div class="d-flex gap-2 flex-wrap text-muted small">
+            <span class="badge bg-dark font-monospace">{{ calendar.academic_year }}</span>
+            <span>Term {{ calendar.term.name }}</span>
+            {% if calendar.is_published %}
+            <span class="badge bg-success rounded-pill">Published</span>
+            {% endif %}
+            {% if calendar.is_active %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Active</span>
+            {% endif %}
+            {% if calendar.document %}
+            <span>
+              <i class="bi bi-file-earmark-pdf text-danger me-1"></i>Has document
+            </span>
+            {% endif %}
+          </div>
+          {% if calendar.description %}
+          <div class="text-muted small mt-2">{{ calendar.description|truncatechars:120 }}</div>
+          {% endif %}
+        </div>
+
+        {% if calendar.document %}
+        <div class="alert alert-warning py-2 small mb-4">
+          <i class="bi bi-file-earmark-pdf me-1 text-danger"></i>
+          The uploaded calendar document will also be permanently deleted from disk.
+        </div>
+        {% endif %}
+
+        <p class="text-muted small mb-4">
+          This action <strong>cannot be undone</strong>. The calendar entry and any linked
+          document file will be permanently removed.
+        </p>
+
+        <div class="d-flex gap-2">
+          <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-trash me-1"></i>Yes, Delete Permanently
+            </button>
+          </form>
+          <a href="{% url 'school:calendar_detail' calendar.pk %}" class="btn btn-outline-secondary">
+            Cancel
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

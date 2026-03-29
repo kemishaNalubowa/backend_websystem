@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'school:school_profile' %}" class="text-secondary">School Profile</a></li>
+<li class="breadcrumb-item active">{{ page_title }}</li>
+{% endblock %}
+
+{% block content %}
+
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ page_title }}</h4>
+    <p class="text-muted small mb-0">
+      {% if is_new %}Complete the school profile to enable report cards, portal pages and letters.
+      {% else %}Update the school's identity, registration, location and contact details.{% endif %}
+    </p>
+  </div>
+  {% if not is_new %}
+  <a href="{% url 'school:school_profile' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to Profile
+  </a>
+  {% endif %}
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+{% csrf_token %}
+
+<div class="row g-4">
+  <div class="col-12 col-lg-8">
+
+    {# ── Section 1: Identity ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-building me-2 text-primary"></i>Identity</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-8">
+            <label class="form-label fw-700 small">School Name <span class="text-danger">*</span></label>
+            <input type="text" name="school_name"
+              class="form-control {% if errors.school_name %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.school_name|default:'' }}{% elif setting %}{{ setting.school_name }}{% endif %}"
+              maxlength="200" placeholder="e.g. Kampala Junior School"/>
+            {% if errors.school_name %}<div class="invalid-feedback">{{ errors.school_name }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Est. Year</label>
+            <input type="number" name="establishment_year"
+              class="form-control font-monospace {% if errors.establishment_year %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.establishment_year|default:'' }}{% elif setting %}{{ setting.establishment_year|default:'' }}{% endif %}"
+              min="1800" max="2100" placeholder="e.g. 1985"/>
+            {% if errors.establishment_year %}<div class="invalid-feedback">{{ errors.establishment_year }}</div>{% endif %}
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">School Motto <span class="text-muted fw-400">(optional)</span></label>
+            <input type="text" name="school_motto"
+              class="form-control"
+              value="{% if post %}{{ post.school_motto|default:'' }}{% elif setting %}{{ setting.school_motto }}{% endif %}"
+              maxlength="200" placeholder='e.g. "Excellence Through Hard Work"'/>
+          </div>
+
+          {# ── Logo ── #}
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">School Logo</label>
+            {% if not is_new and setting.school_logo %}
+            <div class="d-flex align-items-center gap-2 mb-2 p-2 bg-light rounded border">
+              <img src="{{ setting.school_logo.url }}" alt="Current logo"
+                   style="height:40px;width:40px;object-fit:contain;"/>
+              <label class="form-check mb-0 ms-auto">
+                <input type="checkbox" class="form-check-input" name="clear_logo" value="1"/>
+                <span class="small text-danger fw-600">Remove</span>
+              </label>
+            </div>
+            {% endif %}
+            <input type="file" name="school_logo" class="form-control form-control-sm"
+                   accept=".jpg,.jpeg,.png,.svg,.webp"/>
+            <div class="form-text">PNG or JPG, transparent background preferred.</div>
+          </div>
+
+          {# ── Stamp ── #}
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Official Stamp</label>
+            {% if not is_new and setting.school_stamp %}
+            <div class="d-flex align-items-center gap-2 mb-2 p-2 bg-light rounded border">
+              <img src="{{ setting.school_stamp.url }}" alt="Current stamp"
+                   style="height:40px;width:40px;object-fit:contain;"/>
+              <label class="form-check mb-0 ms-auto">
+                <input type="checkbox" class="form-check-input" name="clear_stamp" value="1"/>
+                <span class="small text-danger fw-600">Remove</span>
+              </label>
+            </div>
+            {% endif %}
+            <input type="file" name="school_stamp" class="form-control form-control-sm"
+                   accept=".jpg,.jpeg,.png,.svg,.webp"/>
+            <div class="form-text">Used on reports and official letters.</div>
+          </div>
+
+          {# ── Signature ── #}
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Head Teacher Signature</label>
+            {% if not is_new and setting.head_teacher_signature %}
+            <div class="d-flex align-items-center gap-2 mb-2 p-2 bg-light rounded border">
+              <img src="{{ setting.head_teacher_signature.url }}" alt="Current signature"
+                   style="height:40px;width:60px;object-fit:contain;"/>
+              <label class="form-check mb-0 ms-auto">
+                <input type="checkbox" class="form-check-input" name="clear_signature" value="1"/>
+                <span class="small text-danger fw-600">Remove</span>
+              </label>
+            </div>
+            {% endif %}
+            <input type="file" name="head_teacher_signature" class="form-control form-control-sm"
+                   accept=".jpg,.jpeg,.png,.webp"/>
+            <div class="form-text">Printed on report cards.</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Section 2: Official Registration ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-award me-2 text-warning"></i>Official Registration</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">MoES Registration Number</label>
+            <input type="text" name="registration_number"
+              class="form-control font-monospace {% if errors.registration_number %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.registration_number|default:'' }}{% elif setting %}{{ setting.registration_number }}{% endif %}"
+              maxlength="50" placeholder="e.g. MoES/PRY/001/2005"/>
+            {% if errors.registration_number %}<div class="invalid-feedback">{{ errors.registration_number }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Ownership <span class="text-danger">*</span></label>
+            <select name="ownership" class="form-select {% if errors.ownership %}is-invalid{% endif %}">
+              {% for key, label in ownership_choices %}
+              <option value="{{ key }}"
+                {% if post %}{% if post.ownership == key %}selected{% endif %}
+                {% elif setting %}{% if setting.ownership == key %}selected{% endif %}
+                {% else %}{% if key == 'private' %}selected{% endif %}{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.ownership %}<div class="invalid-feedback">{{ errors.ownership }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">School Type <span class="text-danger">*</span></label>
+            <select name="school_type" class="form-select {% if errors.school_type %}is-invalid{% endif %}">
+              {% for key, label in type_choices %}
+              <option value="{{ key }}"
+                {% if post %}{% if post.school_type == key %}selected{% endif %}
+                {% elif setting %}{% if setting.school_type == key %}selected{% endif %}
+                {% else %}{% if key == 'day' %}selected{% endif %}{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.school_type %}<div class="invalid-feedback">{{ errors.school_type }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Curriculum <span class="text-danger">*</span></label>
+            <select name="curriculum" class="form-select {% if errors.curriculum %}is-invalid{% endif %}">
+              {% for key, label in curriculum_choices %}
+              <option value="{{ key }}"
+                {% if post %}{% if post.curriculum == key %}selected{% endif %}
+                {% elif setting %}{% if setting.curriculum == key %}selected{% endif %}
+                {% else %}{% if key == 'uganda' %}selected{% endif %}{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.curriculum %}<div class="invalid-feedback">{{ errors.curriculum }}</div>{% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Section 3: Location ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-geo-alt me-2 text-danger"></i>Location</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">Address <span class="text-danger">*</span></label>
+            <textarea name="address"
+              class="form-control {% if errors.address %}is-invalid{% endif %}" rows="2"
+              placeholder="Street address, plot number, building name…"
+            >{% if post %}{{ post.address|default:'' }}{% elif setting %}{{ setting.address }}{% endif %}</textarea>
+            {% if errors.address %}<div class="invalid-feedback">{{ errors.address }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">District <span class="text-danger">*</span></label>
+            <input type="text" name="district"
+              class="form-control {% if errors.district %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.district|default:'' }}{% elif setting %}{{ setting.district }}{% endif %}"
+              maxlength="100" placeholder="e.g. Kampala"/>
+            {% if errors.district %}<div class="invalid-feedback">{{ errors.district }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Region <span class="text-danger">*</span></label>
+            <select name="region" class="form-select {% if errors.region %}is-invalid{% endif %}">
+              <option value="">— Select region —</option>
+              {% for key, label in region_choices %}
+              <option value="{{ key }}"
+                {% if post %}{% if post.region == key %}selected{% endif %}
+                {% elif setting %}{% if setting.region == key %}selected{% endif %}{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.region %}<div class="invalid-feedback">{{ errors.region }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">County</label>
+            <input type="text" name="county" class="form-control"
+              value="{% if post %}{{ post.county|default:'' }}{% elif setting %}{{ setting.county }}{% endif %}"
+              maxlength="100" placeholder="e.g. Kampala Central"/>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Sub-county</label>
+            <input type="text" name="sub_county" class="form-control"
+              value="{% if post %}{{ post.sub_county|default:'' }}{% elif setting %}{{ setting.sub_county }}{% endif %}"
+              maxlength="100"/>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Village / Area</label>
+            <input type="text" name="village" class="form-control"
+              value="{% if post %}{{ post.village|default:'' }}{% elif setting %}{{ setting.village }}{% endif %}"
+              maxlength="100"/>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">P.O. Box</label>
+            <input type="text" name="po_box" class="form-control font-monospace"
+              value="{% if post %}{{ post.po_box|default:'' }}{% elif setting %}{{ setting.po_box }}{% endif %}"
+              maxlength="50" placeholder="e.g. P.O. Box 7062, Kampala"/>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Section 4: Contact ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-telephone me-2 text-success"></i>Contact</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Phone <span class="text-danger">*</span></label>
+            <input type="tel" name="phone"
+              class="form-control font-monospace {% if errors.phone %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.phone|default:'' }}{% elif setting %}{{ setting.phone }}{% endif %}"
+              maxlength="15" placeholder="+256 700 000000"/>
+            {% if errors.phone %}<div class="invalid-feedback">{{ errors.phone }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Alt. Phone</label>
+            <input type="tel" name="alt_phone"
+              class="form-control font-monospace"
+              value="{% if post %}{{ post.alt_phone|default:'' }}{% elif setting %}{{ setting.alt_phone }}{% endif %}"
+              maxlength="15" placeholder="+256 700 000001"/>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Email</label>
+            <input type="email" name="email"
+              class="form-control {% if errors.email %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.email|default:'' }}{% elif setting %}{{ setting.email }}{% endif %}"
+              placeholder="info@school.ac.ug"/>
+            {% if errors.email %}<div class="invalid-feedback">{{ errors.email }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Website</label>
+            <input type="url" name="website"
+              class="form-control {% if errors.website %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.website|default:'' }}{% elif setting %}{{ setting.website }}{% endif %}"
+              placeholder="https://www.school.ac.ug"/>
+            {% if errors.website %}<div class="invalid-feedback">{{ errors.website }}</div>{% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Section 5: Academic config ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-book me-2 text-info"></i>Academic Configuration</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12 col-sm-6">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="has_nursery" name="has_nursery" value="1"
+                {% if post %}{% if post.has_nursery %}checked{% endif %}
+                {% elif setting %}{% if setting.has_nursery %}checked{% endif %}
+                {% else %}checked{% endif %}/>
+              <label class="form-check-label fw-700" for="has_nursery">Has Nursery Section</label>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="has_primary" name="has_primary" value="1"
+                {% if post %}{% if post.has_primary %}checked{% endif %}
+                {% elif setting %}{% if setting.has_primary %}checked{% endif %}
+                {% else %}checked{% endif %}/>
+              <label class="form-check-label fw-700" for="has_primary">Has Primary Section</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-700 small">Report Card Footer Text</label>
+            <textarea name="report_footer_text" class="form-control" rows="3"
+              placeholder="Text printed at the bottom of all report cards e.g. 'This report is official and confidential…'"
+            >{% if post %}{{ post.report_footer_text|default:'' }}{% elif setting %}{{ setting.report_footer_text }}{% endif %}</textarea>
+            <div class="form-text">This text appears at the bottom of every printed report card.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 pb-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i>
+        {% if is_new %}Create School Profile{% else %}Save Changes{% endif %}
+      </button>
+      {% if not is_new %}
+      <a href="{% url 'school:school_profile' %}" class="btn btn-outline-secondary">Cancel</a>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {# ── RIGHT: help ── #}
+  <div class="col-12 col-lg-4">
+    <div class="card border-primary-subtle sticky-top" style="top:76px;">
+      <div class="card-header bg-primary-subtle py-3">
+        <h6 class="fw-700 mb-0 text-primary"><i class="bi bi-lightbulb me-2"></i>Setup Guide</h6>
+      </div>
+      <div class="card-body small text-secondary">
+        <dt class="fw-700 text-dark">Singleton</dt>
+        <dd class="mb-2">Only one school profile record is ever created. Submitting this form always updates the same record.</dd>
+        <dt class="fw-700 text-dark">Images</dt>
+        <dd class="mb-2">Upload the logo, stamp and head teacher signature as PNG or JPEG. Use the <strong>Remove</strong> checkbox to delete an existing image without uploading a replacement.</dd>
+        <dt class="fw-700 text-dark">MoES Number</dt>
+        <dd class="mb-2">The Ministry of Education registration number appears on official documents. Leave blank if not yet assigned.</dd>
+        <dt class="fw-700 text-dark">Report Footer</dt>
+        <dd class="mb-0">This text prints at the bottom of every student report card. Keep it short — one or two sentences maximum.</dd>
+      </div>
+    </div>
+  </div>
+
+</div>
+</form>
+{% endblock %}
