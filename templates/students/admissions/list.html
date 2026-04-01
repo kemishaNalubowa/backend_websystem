@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Admissions{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Admissions</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">Admission Applications</h4>
+    <p class="text-muted small mb-0">All applications — pending, approved and enrolled</p>
+  </div>
+  <a href="{% url 'students:admission_add_step1' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>New Admission
+  </a>
+</div>
+
+{# ── Stat cards ── #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-4 col-lg-2"><div class="stat-card"><div class="stat-value text-dark">{{ total }}</div><div class="stat-label">Total</div></div></div>
+  <div class="col-6 col-sm-4 col-lg-2"><div class="stat-card"><div class="stat-value text-warning">{{ pending }}</div><div class="stat-label">Pending</div></div></div>
+  <div class="col-6 col-sm-4 col-lg-2"><div class="stat-card"><div class="stat-value text-success">{{ approved }}</div><div class="stat-label">Approved</div></div></div>
+  <div class="col-6 col-sm-4 col-lg-2"><div class="stat-card"><div class="stat-value text-primary">{{ enrolled }}</div><div class="stat-label">Enrolled</div></div></div>
+  <div class="col-6 col-sm-4 col-lg-2"><div class="stat-card"><div class="stat-value text-info">{{ verified }}</div><div class="stat-label">Verified</div></div></div>
+  <div class="col-6 col-sm-4 col-lg-2"><div class="stat-card"><div class="stat-value text-danger">{{ rejected }}</div><div class="stat-label">Rejected</div></div></div>
+</div>
+
+{# ── Filter bar ── #}
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-12 col-md-3">
+        <label class="form-label fw-700 small mb-1">Search</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-secondary"></i></span>
+          <input type="text" name="q" class="form-control" value="{{ search }}" placeholder="Name or ADM number…"/>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for key, label in status_choices %}
+          <option value="{{ key }}" {% if status_filter == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Verified</label>
+        <select name="verified" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="1" {% if verified_filter == '1' %}selected{% endif %}>Verified</option>
+          <option value="0" {% if verified_filter == '0' %}selected{% endif %}>Not Verified</option>
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Gender</label>
+        <select name="gender" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for key, label in gender_choices %}
+          <option value="{{ key }}" {% if gender_filter == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label fw-700 small mb-1">Interview</label>
+        <select name="interview" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="upcoming" {% if interview_filter == 'upcoming' %}selected{% endif %}>Upcoming</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-1 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-funnel"></i></button>
+        {% if search or status_filter or verified_filter or gender_filter or interview_filter or year_filter %}
+        <a href="{% url 'students:admission_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i></a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# ── Table ── #}
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between py-3">
+    <span class="fw-700">{{ page_obj.paginator.count }} application{{ page_obj.paginator.count|pluralize }}</span>
+  </div>
+
+  {% if admissions %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>ADM #</th>
+          <th>Applicant</th>
+          <th>Class</th>
+          <th>Year</th>
+          <th>Status</th>
+          <th class="text-center">Verified</th>
+          <th>Days</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for adm in admissions %}
+        <tr>
+          <td><code class="fw-700">{{ adm.admission_number }}</code></td>
+          <td>
+            <a href="{% url 'students:admission_detail' adm.pk %}" class="fw-700 text-dark text-decoration-none">
+              {{ adm.last_name }}, {{ adm.first_name }}
+            </a>
+            <div class="text-muted" style="font-size:.72rem;">{{ adm.get_gender_display }}</div>
+          </td>
+          <td class="text-muted small">{{ adm.applied_class.display_name|default:"—" }}</td>
+          <td class="font-monospace small">{{ adm.academic_year }}</td>
+          <td>
+            {% if adm.status == 'pending' %}<span class="badge bg-warning text-dark">Pending</span>
+            {% elif adm.status == 'shortlisted' %}<span class="badge bg-info">Shortlisted</span>
+            {% elif adm.status == 'approved' %}<span class="badge bg-success">Approved</span>
+            {% elif adm.status == 'rejected' %}<span class="badge bg-danger">Rejected</span>
+            {% elif adm.status == 'waitlisted' %}<span class="badge bg-secondary">Waitlisted</span>
+            {% elif adm.status == 'enrolled' %}<span class="badge bg-primary">Enrolled</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if adm.is_verified %}
+            <i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}
+            <i class="bi bi-dash-circle text-muted opacity-50"></i>
+            {% endif %}
+          </td>
+          <td class="text-muted small">{{ adm.days_since_application }}d</td>
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{% url 'students:admission_detail' adm.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+              {% if adm.status == 'approved' and not adm.is_verified %}
+              <a href="{% url 'students:admission_verify_step1' adm.pk %}" class="btn btn-sm btn-outline-success" title="Verify"><i class="bi bi-shield-check"></i></a>
+              {% endif %}
+              {% if adm.allowed_transitions %}
+              <a href="{% url 'students:admission_update_status' adm.pk %}" class="btn btn-sm btn-outline-primary" title="Update Status"><i class="bi bi-arrow-repeat"></i></a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between py-3">
+    <small class="text-muted">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</small>
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&status={{ status_filter }}&verified={{ verified_filter }}&gender={{ gender_filter }}"><i class="bi bi-chevron-left"></i></a></li>{% else %}<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>{% endif %}
+      {% for num in page_obj.paginator.page_range %}{% if page_obj.number == num %}<li class="page-item active"><span class="page-link">{{ num }}</span></li>{% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}<li class="page-item"><a class="page-link" href="?page={{ num }}&q={{ search }}&status={{ status_filter }}&verified={{ verified_filter }}&gender={{ gender_filter }}">{{ num }}</a></li>{% endif %}{% endfor %}
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&status={{ status_filter }}&verified={{ verified_filter }}&gender={{ gender_filter }}"><i class="bi bi-chevron-right"></i></a></li>{% else %}<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-clipboard fs-1 d-block mb-2 opacity-25"></i>
+    <div class="fw-700 mb-1">No applications found</div>
+    {% if search or status_filter %}<a href="{% url 'students:admission_list' %}" class="btn btn-sm btn-outline-secondary mt-2">Clear Filters</a>
+    {% else %}<a href="{% url 'students:admission_add_step1' %}" class="btn btn-sm btn-primary mt-2"><i class="bi bi-plus-lg me-1"></i>New Admission</a>{% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

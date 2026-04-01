@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:admission_list' %}" class="text-secondary">Admissions</a></li>
+<li class="breadcrumb-item"><a href="{% url 'students:admission_detail' admission.pk %}" class="text-secondary">{{ admission.admission_number }}</a></li>
+<li class="breadcrumb-item active">Verify — Step 2</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-4 flex-wrap">
+  <a href="{% url 'students:admission_verify_step1' admission.pk %}" class="badge bg-success px-3 py-2 fw-700 text-decoration-none">
+    <i class="bi bi-check-circle-fill me-1"></i>1 Verified
+  </a>
+  <i class="bi bi-chevron-right text-muted"></i>
+  <span class="badge bg-primary px-3 py-2 fw-700">2 Create Student</span>
+  <i class="bi bi-chevron-right text-muted"></i>
+  <span class="badge bg-secondary-subtle text-secondary border px-3 py-2">3 Parent Accounts</span>
+  <i class="bi bi-chevron-right text-muted"></i>
+  <span class="badge bg-secondary-subtle text-secondary border px-3 py-2">4 Summary</span>
+</div>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">Verify — Step 2: Create Student</h4>
+    <p class="text-muted small mb-0">
+      {{ admission.first_name }} {{ admission.last_name }} — {{ admission.admission_number }}
+    </p>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-7">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="card mb-4">
+        <div class="card-header py-3">
+          <h6 class="fw-700 mb-0"><i class="bi bi-person-plus me-2 text-primary"></i>Enrolment Details</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700 small">Student ID <span class="text-danger">*</span></label>
+              <input type="text" name="student_id"
+                class="form-control font-monospace {% if errors.student_id %}is-invalid{% endif %}"
+                value="{{ post.student_id|default:suggested_id }}"
+                maxlength="20"/>
+              <div class="form-text">Auto-suggested. Change only if needed.</div>
+              {% if errors.student_id %}<div class="invalid-feedback">{{ errors.student_id }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700 small">Class to Enrol Into <span class="text-danger">*</span></label>
+              <select name="current_class" class="form-select {% if errors.current_class %}is-invalid{% endif %}">
+                <option value="">— Select class —</option>
+                <optgroup label="Nursery">
+                  {% for cls in all_classes %}{% if cls.section == 'nursery' %}
+                  <option value="{{ cls.pk }}"
+                    {% if post.current_class == cls.pk|stringformat:"s" %}selected
+                    {% elif admission.applied_class_id == cls.pk %}selected{% endif %}>
+                    {{ cls.display_name }}
+                  </option>
+                  {% endif %}{% endfor %}
+                </optgroup>
+                <optgroup label="Primary">
+                  {% for cls in all_classes %}{% if cls.section == 'primary' %}
+                  <option value="{{ cls.pk }}"
+                    {% if post.current_class == cls.pk|stringformat:"s" %}selected
+                    {% elif admission.applied_class_id == cls.pk %}selected{% endif %}>
+                    {{ cls.display_name }}
+                  </option>
+                  {% endif %}{% endfor %}
+                </optgroup>
+              </select>
+              {% if errors.current_class %}<div class="invalid-feedback">{{ errors.current_class }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700 small">Academic Year <span class="text-danger">*</span></label>
+              <input type="text" name="academic_year"
+                class="form-control font-monospace {% if errors.academic_year %}is-invalid{% endif %}"
+                value="{{ post.academic_year|default:current_year }}" maxlength="9"/>
+              {% if errors.academic_year %}<div class="invalid-feedback">{{ errors.academic_year }}</div>{% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700 small">Date Enrolled <span class="text-danger">*</span></label>
+              <input type="date" name="date_enrolled"
+                class="form-control {% if errors.date_enrolled %}is-invalid{% endif %}"
+                value="{{ post.date_enrolled|default:today_str }}" max="{{ today_str }}"/>
+              {% if errors.date_enrolled %}<div class="invalid-feedback">{{ errors.date_enrolled }}</div>{% endif %}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-person-plus me-1"></i>Create Student &amp; Continue
+          <i class="bi bi-chevron-right ms-1"></i>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="card bg-light border-0">
+      <div class="card-body small text-muted">
+        <div class="fw-700 text-dark mb-2">Student data from admission</div>
+        <dl class="row mb-0">
+          <dt class="col-5 fw-700">Name</dt>
+          <dd class="col-7">{{ admission.first_name }} {{ admission.last_name }}</dd>
+          <dt class="col-5 fw-700">DOB</dt>
+          <dd class="col-7">{{ admission.date_of_birth|date:"d M Y" }}</dd>
+          <dt class="col-5 fw-700">Gender</dt>
+          <dd class="col-7">{{ admission.get_gender_display }}</dd>
+          <dt class="col-5 fw-700">Applying for</dt>
+          <dd class="col-7">{{ admission.applied_class.display_name|default:"—" }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

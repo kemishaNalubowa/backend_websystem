@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:admission_list' %}" class="text-secondary">Admissions</a></li>
+<li class="breadcrumb-item"><a href="{% url 'students:admission_detail' admission.pk %}" class="text-secondary">{{ admission.admission_number }}</a></li>
+<li class="breadcrumb-item active">Verify — Step 3</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-4 flex-wrap">
+  <a href="{% url 'students:admission_verify_step1' admission.pk %}" class="badge bg-success px-3 py-2 fw-700 text-decoration-none">
+    <i class="bi bi-check-circle-fill me-1"></i>1 Verified
+  </a>
+  <i class="bi bi-chevron-right text-muted"></i>
+  <a href="{% url 'students:admission_verify_step2' admission.pk %}" class="badge bg-success px-3 py-2 fw-700 text-decoration-none">
+    <i class="bi bi-check-circle-fill me-1"></i>2 Student Created
+  </a>
+  <i class="bi bi-chevron-right text-muted"></i>
+  <span class="badge bg-primary px-3 py-2 fw-700">3 Parent Accounts</span>
+  <i class="bi bi-chevron-right text-muted"></i>
+  <span class="badge bg-secondary-subtle text-secondary border px-3 py-2">4 Summary</span>
+</div>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">Verify — Step 3: Create Parent Accounts</h4>
+    <p class="text-muted small mb-0">
+      The following parent accounts will be created. Each new parent will receive
+      a unique Parent ID and a shared portal access token.
+    </p>
+  </div>
+</div>
+
+{# Student summary ── #}
+{% if student %}
+<div class="alert alert-success d-flex align-items-center gap-3 mb-4">
+  <i class="bi bi-person-check-fill fs-4 flex-shrink-0"></i>
+  <div>
+    <div class="fw-700">Student created: {{ student.student_id }} — {{ student.full_name }}</div>
+    <div class="text-muted small">{{ student.current_class.display_name }} &bull; Enrolled {{ student.date_enrolled|date:"d M Y" }}</div>
+  </div>
+</div>
+{% endif %}
+
+{# If already done ── #}
+{% if already_done %}
+<div class="alert alert-info mb-4">
+  <i class="bi bi-info-circle me-2"></i>
+  Parent accounts have already been created for this student.
+  <a href="{% url 'students:admission_verify_step4' admission.pk %}" class="alert-link ms-2">Go to Summary</a>
+</div>
+{% else %}
+
+{# Parent list to be created ── #}
+<div class="row g-4 mb-4">
+  {% for p in parents_list %}
+  <div class="col-12 col-md-6">
+    <div class="card h-100 {% if p.existing %}border-success-subtle{% else %}border-primary-subtle{% endif %}">
+      <div class="card-header py-3 {% if p.existing %}bg-success-subtle{% else %}bg-primary-subtle{% endif %}">
+        <h6 class="fw-700 mb-0 {% if p.existing %}text-success{% else %}text-primary{% endif %}">
+          {% if p.existing %}
+          <i class="bi bi-person-check me-2"></i>Link Existing Parent
+          {% else %}
+          <i class="bi bi-person-plus me-2"></i>Create New Parent
+          {% endif %}
+          {% if forloop.first %}<span class="badge bg-warning text-dark ms-2" style="font-size:.65rem;">Primary</span>{% endif %}
+        </h6>
+      </div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          {% if p.existing %}
+          <dt class="col-5 text-muted fw-700">Parent ID</dt>
+          <dd class="col-7 font-monospace fw-700">{{ p.parent_id }}</dd>
+          <dt class="col-5 text-muted fw-700">Name</dt>
+          <dd class="col-7">{{ p.full_name }}</dd>
+          {% else %}
+          <dt class="col-5 text-muted fw-700">Full Name</dt>
+          <dd class="col-7 fw-700">{{ p.full_name }}</dd>
+          <dt class="col-5 text-muted fw-700">Phone</dt>
+          <dd class="col-7">{{ p.phone }}</dd>
+          {% if p.email %}<dt class="col-5 text-muted fw-700">Email</dt><dd class="col-7">{{ p.email }}</dd>{% endif %}
+          <dt class="col-5 text-muted fw-700">Will receive</dt>
+          <dd class="col-7">
+            <span class="badge bg-secondary-subtle text-secondary border">Auto Parent ID</span>
+            <span class="badge bg-info-subtle text-info border border-info-subtle ms-1">Shared Token</span>
+          </dd>
+          {% endif %}
+          <dt class="col-5 text-muted fw-700">Relationship</dt>
+          <dd class="col-7">{{ p.relationship|title }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# Confirm ── #}
+<div class="card border-primary border-2">
+  <div class="card-body">
+    <p class="small text-muted mb-3">
+      Clicking <strong>Create Parent Accounts</strong> will create all the parent records above.
+      A single shared access token will be generated and set as the portal login password for all parents of this student.
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary px-5">
+        <i class="bi bi-people me-1"></i>Create Parent Accounts
+        <i class="bi bi-chevron-right ms-1"></i>
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}

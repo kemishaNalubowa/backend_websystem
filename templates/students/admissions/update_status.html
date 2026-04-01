@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Update Status{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:admission_list' %}" class="text-secondary">Admissions</a></li>
+<li class="breadcrumb-item"><a href="{% url 'students:admission_detail' admission.pk %}" class="text-secondary">{{ admission.admission_number }}</a></li>
+<li class="breadcrumb-item active">Update Status</li>
+{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <div class="card">
+      <div class="card-header py-3">
+        <h5 class="fw-800 mb-0">Update Status — {{ admission.admission_number }}</h5>
+        <div class="text-muted small">
+          {{ admission.first_name }} {{ admission.last_name }} &bull;
+          Current: <strong>{{ status_label }}</strong>
+        </div>
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label fw-700 small">New Status <span class="text-danger">*</span></label>
+            <select name="status" class="form-select {% if errors.status %}is-invalid{% endif %}">
+              <option value="">— Select —</option>
+              {% for key, label in allowed %}
+              <option value="{{ key }}" {% if target_status == key or post.status == key %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% if errors.status %}<div class="invalid-feedback">{{ errors.status }}</div>{% endif %}
+          </div>
+
+          <div class="mb-3" id="admission-date-row" style="{% if target_status != 'approved' %}display:none{% endif %}">
+            <label class="form-label fw-700 small">Admission Date <span class="text-danger">*</span></label>
+            <input type="date" name="admission_date"
+              class="form-control {% if errors.admission_date %}is-invalid{% endif %}"
+              value="{{ post.admission_date|default:'' }}"/>
+            {% if errors.admission_date %}<div class="invalid-feedback">{{ errors.admission_date }}</div>{% endif %}
+          </div>
+
+          <div class="mb-3" id="interview-date-row" style="{% if target_status != 'shortlisted' %}display:none{% endif %}">
+            <label class="form-label fw-700 small">Interview Date</label>
+            <input type="date" name="interview_date" class="form-control"
+              value="{{ post.interview_date|default:'' }}"/>
+          </div>
+
+          <div class="mb-3" id="rejection-reason-row" style="{% if target_status != 'rejected' %}display:none{% endif %}">
+            <label class="form-label fw-700 small">Rejection Reason <span class="text-danger">*</span></label>
+            <textarea name="rejection_reason"
+              class="form-control {% if errors.rejection_reason %}is-invalid{% endif %}" rows="3"
+            >{{ post.rejection_reason|default:'' }}</textarea>
+            {% if errors.rejection_reason %}<div class="invalid-feedback">{{ errors.rejection_reason }}</div>{% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-700 small">Notes</label>
+            <textarea name="notes" class="form-control" rows="2">{{ post.notes|default:'' }}</textarea>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Update Status</button>
+            <a href="{% url 'students:admission_detail' admission.pk %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const statusSel = document.querySelector('select[name="status"]');
+  function toggleRows() {
+    const v = statusSel.value;
+    document.getElementById('admission-date-row').style.display  = v === 'approved'    ? '' : 'none';
+    document.getElementById('interview-date-row').style.display  = v === 'shortlisted' ? '' : 'none';
+    document.getElementById('rejection-reason-row').style.display= v === 'rejected'    ? '' : 'none';
+  }
+  statusSel.addEventListener('change', toggleRows);
+  toggleRows();
+</script>
+{% endblock %}

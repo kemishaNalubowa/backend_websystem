@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:admission_list' %}" class="text-secondary">Admissions</a></li>
+<li class="breadcrumb-item"><a href="{% url 'students:admission_detail' admission.pk %}" class="text-secondary">{{ admission.admission_number }}</a></li>
+<li class="breadcrumb-item active">Edit Parents</li>
+{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ page_title }}</h4>
+    <p class="text-muted small mb-0">
+      {{ admission.first_name }} {{ admission.last_name }} &bull; {{ admission.admission_number }}
+    </p>
+  </div>
+  <a href="{% url 'students:admission_detail' admission.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+</div>
+
+{% if errors.parents %}
+<div class="alert alert-danger small">{{ errors.parents }}</div>
+{% endif %}
+
+<form method="post" novalidate>
+{% csrf_token %}
+
+<div class="row g-4">
+  <div class="col-12 col-lg-8">
+
+    <div id="parents-container">
+      {% if existing_parents %}
+        {% for p in existing_parents %}
+        <div class="parent-block card mb-3" data-index="{{ forloop.counter0 }}">
+          {% include "students/admissions/_parent_block.html" with index=forloop.counter0 p=p %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="parent-block card mb-3" data-index="0">
+          {% include "students/admissions/_parent_block.html" with index=0 p=None %}
+        </div>
+      {% endif %}
+    </div>
+
+    <button type="button" class="btn btn-outline-primary btn-sm mb-4" id="add-parent-btn">
+      <i class="bi bi-plus-lg me-1"></i>Add Another Parent
+    </button>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i>Save Parent Data
+      </button>
+      <a href="{% url 'students:admission_detail' admission.pk %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="card border-warning-subtle bg-warning-subtle">
+      <div class="card-body small">
+        <i class="bi bi-exclamation-triangle me-1 text-warning"></i>
+        Parent accounts are <strong>not</strong> created here. This only updates
+        the raw data stored on the admission application.
+        Parent accounts are created during the Verify flow after approval.
+      </div>
+    </div>
+  </div>
+</div>
+</form>
+
+<template id="parent-block-template">
+  <div class="parent-block card mb-3" data-index="__IDX__">
+    {% include "students/admissions/_parent_block.html" with index="__IDX__" p=None %}
+  </div>
+</template>
+
+<script>
+(function () {
+  let count = document.querySelectorAll('.parent-block').length;
+  document.getElementById('add-parent-btn').addEventListener('click', function () {
+    const tpl  = document.getElementById('parent-block-template').innerHTML;
+    const html = tpl.replace(/__IDX__/g, count);
+    const wrap = document.createElement('div');
+    wrap.innerHTML = html;
+    document.getElementById('parents-container').appendChild(wrap.firstElementChild);
+    count++;
+  });
+  document.getElementById('parents-container').addEventListener('click', function (e) {
+    const btn = e.target.closest('.remove-parent-btn');
+    if (!btn) return;
+    if (document.querySelectorAll('.parent-block').length > 1) {
+      btn.closest('.parent-block').remove();
+    } else {
+      alert('At least one parent is required.');
+    }
+  });
+})();
+</script>
+{% endblock %}

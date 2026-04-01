@@ -14,6 +14,7 @@ urlpatterns = [
     path("fees/", include("fees.urls",  namespace="fees")),
     path("school/", include("school.urls",  namespace="school")),
     path("permissions/", include("permissions.urls",  namespace="permissions")),
+    path("students/", include("students.urls",  namespace="students")),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

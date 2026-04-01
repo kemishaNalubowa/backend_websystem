@@ -21,6 +21,7 @@
 from django.db import models
 from academics.base import TimeStampedModel
 from authentication.models import CustomUser
+from academics.models import SchoolStream
 
 ASSESSMENT_TYPE_CHOICES = [
     ('bot',       'Beginning of Term Exam (BOT)'),
@@ -163,6 +164,11 @@ class AssessmentClass(TimeStampedModel):
                            'academics.SchoolClass', on_delete=models.CASCADE,
                            related_name='class_assessment_links'
                        )
+    school_stream = models.ForeignKey(
+                        SchoolStream, on_delete=models.CASCADE,
+                        related_name='assessments',
+                        null=True, blank=True
+                    )
     students_invited = models.PositiveIntegerField(default=0,
                            help_text='Students expected to sit')
     students_sat     = models.PositiveIntegerField(default=0,
@@ -278,6 +284,12 @@ class AssessmentTeacher(TimeStampedModel):
                         null=True, blank=True,
                         related_name='class_assessment_teachers',
                         help_text='Class this teacher handled (invigilator / class_teacher)'
+                    )
+    
+    school_stream = models.ForeignKey(
+                        SchoolStream, on_delete=models.CASCADE,
+                        related_name='class_assessment_teachers',
+                        null=True, blank=True
                     )
     notes         = models.CharField(max_length=200, blank=True)
 
@@ -430,7 +442,11 @@ class AssessmentPerformance(TimeStampedModel):
                        'academics.SchoolClass', on_delete=models.CASCADE,
                        related_name='assessment_performances'
                    )
-
+    school_stream = models.ForeignKey(
+                        SchoolStream, on_delete=models.CASCADE,
+                        related_name='assessment_performances',
+                        null=True, blank=True
+                    )
     # Marks (Primary)
     marks_obtained = models.DecimalField(max_digits=7, decimal_places=1,
                          null=True, blank=True,

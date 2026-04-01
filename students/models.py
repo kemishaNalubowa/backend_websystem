@@ -13,6 +13,7 @@ from django.db import models
 
 from academics.base import TimeStampedModel
 from authentication.models import CustomUser
+from academics.models import SchoolStream
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -77,6 +78,13 @@ class Student(TimeStampedModel):
                          null=True,
                          related_name='students',
                      )
+    
+    school_stream = models.ForeignKey(
+                        SchoolStream, on_delete=models.CASCADE,
+                        related_name='students',
+                        null=True, blank=True
+                    )
+    
     date_enrolled  = models.DateField()
     academic_year  = models.CharField(
                          max_length=9,
@@ -288,6 +296,11 @@ class Admission(TimeStampedModel):
                            related_name='admission_applications',
                            help_text='Class the child is applying to join'
                        )
+    school_stream = models.ForeignKey(
+                        SchoolStream, on_delete=models.CASCADE,
+                        related_name='admissions',
+                        null=True, blank=True
+                    )
 
     # ── Applicant (student) details ───────────────────────────────────────────
     first_name           = models.CharField(max_length=50)

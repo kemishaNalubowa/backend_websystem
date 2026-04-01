@@ -13,6 +13,7 @@
 from django.db import models
 
 from authentication.models import CustomUser
+from academics.models import SchoolStream
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -233,6 +234,11 @@ class StaffProfile(models.Model):
                          null=True, blank=True,
                          related_name='form_teacher',
                      )
+    school_stream = models.ForeignKey(
+                        SchoolStream, on_delete=models.CASCADE,
+                        related_name='form_teacher',
+                        null=True, blank=True
+                    )
 
     # ── Uganda payroll / HR ───────────────────────────────────────────────────
     nssf_number  = models.CharField(max_length=20, blank=True)

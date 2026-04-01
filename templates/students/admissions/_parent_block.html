@@ -1,0 +1,88 @@
+{# students/admissions/_parent_block.html
+   Reusable partial: one parent/guardian input block.
+   Variables:
+     index   — integer index (0, 1, 2, …) or string '__IDX__' for the template
+     p       — existing parent dict (for pre-population) or None
+     errors  — full errors dict from view (optional)
+     relationship_choices — from context
+#}
+
+<div class="card-header py-2 d-flex align-items-center justify-content-between">
+  <span class="fw-700 small">
+    <i class="bi bi-person me-2 text-primary"></i>
+    {% if index == 0 %}Primary Guardian{% else %}Guardian {{ index|add:"1" }}{% endif %}
+  </span>
+  {% if index != 0 %}
+  <button type="button" class="btn btn-sm btn-outline-danger remove-parent-btn py-0">
+    <i class="bi bi-trash"></i>
+  </button>
+  {% endif %}
+</div>
+
+<div class="card-body">
+  <div class="row g-3">
+
+    <div class="col-12 col-sm-6">
+      <label class="form-label fw-700 small">Full Name <span class="text-danger">*</span></label>
+      <input type="text" name="parent_{{ index }}_full_name"
+        class="form-control"
+        value="{{ p.full_name|default:'' }}"
+        placeholder="e.g. John Doe" maxlength="100"/>
+    </div>
+
+    <div class="col-12 col-sm-6">
+      <label class="form-label fw-700 small">Relationship <span class="text-danger">*</span></label>
+      <select name="parent_{{ index }}_relationship" class="form-select">
+        {% for key, label in relationship_choices %}
+        <option value="{{ key }}" {% if p.relationship == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-12 col-sm-6">
+      <label class="form-label fw-700 small">Phone <span class="text-danger">*</span></label>
+      <input type="tel" name="parent_{{ index }}_phone"
+        class="form-control font-monospace"
+        value="{{ p.phone|default:'' }}"
+        placeholder="+256 700 000000" maxlength="15"/>
+    </div>
+
+    <div class="col-12 col-sm-6">
+      <label class="form-label fw-700 small">Email <span class="text-muted fw-400">(optional)</span></label>
+      <input type="email" name="parent_{{ index }}_email"
+        class="form-control"
+        value="{{ p.email|default:'' }}"
+        placeholder="parent@example.com"/>
+    </div>
+
+    <div class="col-12 col-sm-6">
+      <label class="form-label fw-700 small">Occupation</label>
+      <input type="text" name="parent_{{ index }}_occupation"
+        class="form-control"
+        value="{{ p.occupation|default:'' }}" maxlength="100"/>
+    </div>
+
+    <div class="col-12 col-sm-6">
+      <label class="form-label fw-700 small">Employer</label>
+      <input type="text" name="parent_{{ index }}_employer"
+        class="form-control"
+        value="{{ p.employer|default:'' }}" maxlength="200"/>
+    </div>
+
+    <div class="col-12 col-sm-6">
+      <label class="form-label fw-700 small">NIN <span class="text-muted fw-400">(optional)</span></label>
+      <input type="text" name="parent_{{ index }}_nin"
+        class="form-control font-monospace"
+        value="{{ p.nin|default:'' }}" maxlength="20"
+        placeholder="National ID Number"/>
+    </div>
+
+    <div class="col-12">
+      <label class="form-label fw-700 small">Home Address <span class="text-danger">*</span></label>
+      <textarea name="parent_{{ index }}_address"
+        class="form-control" rows="2"
+        placeholder="Village / street, sub-county, district…">{{ p.address|default:'' }}</textarea>
+    </div>
+
+  </div>
+</div>

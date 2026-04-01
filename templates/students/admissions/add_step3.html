@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:admission_list' %}" class="text-secondary">Admissions</a></li>
+<li class="breadcrumb-item active">New — Step 3</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-4 flex-wrap">
+  <a href="{% url 'students:admission_add_step1' %}" class="badge bg-success px-3 py-2 fw-700 text-decoration-none">
+    <i class="bi bi-check-circle-fill me-1"></i>1 Student
+  </a>
+  <i class="bi bi-chevron-right text-muted"></i>
+  <a href="{% url 'students:admission_add_step2' %}" class="badge bg-success px-3 py-2 fw-700 text-decoration-none">
+    <i class="bi bi-check-circle-fill me-1"></i>2 Parents
+  </a>
+  <i class="bi bi-chevron-right text-muted"></i>
+  <span class="badge bg-primary px-3 py-2 fw-700">3 Confirm &amp; Save</span>
+</div>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">New Admission — Step 3</h4>
+    <p class="text-muted small mb-0">Review all details below, then enter your password to save the application.</p>
+  </div>
+  <a href="{% url 'students:admission_add_step2' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-8">
+
+    {# ── Student summary ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3 bg-primary-subtle border-primary-subtle">
+        <h6 class="fw-700 mb-0 text-primary"><i class="bi bi-person me-2"></i>Applicant</h6>
+      </div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-4 text-muted fw-700">Name</dt>
+          <dd class="col-8 fw-700">{{ student_data.first_name }} {{ student_data.other_names }} {{ student_data.last_name }}</dd>
+          <dt class="col-4 text-muted fw-700">Date of Birth</dt>
+          <dd class="col-8">{{ student_data.date_of_birth }}</dd>
+          <dt class="col-4 text-muted fw-700">Gender</dt>
+          <dd class="col-8">{{ student_data.gender|title }}</dd>
+          <dt class="col-4 text-muted fw-700">Nationality</dt>
+          <dd class="col-8">{{ student_data.nationality }}</dd>
+          <dt class="col-4 text-muted fw-700">Academic Year</dt>
+          <dd class="col-8 fw-700 font-monospace">{{ student_data.academic_year }}</dd>
+          {% if applied_class %}
+          <dt class="col-4 text-muted fw-700">Applying for</dt>
+          <dd class="col-8">{{ applied_class.display_name }}</dd>
+          {% endif %}
+          {% if student_data.previous_school %}
+          <dt class="col-4 text-muted fw-700">Previous School</dt>
+          <dd class="col-8">{{ student_data.previous_school }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+    {# ── Parents summary ── #}
+    {% for p in parents_data %}
+    <div class="card mb-4">
+      <div class="card-header py-3 bg-success-subtle border-success-subtle">
+        <h6 class="fw-700 mb-0 text-success">
+          <i class="bi bi-people me-2"></i>
+          {% if p.existing %}Linked Parent{% else %}Parent / Guardian {{ forloop.counter }}{% endif %}
+        </h6>
+      </div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          {% if p.existing %}
+          <dt class="col-4 text-muted fw-700">Parent ID</dt>
+          <dd class="col-8 font-monospace fw-700">{{ p.parent_id }}</dd>
+          <dt class="col-4 text-muted fw-700">Name</dt>
+          <dd class="col-8">{{ p.full_name }}</dd>
+          {% else %}
+          <dt class="col-4 text-muted fw-700">Name</dt>
+          <dd class="col-8 fw-700">{{ p.full_name }}</dd>
+          <dt class="col-4 text-muted fw-700">Phone</dt>
+          <dd class="col-8">{{ p.phone }}</dd>
+          {% if p.email %}<dt class="col-4 text-muted fw-700">Email</dt><dd class="col-8">{{ p.email }}</dd>{% endif %}
+          {% if p.occupation %}<dt class="col-4 text-muted fw-700">Occupation</dt><dd class="col-8">{{ p.occupation }}</dd>{% endif %}
+          <dt class="col-4 text-muted fw-700">Address</dt>
+          <dd class="col-8">{{ p.address }}</dd>
+          {% endif %}
+          <dt class="col-4 text-muted fw-700">Relationship</dt>
+          <dd class="col-8">{{ p.relationship|title }}</dd>
+        </dl>
+      </div>
+    </div>
+    {% endfor %}
+
+    {# ── Password confirm ── #}
+    <div class="card border-primary border-2">
+      <div class="card-header bg-primary-subtle border-primary py-3">
+        <h6 class="fw-700 mb-0 text-primary">
+          <i class="bi bi-lock-fill me-2"></i>Confirm &amp; Submit
+        </h6>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Enter your login password to submit this application.
+          Nothing is saved until you confirm.
+        </p>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-700 small">Your Password <span class="text-danger">*</span></label>
+              <input type="password" name="confirm_password"
+                class="form-control {% if errors.confirm_password %}is-invalid{% endif %}"
+                autocomplete="current-password" placeholder="Enter your password"/>
+              {% if errors.confirm_password %}<div class="invalid-feedback">{{ errors.confirm_password }}</div>{% endif %}
+            </div>
+            <div class="col-12 col-md-3">
+              <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-check-lg me-1"></i>Submit Application
+              </button>
+            </div>
+            <div class="col-12 col-md-3">
+              <a href="{% url 'students:admission_add_step2' %}" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-arrow-left me-1"></i>Go Back
+              </a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="col-12 col-lg-4">
+    <div class="card border-warning-subtle bg-warning-subtle">
+      <div class="card-body small">
+        <div class="fw-700 mb-2"><i class="bi bi-exclamation-triangle me-1 text-warning"></i>Before you submit</div>
+        <ul class="mb-0 text-secondary ps-3">
+          <li class="mb-1">An admission number (ADM…) will be auto-generated.</li>
+          <li class="mb-1">The application starts with status <strong>Pending Review</strong>.</li>
+          <li class="mb-1">Parent accounts are <strong>not</strong> created at this stage — only after the admission is approved and verified.</li>
+          <li>You can edit parent data after submission until the admission is verified.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

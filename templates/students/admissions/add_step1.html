@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:admission_list' %}" class="text-secondary">Admissions</a></li>
+<li class="breadcrumb-item active">New — Step 1</li>
+{% endblock %}
+
+{% block content %}
+
+{# ── Flow progress bar ── #}
+<div class="d-flex align-items-center gap-2 mb-4 flex-wrap">
+  <span class="badge bg-primary px-3 py-2 fw-700">1 Student Details</span>
+  <i class="bi bi-chevron-right text-muted"></i>
+  <span class="badge bg-secondary-subtle text-secondary border px-3 py-2">2 Parent Details</span>
+  <i class="bi bi-chevron-right text-muted"></i>
+  <span class="badge bg-secondary-subtle text-secondary border px-3 py-2">3 Confirm &amp; Save</span>
+</div>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">New Admission — Step 1</h4>
+    <p class="text-muted small mb-0">Enter the applicant's personal and academic details.</p>
+  </div>
+  <a href="{% url 'students:admission_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-x-lg me-1"></i>Cancel
+  </a>
+</div>
+
+<form method="post" novalidate>
+{% csrf_token %}
+<div class="row g-4">
+  <div class="col-12 col-lg-8">
+
+    {# ── Applicant identity ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-person me-2 text-primary"></i>Applicant Details</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">First Name <span class="text-danger">*</span></label>
+            <input type="text" name="first_name"
+              class="form-control {% if errors.first_name %}is-invalid{% endif %}"
+              value="{{ post.first_name|default:'' }}" maxlength="50"/>
+            {% if errors.first_name %}<div class="invalid-feedback">{{ errors.first_name }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Last Name <span class="text-danger">*</span></label>
+            <input type="text" name="last_name"
+              class="form-control {% if errors.last_name %}is-invalid{% endif %}"
+              value="{{ post.last_name|default:'' }}" maxlength="50"/>
+            {% if errors.last_name %}<div class="invalid-feedback">{{ errors.last_name }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Other Names</label>
+            <input type="text" name="other_names" class="form-control"
+              value="{{ post.other_names|default:'' }}" maxlength="50"/>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Date of Birth <span class="text-danger">*</span></label>
+            <input type="date" name="date_of_birth"
+              class="form-control {% if errors.date_of_birth %}is-invalid{% endif %}"
+              value="{{ post.date_of_birth|default:'' }}"/>
+            {% if errors.date_of_birth %}<div class="invalid-feedback">{{ errors.date_of_birth }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Gender <span class="text-danger">*</span></label>
+            <select name="gender" class="form-select {% if errors.gender %}is-invalid{% endif %}">
+              <option value="">— Select —</option>
+              {% for key, label in gender_choices %}
+              <option value="{{ key }}" {% if post.gender == key %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% if errors.gender %}<div class="invalid-feedback">{{ errors.gender }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Birth Certificate No.</label>
+            <input type="text" name="birth_certificate_no" class="form-control font-monospace"
+              value="{{ post.birth_certificate_no|default:'' }}" maxlength="50"/>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Nationality</label>
+            <input type="text" name="nationality" class="form-control"
+              value="{{ post.nationality|default:'Ugandan' }}" maxlength="50"/>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">District of Origin</label>
+            <input type="text" name="district_of_origin" class="form-control"
+              value="{{ post.district_of_origin|default:'' }}" maxlength="100"/>
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">Religion</label>
+            <input type="text" name="religion" class="form-control"
+              value="{{ post.religion|default:'' }}" maxlength="50"/>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Academic placement ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-building me-2 text-info"></i>Academic Placement</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Academic Year (entry) <span class="text-danger">*</span></label>
+            <input type="text" name="academic_year"
+              class="form-control font-monospace {% if errors.academic_year %}is-invalid{% endif %}"
+              value="{{ post.academic_year|default:next_year }}" maxlength="9"
+              placeholder="e.g. 2026"/>
+            {% if errors.academic_year %}<div class="invalid-feedback">{{ errors.academic_year }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Applying for Class</label>
+            <select name="applied_class" class="form-select {% if errors.applied_class %}is-invalid{% endif %}">
+              <option value="">— Not specified —</option>
+              <optgroup label="Nursery">
+                {% for cls in all_classes %}{% if cls.section == 'nursery' %}
+                <option value="{{ cls.pk }}" {% if post.applied_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.display_name }}</option>
+                {% endif %}{% endfor %}
+              </optgroup>
+              <optgroup label="Primary">
+                {% for cls in all_classes %}{% if cls.section == 'primary' %}
+                <option value="{{ cls.pk }}" {% if post.applied_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.display_name }}</option>
+                {% endif %}{% endfor %}
+              </optgroup>
+            </select>
+            {% if errors.applied_class %}<div class="invalid-feedback">{{ errors.applied_class }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Previous School</label>
+            <input type="text" name="previous_school" class="form-control"
+              value="{{ post.previous_school|default:'' }}" maxlength="200"/>
+          </div>
+
+          <div class="col-12 col-sm-3">
+            <label class="form-label fw-700 small">Previous Class</label>
+            <input type="text" name="previous_class" class="form-control"
+              value="{{ post.previous_class|default:'' }}" maxlength="50"/>
+          </div>
+
+          <div class="col-12 col-sm-3">
+            <label class="form-label fw-700 small">Last Result</label>
+            <input type="text" name="last_result" class="form-control"
+              value="{{ post.last_result|default:'' }}" maxlength="100"/>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Parent already exists checkbox ── #}
+    <div class="card mb-4 border-info-subtle">
+      <div class="card-body">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch"
+            id="parent_already_exists" name="parent_already_exists" value="1"
+            {% if post.parent_already_exists %}checked{% endif %}/>
+          <label class="form-check-label fw-700" for="parent_already_exists">
+            <i class="bi bi-info-circle me-1 text-info"></i>
+            Parent / guardian already has a student enrolled in this school
+          </label>
+        </div>
+        <div class="form-text ms-5">
+          If checked, on the next step you will enter the existing Parent ID
+          instead of filling in new parent details.
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary px-4">
+        Continue to Parent Details <i class="bi bi-chevron-right ms-1"></i>
+      </button>
+    </div>
+
+  </div>
+
+  <div class="col-12 col-lg-4">
+    <div class="card border-primary-subtle sticky-top" style="top:76px;">
+      <div class="card-header bg-primary-subtle py-3">
+        <h6 class="fw-700 mb-0 text-primary"><i class="bi bi-lightbulb me-2"></i>Notes</h6>
+      </div>
+      <div class="card-body small text-secondary">
+        <dt class="fw-700 text-dark">3-Step Flow</dt>
+        <dd class="mb-2">Data from this step is held in your session. Nothing is saved to the database until Step 3.</dd>
+        <dt class="fw-700 text-dark">Existing Parent</dt>
+        <dd class="mb-0">Tick the checkbox if one or both parents are already registered in the system (they have a PAR-number). On Step 2 you will enter their Parent ID instead of creating new records.</dd>
+      </div>
+    </div>
+  </div>
+
+</div>
+</form>
+{% endblock %}

@@ -162,6 +162,14 @@ class Term(TimeStampedModel):
                                 related_name='holiday_study_terms',
                                 help_text='Classes attending holiday studies e.g. P6, P7'
                             )
+    
+    holiday_study_class_stream = models.ManyToManyField(
+                                'SchoolStream',
+                                blank=True,
+                                related_name='holiday_study_terms',
+                                help_text='Classes attending holiday studies e.g. P6, P7'
+    )
+
     holiday_study_note    = models.TextField(
                                 blank=True,
                                 help_text=(
@@ -343,63 +351,127 @@ class Subject(TimeStampedModel):
 
 class SchoolClass(TimeStampedModel):
     """
-    A class/grade level in the school.
-    Supports both Nursery (Baby/Middle/Top) and Primary (P1–P7).
-    Streams (e.g. P3A, P3B) are handled via the `stream` field.
+    Static class levels seeded once during setup.
+    Covers nursery (Baby, Middle, Top) and primary (P1-P7).
+    Records cannot be added, edited, or deleted after seeding.
     """
-    LEVEL_CHOICES = [
-        # Nursery
-        ('baby',   'Baby Class'),
-        ('middle', 'Middle Class'),
-        ('top',    'Top Class'),
-        # Primary
-        ('p1',     'Primary One (P1)'),
-        ('p2',     'Primary Two (P2)'),
-        ('p3',     'Primary Three (P3)'),
-        ('p4',     'Primary Four (P4)'),
-        ('p5',     'Primary Five (P5)'),
-        ('p6',     'Primary Six (P6)'),
-        ('p7',     'Primary Seven (P7)'),
-    ]
-    SECTION_CHOICES = [
+    key = models.CharField(max_length=10, unique=True)   # 'p1', 'baby' etc.
+    name = models.CharField(max_length=50)               # 'Primary One'
+    level_type = models.CharField(max_length=20, choices=[
         ('nursery', 'Nursery'),
         ('primary', 'Primary'),
-    ]
-
-    level         = models.CharField(max_length=10, choices=LEVEL_CHOICES)
-    stream        = models.CharField(max_length=5, blank=True,
-                        help_text='Stream / section e.g. A, B, C. Leave blank if no streaming.')
-    section       = models.CharField(max_length=10, choices=SECTION_CHOICES)
-    capacity      = models.PositiveIntegerField(default=45,
-                        help_text='Maximum number of students allowed in this class')
-    # class_teacher = models.ForeignKey(
-    #                     'accounts.Teacher',
-    #                     on_delete=models.SET_NULL,
-    #                     null=True, blank=True,
-    #                     related_name='class_managed',
-    #                     help_text='The designated class/form teacher'
-    #                 )
-    classroom     = models.CharField(max_length=50, blank=True,
-                        help_text='Room number or name e.g. Room 4, Block B')
-    academic_year = models.CharField(max_length=9,
-                        help_text='Format: 2025/2026')
-    is_active     = models.BooleanField(default=True)
+    ])
+    order = models.PositiveIntegerField()                # for sorted display
 
     class Meta:
-        verbose_name        = 'Class'
+        ordering = ['order']
+        verbose_name = 'Class'
         verbose_name_plural = 'Classes'
-        unique_together     = ['level', 'stream', 'academic_year']
-        ordering            = ['section', 'level', 'stream']
-
-    @property
-    def display_name(self):
-        name = self.get_level_display()
-        if self.stream:
-            name = f"{name} {self.stream.upper()}"
-        return name
 
     def __str__(self):
-        return self.display_name
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise PermissionError("Class records are static and cannot be modified.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise PermissionError("Class records are static and cannot be deleted.")
+
+
+class SchoolStream(TimeStampedModel):
+    """
+    School-defined streams per class level.
+    e.g. Primary Three A, Primary Three B.
+    Only relevant if school.has_streams is True.
+    """
+    # school = models.ForeignKey(
+    #     'schools.School',
+    #     on_delete=models.CASCADE,
+    #     related_name='streams'
+    # )
+    class_level = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.CASCADE,
+        related_name='streams'
+    )
+    name = models.CharField(max_length=20)   # 'A', 'B', 'East', 'West'
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['class_level__order', 'name']
+        unique_together = ( 'class_level', 'name')
+        verbose_name = 'Stream'
+        verbose_name_plural = 'Streams'
+
+    def __str__(self):
+        return f"{self.class_level.name} {self.name}"   # "Primary Three A"
+    
+
+
+
+
+# class SchoolClass(TimeStampedModel):
+#     """
+#     A class/grade level in the school.
+#     Supports both Nursery (Baby/Middle/Top) and Primary (P1–P7).
+#     Streams (e.g. P3A, P3B) are handled via the `stream` field.
+#     """
+#     LEVEL_CHOICES = [
+#         # Nursery
+#         ('baby',   'Baby Class'),
+#         ('middle', 'Middle Class'),
+#         ('top',    'Top Class'),
+#         # Primary
+#         ('p1',     'Primary One (P1)'),
+#         ('p2',     'Primary Two (P2)'),
+#         ('p3',     'Primary Three (P3)'),
+#         ('p4',     'Primary Four (P4)'),
+#         ('p5',     'Primary Five (P5)'),
+#         ('p6',     'Primary Six (P6)'),
+#         ('p7',     'Primary Seven (P7)'),
+#     ]
+#     SECTION_CHOICES = [
+#         ('nursery', 'Nursery'),
+#         ('primary', 'Primary'),
+#     ]
+
+#     level         = models.CharField(max_length=10, choices=LEVEL_CHOICES)
+#     stream        = models.CharField(max_length=5, blank=True,
+#                         help_text='Stream / section e.g. A, B, C. Leave blank if no streaming.')
+#     section       = models.CharField(max_length=10, choices=SECTION_CHOICES)
+#     capacity      = models.PositiveIntegerField(default=45,
+#                         help_text='Maximum number of students allowed in this class')
+#     # class_teacher = models.ForeignKey(
+#     #                     'accounts.Teacher',
+#     #                     on_delete=models.SET_NULL,
+#     #                     null=True, blank=True,
+#     #                     related_name='class_managed',
+#     #                     help_text='The designated class/form teacher'
+#     #                 )
+#     classroom     = models.CharField(max_length=50, blank=True,
+#                         help_text='Room number or name e.g. Room 4, Block B')
+#     academic_year = models.CharField(max_length=9,
+#                         help_text='Format: 2025/2026')
+#     is_active     = models.BooleanField(default=True)
+
+#     class Meta:
+#         verbose_name        = 'Class'
+#         verbose_name_plural = 'Classes'
+#         unique_together     = ['level', 'stream', 'academic_year']
+#         ordering            = ['section', 'level', 'stream']
+
+#     @property
+#     def display_name(self):
+#         name = self.get_level_display()
+#         if self.stream:
+#             name = f"{name} {self.stream.upper()}"
+#         return name
+
+#     def __str__(self):
+#         return self.display_name
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -413,6 +485,13 @@ class ClassSubject(TimeStampedModel):
                         SchoolClass, on_delete=models.CASCADE,
                         related_name='class_subjects'
                     )
+    
+    school_stream = models.ForeignKey(
+                        SchoolStream, on_delete=models.CASCADE,
+                        related_name='class_subjects',
+                        null=True, blank=True
+                    )
+    
     subject      = models.ForeignKey(
                         Subject, on_delete=models.CASCADE,
                         related_name='class_subjects'
@@ -478,6 +557,11 @@ class TeacherClass(TimeStampedModel):
     subject      = models.ForeignKey(
                         Subject, on_delete=models.CASCADE,
                         related_name='teaching_assignments'
+                    )
+    school_stream = models.ForeignKey(
+                        SchoolStream, on_delete=models.CASCADE,
+                        related_name='teaching_assessments',
+                        null=True, blank=True
                     )
     term         = models.ForeignKey(
                         Term, on_delete=models.CASCADE,

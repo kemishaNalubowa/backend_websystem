@@ -8,7 +8,7 @@
 from django.db import models
 from academics.base import TimeStampedModel
 from authentication.models import CustomUser
-
+from academics.models import SchoolStream
 
 class SchoolSetting(models.Model):
     """
@@ -117,6 +117,12 @@ class SchoolRequirement(TimeStampedModel):
                         related_name='requirements',
                         help_text='Leave blank if this requirement applies to all classes'
                     )
+    school_stream = models.ForeignKey(
+                        SchoolStream, on_delete=models.CASCADE,
+                        related_name='requirements',
+                        null=True, blank=True
+                    )
+    
     term          = models.ForeignKey(
                         'academics.Term',
                         on_delete=models.SET_NULL,
@@ -180,6 +186,13 @@ class SchoolAnnouncement(TimeStampedModel):
                        null=True, blank=True,
                        related_name='announcements'
                    )
+    
+    school_stream = models.ForeignKey(
+                        SchoolStream, on_delete=models.CASCADE,
+                        related_name='announcements',
+                        null=True, blank=True
+                    )
+    
     posted_by    = models.ForeignKey(
                        CustomUser,
                        on_delete=models.SET_NULL,
@@ -237,6 +250,14 @@ class SchoolEvent(TimeStampedModel):
                           related_name='events',
                           help_text='Specific classes involved (if not whole-school)'
                       )
+    
+    school_stream = models.ForeignKey(
+                        SchoolStream, on_delete=models.CASCADE,
+                        related_name='events',
+                        null=True, blank=True
+                    )
+    
+
     is_published    = models.BooleanField(default=False)
     attachment      = models.FileField(upload_to='events/', blank=True, null=True,
                           help_text='Event notice, invitation, or programme')

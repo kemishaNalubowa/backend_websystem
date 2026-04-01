@@ -9,7 +9,7 @@
 from django.db import models
 from academics.base import TimeStampedModel
 from authentication.models import CustomUser
-
+from academics.models import SchoolStream
 
 class SchoolFees(TimeStampedModel):
     """
@@ -36,6 +36,12 @@ class SchoolFees(TimeStampedModel):
                         on_delete=models.CASCADE,
                         related_name='fee_structures'
                     )
+    school_stream = models.ForeignKey(
+                        SchoolStream, on_delete=models.CASCADE,
+                        related_name='fees_structures',
+                        null=True, blank=True
+                    )
+    
     term          = models.ForeignKey(
                         'academics.Term',
                         on_delete=models.CASCADE,
@@ -93,6 +99,12 @@ class FeesPayment(TimeStampedModel):
                            related_name='school_class',
                            help_text='Which Class the student in'
                        )
+    school_stream = models.ForeignKey(
+                        SchoolStream, on_delete=models.CASCADE,
+                        related_name='fees_payments',
+                        null=True, blank=True
+                    )
+    
     
     amount_paid      = models.DecimalField(max_digits=12, decimal_places=2,
                            help_text='Amount paid in UGX')

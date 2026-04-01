@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Delete Admission{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:admission_list' %}" class="text-secondary">Admissions</a></li>
+<li class="breadcrumb-item"><a href="{% url 'students:admission_detail' admission.pk %}" class="text-secondary">{{ admission.admission_number }}</a></li>
+<li class="breadcrumb-item active">Delete</li>
+{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <div class="card border-danger">
+      <div class="card-header bg-danger-subtle border-danger-subtle py-3">
+        <h5 class="fw-800 mb-0 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Delete Admission Application</h5>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">You are about to permanently delete:</p>
+        <div class="border rounded p-3 mb-4 bg-light">
+          <div class="fw-800 fs-5 mb-1">{{ admission.admission_number }}</div>
+          <div class="text-muted small">{{ admission.first_name }} {{ admission.last_name }} &bull; {{ status_label }} &bull; {{ admission.academic_year }}</div>
+        </div>
+        {% if is_enrolled or is_verified %}
+        <div class="alert alert-danger mb-4">
+          <i class="bi bi-lock-fill me-2"></i>
+          <strong>Cannot delete.</strong>
+          This application {% if is_verified %}has been verified{% endif %}{% if is_enrolled %} and has an enrolled student record{% endif %}. Deletion is blocked.
+        </div>
+        <a href="{% url 'students:admission_detail' admission.pk %}" class="btn btn-secondary">Go Back</a>
+        {% else %}
+        <p class="text-muted small mb-4">This action <strong>cannot be undone</strong>.</p>
+        <div class="d-flex gap-2">
+          <form method="post">{% csrf_token %}
+            <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Yes, Delete Permanently</button>
+          </form>
+          <a href="{% url 'students:admission_detail' admission.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
