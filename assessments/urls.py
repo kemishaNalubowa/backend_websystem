@@ -16,6 +16,7 @@ urlpatterns = [
         views.add_assessment,
         name='add'
     ),
+
     path(
         '<int:pk>/edit/',
         views.edit_assessment,

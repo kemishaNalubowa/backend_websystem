@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}New Assessment{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'assessments:list' %}" class="text-secondary">Assessments</a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">New Assessment</li>
+{% endblock %} 
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">New Assessment</h4>
+    <p class="text-muted small mb-0">Fill in the details below to create an assessment record.</p>
+  </div>
+  <a href="{% url 'assessments:list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+{% csrf_token %}
+
+<div class="row g-4">
+
+
+  <div class="col-12 col-lg-8">
+
+    
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-clipboard me-2 text-primary"></i>Core Details
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">
+              Title <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="title"
+              class="form-control {% if errors.title %}is-invalid{% endif %}"
+              value="{{ post.title|default:'' }}"
+              placeholder='e.g. "Term 1 BOT Exams 2026" or "P4 Maths Test Week 3"'
+              maxlength="200"/>
+            {% if errors.title %}<div class="invalid-feedback">{{ errors.title }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Assessment Type <span class="text-danger">*</span>
+            </label>
+            <select name="assessment_type"
+              class="form-select {% if errors.assessment_type %}is-invalid{% endif %}">
+              <option value="">— Select type —</option>
+              {% for key, label in type_choices %}
+              <option value="{{ key }}" {% if post.assessment_type == key %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.assessment_type %}<div class="invalid-feedback">{{ errors.assessment_type }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Term <span class="text-danger">*</span>
+            </label>
+            <select name="term"
+              class="form-select {% if errors.term %}is-invalid{% endif %}">
+              <option value="">— Select term —</option>
+              {% for term in terms %}
+              <option value="{{ term.pk }}" {% if post.term == term.pk|stringformat:"s" %}selected{% endif %}>
+                {{ term }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.term %}<div class="invalid-feedback">{{ errors.term }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-4">
+            <label class="form-label fw-700 small">
+              Month <span class="text-danger">*</span>
+            </label>
+            <select name="month"
+              class="form-select {% if errors.month %}is-invalid{% endif %}">
+              <option value="">— Select —</option>
+              {% for num, name in month_choices %}
+              <option value="{{ num }}" {% if post.month == num|stringformat:"s" %}selected{% endif %}>
+                {{ name }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if errors.month %}<div class="invalid-feedback">{{ errors.month }}</div>{% endif %}
+          </div>
+
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">Description / Instructions</label>
+            <textarea name="description" class="form-control" rows="3"
+              placeholder="Any instructions or notes about this assessment (optional)."
+            >{{ post.description|default:'' }}</textarea>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-calendar3 me-2 text-warning"></i>Dates &amp; Timing
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Date Given <span class="text-danger">*</span>
+            </label>
+            <input type="date" name="date_given"
+              class="form-control {% if errors.date_given %}is-invalid{% endif %}"
+              value="{{ post.date_given|default:'' }}"/>
+            {% if errors.date_given %}<div class="invalid-feedback">{{ errors.date_given }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Due Date</label>
+            <input type="date" name="date_due"
+              class="form-control"
+              value="{{ post.date_due|default:'' }}"/>
+            <div class="form-text">Submission deadline for homework, projects, etc.</div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Results Release Date</label>
+            <input type="date" name="date_results_released"
+              class="form-control"
+              value="{{ post.date_results_released|default:'' }}"/>
+            <div class="form-text">Date results will be / were released to parents.</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-journal-text me-2 text-secondary"></i>Internal Notes
+        </h6>
+      </div>
+      <div class="card-body">
+        <textarea name="notes" class="form-control" rows="3"
+          placeholder="Internal admin notes — not visible to teachers or parents."
+        >{{ post.notes|default:'' }}</textarea>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 pb-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i>Create Assessment
+      </button>
+      <a href="{% url 'assessments:list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+
+  </div>{# /col-lg-8 #}
+
+  
+  <div class="col-12 col-lg-4">
+    <div class="card border-primary-subtle sticky-top" style="top:76px;">
+      <div class="card-header bg-primary-subtle border-primary-subtle py-3">
+        <h6 class="fw-700 mb-0 text-primary">
+          <i class="bi bi-lightbulb me-2"></i>Quick Guide
+        </h6>
+      </div>
+      <div class="card-body small text-secondary">
+
+        <div class="fw-700 text-dark mb-1">Assessment Types</div>
+        <ul class="ps-3 mb-3">
+          <li><strong>BOT / MOT / EOT</strong> — Term-wide formal exams.</li>
+          <li><strong>Test / Quiz / Exercise</strong> — Smaller class-level assessments.</li>
+          <li><strong>Mock / PLE</strong> — National exam preparation.</li>
+          <li><strong>Project / Practical</strong> — Assignment or oral work.</li>
+        </ul>
+
+        <div class="fw-700 text-dark mb-1">After creating</div>
+        <p class="mb-3">
+          On the next screen you can add the classes, subjects, teachers,
+          passsmarks and finally student performance marks — all from
+          the assessment detail page.
+        </p>
+
+        <div class="fw-700 text-dark mb-1">Total Marks</div>
+        <p class="mb-0">
+          Sets the default maximum for all subjects.
+          You can override this per-subject when adding subjects.
+        </p>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+</form>
+
+{% endblock %}

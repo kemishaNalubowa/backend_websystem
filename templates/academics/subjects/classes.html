@@ -41,81 +41,7 @@
   </li>
 </ul>
 
-<!-- Stats -->
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-value text-dark">{{ total_classes|default:"0" }}</div>
-      <div class="stat-label">Total Classes</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-value text-success">{{ active_classes|default:"0" }}</div>
-      <div class="stat-label">Active</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-value text-primary">{{ nursery_classes|default:"0" }}</div>
-      <div class="stat-label">Nursery</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-value text-info">{{ primary_classes|default:"0" }}</div>
-      <div class="stat-label">Primary</div>
-    </div>
-  </div>
-</div>
 
-<!-- Filters -->
-<div class="card mb-4">
-  <div class="card-body py-3">
-    <form method="get" class="row g-2 align-items-end">
-      <div class="col-12 col-md-4">
-        <label class="form-label fw-700 small mb-1">Search Class</label>
-        <div class="input-group input-group-sm">
-          <span class="input-group-text"><i class="bi bi-search"></i></span>
-          <input type="text" class="form-control" name="q" value="{{ search }}" placeholder="Level or stream…"/>
-        </div>
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label fw-700 small mb-1">Section</label>
-        <select class="form-select form-select-sm" name="section">
-          <option value="">All</option>
-          <option value="nursery" {% if section_filter == 'nursery' %}selected{% endif %}>Nursery</option>
-          <option value="primary" {% if section_filter == 'primary' %}selected{% endif %}>Primary</option>
-        </select>
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label fw-700 small mb-1">Level</label>
-        <select class="form-select form-select-sm" name="level">
-          <option value="">All</option>
-          {% for key, label in level_choices %}
-          <option value="{{ key }}" {% if level_filter == key %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-6 col-md-1">
-        <label class="form-label fw-700 small mb-1">Active</label>
-        <select class="form-select form-select-sm" name="active">
-          <option value="">All</option>
-          <option value="1" {% if active_filter == '1' %}selected{% endif %}>Yes</option>
-          <option value="0" {% if active_filter == '0' %}selected{% endif %}>No</option>
-        </select>
-      </div>
-      <div class="col-6 col-md-2 d-flex gap-2">
-        <button type="submit" class="btn btn-primary btn-sm flex-fill">
-          <i class="bi bi-funnel me-1"></i>Filter
-        </button>
-        <a href="{% url 'academics:subject_detail_classes' subject.pk %}" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-x-lg"></i>
-        </a>
-      </div>
-    </form>
-  </div>
-</div>
 
 <!-- Table -->
 <div class="card">
@@ -129,33 +55,24 @@
       <thead class="table-light">
         <tr>
           <th>Class</th>
+          <th>Code</th>
           <th>Section</th>
-          <th>Stream</th>
-          <th>Status</th>
-          <th>Notes</th>
         </tr>
       </thead>
       <tbody>
         {% for cs in class_subjects %}
         <tr>
           <td>
-            <div class="fw-700">{{ cs.school_class.display_name }}</div>
-            <div class="text-muted small">{{ cs.school_class.classroom|default:"—" }}</div>
+            <div class="fw-700">{{ cs.school_class.supported_class.name }}</div>
+          </td>
+          <td>
+            <div class="fw-700 text-uppercase">{{ cs.school_class.supported_class.key }}</div>
           </td>
           <td>
             <span class="badge {% if cs.school_class.section == 'nursery' %}bg-info-subtle text-info border border-info-subtle{% else %}bg-primary-subtle text-primary border border-primary-subtle{% endif %}">
-              {{ cs.school_class.get_section_display }}
+              {{ cs.school_class.supported_class.section }}
             </span>
           </td>
-          <td>{{ cs.school_class.stream|upper|default:"—" }}</td>
-          <td>
-            {% if cs.is_active %}
-              <span class="badge bg-success rounded-pill">Active</span>
-            {% else %}
-              <span class="badge bg-secondary rounded-pill">Inactive</span>
-            {% endif %}
-          </td>
-          <td class="text-muted small">{{ cs.notes|default:"—" }}</td>
         </tr>
         {% endfor %}
       </tbody>

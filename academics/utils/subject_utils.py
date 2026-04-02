@@ -11,18 +11,26 @@ from django.db.models import Avg, Count, Q, Sum
 from academics.models import Subject
 
 
+
+from academics.models import SchoolSupportedClasses
+
+def get_sch_supported_classes():
+    return SchoolSupportedClasses.objects.all()
+
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  VALIDATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-VALID_LEVELS = {'nursery', 'lower_primary', 'upper_primary', 'all'}
+# VALID_LEVELS = {'nursery', 'lower_primary', 'upper_primary', 'all'}
 
-LEVEL_DISPLAY = {
-    'nursery':       'Nursery (Baby – Top Class)',
-    'lower_primary': 'Lower Primary (P1 – P3)',
-    'upper_primary': 'Upper Primary (P4 – P7)',
-    'all':           'All Levels',
-}
+# LEVEL_DISPLAY = {
+#     'nursery':       'Nursery (Baby – Top Class)',
+#     'lower_primary': 'Lower Primary (P1 – P3)',
+#     'upper_primary': 'Upper Primary (P4 – P7)',
+#     'all':           'All Levels',
+# }
 
 
 def validate_and_parse_subject(post: dict, instance: Subject | None = None) -> tuple[dict, dict]:
@@ -65,21 +73,27 @@ def validate_and_parse_subject(post: dict, instance: Subject | None = None) -> t
             cleaned['code'] = code
 
     # ── level ─────────────────────────────────────────────────────────────────
-    level = (post.get('level') or '').strip()
-    if not level:
-        errors['level'] = 'School level is required.'
-    elif level not in VALID_LEVELS:
-        errors['level'] = f'Invalid level. Choose one of: {", ".join(VALID_LEVELS)}.'
+
+    supported_classes = get_sch_supported_classes()
+    submitted_classes = []
+
+    for sc in supported_classes:
+        key = sc.supported_class.key
+
+        class_ = (post.get(f"class_{key}") or '').strip()
+
+        if class_:
+            submitted_classes.append({f"class_{key}":class_})
+    
+    if not submitted_classes:
+        errors['classes'] = f'Subject Class is required.'
     else:
-        cleaned['level'] = level
+        cleaned['classes'] = submitted_classes
+
 
     # ── description ───────────────────────────────────────────────────────────
     cleaned['description'] = (post.get('description') or '').strip()
 
-    # ── is_compulsory ─────────────────────────────────────────────────────────
-    cleaned['is_compulsory'] = str(post.get('is_compulsory', '')).strip().lower() in (
-        '1', 'true', 'on', 'yes'
-    )
 
     # ── is_active ─────────────────────────────────────────────────────────────
     cleaned['is_active'] = str(post.get('is_active', '')).strip().lower() in (
@@ -87,15 +101,14 @@ def validate_and_parse_subject(post: dict, instance: Subject | None = None) -> t
     )
 
     # ── sort_order ────────────────────────────────────────────────────────────
-    sort_raw = (post.get('sort_order') or '0').strip()
-    try:
-        sort_val = int(sort_raw)
-        if sort_val < 0:
-            errors['sort_order'] = 'Sort order must be 0 or greater.'
-        else:
-            cleaned['sort_order'] = sort_val
-    except ValueError:
-        errors['sort_order'] = 'Sort order must be a whole number.'
+
+
+    if not errors:
+        submitted_keys = [v for d in cleaned['classes'] for v in d.values()]
+        cleaned['classes'] = [
+            sc for sc in supported_classes
+            if sc.supported_class.key in submitted_keys
+        ]
 
     return cleaned, errors
 
@@ -113,19 +126,19 @@ def get_subject_list_stats() -> dict:
     total         = qs.count()
     active        = qs.filter(is_active=True).count()
     inactive      = qs.filter(is_active=False).count()
-    compulsory    = qs.filter(is_compulsory=True, is_active=True).count()
-    optional      = qs.filter(is_compulsory=False, is_active=True).count()
+    # compulsory    = qs.filter(is_compulsory=True, is_active=True).count()
+    # optional      = qs.filter(is_compulsory=False, is_active=True).count()
 
-    by_level = list(
-        qs.filter(is_active=True)
-        .values('level')
-        .annotate(total=Count('id'))
-        .order_by('level')
-    )
+    # by_level = list(
+    #     qs.filter(is_active=True)
+    #     # .values('level')
+    #     .annotate(total=Count('id'))
+    #     # .order_by('level')
+    # )
 
     # Attach display labels
-    for row in by_level:
-        row['level_display'] = LEVEL_DISPLAY.get(row['level'], row['level'])
+    # for row in by_level:
+    #     row['level_display'] = LEVEL_DISPLAY.get(row['level'], row['level'])
 
     # Subjects with no class assignment at all
     from academics.models import ClassSubject
@@ -141,9 +154,9 @@ def get_subject_list_stats() -> dict:
         'total':        total,
         'active':       active,
         'inactive':     inactive,
-        'compulsory':   compulsory,
-        'optional':     optional,
-        'by_level':     by_level,
+        # 'compulsory':   compulsory,
+        # 'optional':     optional,
+        # 'by_level':     by_level,
         'unassigned':   unassigned,
         'unteached':    unteached,
     }
@@ -159,11 +172,13 @@ def get_subject_info_stats(subject: Subject) -> dict:
     """
     from academics.models import ClassSubject, TeacherSubject, TeacherClass
 
-    class_count   = ClassSubject.objects.filter(subject=subject, is_active=True).count()
+    class_count   = ClassSubject.objects.filter(subject=subject).count()
+
+
     teacher_count = TeacherSubject.objects.filter(subject=subject).count()
-    primary_teacher = TeacherSubject.objects.filter(
-        subject=subject, is_primary=True
-    ).select_related('teacher__user').first()
+    # primary_teacher = TeacherSubject.objects.filter(
+    #     subject=subject, is_primary=True
+    # ).select_related('teacher__user').first()
 
     # How many active teaching assignments exist for this subject this term
     from academics.models import Term
@@ -179,10 +194,10 @@ def get_subject_info_stats(subject: Subject) -> dict:
     return {
         'class_count':        class_count,
         'teacher_count':      teacher_count,
-        'primary_teacher':    primary_teacher,
+        # 'primary_teacher':    primary_teacher,
         'current_term':       current_term,
         'active_assignments': active_assignments,
-        'level_display':      LEVEL_DISPLAY.get(subject.level, subject.level),
+        # 'level_display':      LEVEL_DISPLAY.get(subject.level, subject.level),
     }
 
 
@@ -254,29 +269,30 @@ def get_subject_classes_stats(subject: Subject) -> dict:
     from academics.models import ClassSubject, TeacherClass, Term
     from assessments.models import AssessmentSubject
 
+    # supported_classes = SchoolSupportedClasses.objects.filter()
+
     cs_qs = ClassSubject.objects.filter(
         subject=subject
     ).select_related('school_class').order_by(
-        'school_class__section', 'school_class__level', 'school_class__stream'
+        'school_class__supported_class__section','school_class__supported_class__order'
     )
 
     total_assigned  = cs_qs.count()
-    active_assigned = cs_qs.filter(is_active=True).count()
+    # active_assigned = cs_qs.filter(is_active=True).count()
 
     # Breakdown by school section (nursery vs primary)
     by_section = list(
-        cs_qs.filter(is_active=True)
-        .values('school_class__section')
+        cs_qs.values('school_class__supported_class__section')
         .annotate(count=Count('id'))
     )
 
     # Breakdown by level
-    by_level = list(
-        cs_qs.filter(is_active=True)
-        .values('school_class__level')
-        .annotate(count=Count('id'))
-        .order_by('school_class__level')
-    )
+    # by_level = list(
+    #     cs_qs.filter(is_active=True)
+    #     .values('school_class__level')
+    #     .annotate(count=Count('id'))
+    #     .order_by('school_class__level')
+    # )
 
     # Current term: which classes are actively taught this subject + by whom
     current_term = Term.objects.filter(is_current=True).first()
@@ -287,39 +303,39 @@ def get_subject_classes_stats(subject: Subject) -> dict:
                 subject=subject,
                 term=current_term,
                 is_active=True,
-            ).select_related('school_class', 'teacher__user')
-            .order_by('school_class__section', 'school_class__level')
+            ).select_related('school_class')
+            .order_by('school_class__section', )
         )
 
     # Performance: latest EOT average per class for this subject
     class_performance = list(
         AssessmentSubject.objects.filter(
             subject=subject,
-            exam_type='eot',
+            # exam_type='eot',
         )
-        .values(
-            'school_class__level',
-            'school_class__stream',
-            'term__name',
-            'term__start_date',
-        )
-        .annotate(
-            avg_mark=Avg('marks_obtained'),
-            student_count=Count('student', distinct=True),
-        )
-        .order_by(
-            'school_class__level',
-            '-term__start_date',
-        )[:30]
+        # .values(
+        #     # 'school_class__level',
+        #     # 'school_class__stream',
+        #     'term__name',
+        #     'term__start_date',
+        # )
+        # .annotate(
+        #     avg_mark=Avg('marks_obtained'),
+        #     student_count=Count('student', distinct=True),
+        # )
+        # .order_by(
+        #     'school_class__level',
+        #     '-term__start_date',
+        # )[:30]
     )
 
     return {
         'class_subjects':       cs_qs,
         'total_assigned':       total_assigned,
-        'active_assigned':      active_assigned,
-        'inactive_assigned':    total_assigned - active_assigned,
+        # 'active_assigned':      active_assigned,
+        # 'inactive_assigned':    total_assigned - active_assigned,
         'by_section':           by_section,
-        'by_level':             by_level,
+        # 'by_level':             by_level,
         'current_term':         current_term,
         'current_assignments':  current_assignments,
         'class_performance':    class_performance,

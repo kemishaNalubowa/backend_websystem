@@ -18,14 +18,16 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from academics.models import Subject
+from academics.models import base
+from academics.models import Subject,ClassSubject
 from academics.utils.subject_utils import (
     get_subject_classes_stats,
     get_subject_info_stats,
     get_subject_list_stats,
     get_subject_teachers_stats,
     validate_and_parse_subject,
-    LEVEL_DISPLAY,
+    get_sch_supported_classes,
+    # LEVEL_DISPLAY,
 )
 
 _T = 'academics/subjects/'
@@ -50,8 +52,8 @@ def subject_list(request):
 
     # ── Filters ───────────────────────────────────────────────────────────────
     status_filter     = request.GET.get('status', '').strip()
-    level_filter      = request.GET.get('level', '').strip()
-    compulsory_filter = request.GET.get('compulsory', '').strip()
+    # level_filter      = request.GET.get('level', '').strip()
+    # compulsory_filter = request.GET.get('compulsory', '').strip()
     search            = request.GET.get('q', '').strip()
 
     if status_filter == 'active':
@@ -59,13 +61,6 @@ def subject_list(request):
     elif status_filter == 'inactive':
         qs = qs.filter(is_active=False)
 
-    if level_filter:
-        qs = qs.filter(level=level_filter)
-
-    if compulsory_filter == '1':
-        qs = qs.filter(is_compulsory=True)
-    elif compulsory_filter == '0':
-        qs = qs.filter(is_compulsory=False)
 
     if search:
         qs = qs.filter(
@@ -74,7 +69,7 @@ def subject_list(request):
             Q(description__icontains=search)
         )
 
-    qs = qs.order_by('sort_order', 'name')
+    qs = qs.order_by('name')
 
     # ── Pagination ────────────────────────────────────────────────────────────
     paginator  = Paginator(qs, 15)
@@ -87,10 +82,10 @@ def subject_list(request):
         'subjects':           page_obj.object_list,
         'page_obj':           page_obj,
         'status_filter':      status_filter,
-        'level_filter':       level_filter,
-        'compulsory_filter':  compulsory_filter,
+        # 'level_filter':       level_filter,
+        # 'compulsory_filter':  compulsory_filter,
         'search':             search,
-        'level_choices':      list(LEVEL_DISPLAY.items()),
+        # 'level_choices':      list(LEVEL_DISPLAY.items()),
         'section':            'list',
         **stats,
     }
@@ -115,7 +110,8 @@ def subject_add(request):
             'section':      'add',
             'post':         {},
             'errors':       {},
-            'level_choices': list(LEVEL_DISPLAY.items()),
+            "classes":get_sch_supported_classes(),
+            # 'level_choices': list(LEVEL_DISPLAY.items()),
         })
 
     # ── POST ──────────────────────────────────────────────────────────────────
@@ -130,12 +126,29 @@ def subject_add(request):
             'section':       'add',
             'post':          request.POST,
             'errors':        errors,
-            'level_choices': list(LEVEL_DISPLAY.items()),
+            "classes":get_sch_supported_classes(),
+            # 'level_choices': list(LEVEL_DISPLAY.items()),
         })
 
     try:
         with transaction.atomic():
-            subject = Subject.objects.create(**cleaned)
+            subject = Subject.objects.create(
+                name=cleaned['name'],
+                code=cleaned['code'],
+                description=cleaned['description'],
+                is_active=cleaned['is_active'],
+            )
+
+            # Creating the supported Classess
+
+            for cls in cleaned["classes"]:
+                ClassSubject.objects.create(
+                    school_class=cls,  # the actual Class FK
+                    subject=subject,
+                )
+
+
+
     except Exception as exc:
         messages.error(request, f'Could not save subject: {exc}')
         return render(request, f'{_T}form.html', {
@@ -144,7 +157,8 @@ def subject_add(request):
             'section':       'add',
             'post':          request.POST,
             'errors':        {},
-            'level_choices': list(LEVEL_DISPLAY.items()),
+            'classes':       get_sch_supported_classes(),
+            # 'level_choices': list(LEVEL_DISPLAY.items()),
         })
 
     messages.success(
@@ -173,9 +187,10 @@ def subject_edit(request, pk):
             'form_title':    f'Edit Subject — {subject.name} ({subject.code})',
             'action':        'edit',
             'section':       'edit',
+            "classes":get_sch_supported_classes(),
             'post':          {},
             'errors':        {},
-            'level_choices': list(LEVEL_DISPLAY.items()),
+            # 'level_choices': list(LEVEL_DISPLAY.items()),
         })
 
     # ── POST ──────────────────────────────────────────────────────────────────
@@ -190,15 +205,26 @@ def subject_edit(request, pk):
             'action':        'edit',
             'section':       'edit',
             'post':          request.POST,
+            "classes":get_sch_supported_classes(),
             'errors':        errors,
-            'level_choices': list(LEVEL_DISPLAY.items()),
+            # 'level_choices': list(LEVEL_DISPLAY.items()),
         })
 
     try:
         with transaction.atomic():
-            for field, value in cleaned.items():
+            # Update Subject fields only
+            subject_fields = {k: v for k, v in cleaned.items() if k != 'classes'}
+            for field, value in subject_fields.items():
                 setattr(subject, field, value)
             subject.save()
+
+            # Sync ClassSubject records
+            ClassSubject.objects.filter(subject=subject).delete()
+            for cls in cleaned['classes']:
+                ClassSubject.objects.create(
+                    school_class=cls,
+                    subject=subject,
+                )
     except Exception as exc:
         messages.error(request, f'Could not update subject: {exc}')
         return render(request, f'{_T}form.html', {
@@ -208,7 +234,8 @@ def subject_edit(request, pk):
             'section':       'edit',
             'post':          request.POST,
             'errors':        {},
-            'level_choices': list(LEVEL_DISPLAY.items()),
+            'classes':       get_sch_supported_classes(),
+            # 'level_choices': list(LEVEL_DISPLAY.items()),
         })
 
     messages.success(
@@ -323,7 +350,7 @@ def subject_detail_info(request, pk):
 
     context = {
         'subject':       subject,
-        'level_display': LEVEL_DISPLAY.get(subject.level, subject.level),
+        # 'level_display': LEVEL_DISPLAY.get(subject.level, subject.level),
         'page_title':    f'{subject.name} ({subject.code})',
         **stats,
     }
@@ -448,7 +475,7 @@ def subject_detail_classes(request, pk):
 
     context = {
         'subject':        subject,
-        'level_display':  LEVEL_DISPLAY.get(subject.level, subject.level),
+        # 'level_display':  LEVEL_DISPLAY.get(subject.level, subject.level),
         'page_title':     f'Classes — {subject.name} ({subject.code})',
         **stats,
         'class_subjects': page_obj.object_list,

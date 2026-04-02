@@ -26,9 +26,7 @@
         {% endif %}
       </div>
       <div class="text-muted small">
-        Code: <code>{{ subject.code }}</code> &bull;
-        {{ level_display }} &bull;
-        {% if subject.is_compulsory %}Compulsory{% else %}Optional{% endif %}
+        Code: <code>{{ subject.code }}</code>
       </div>
     </div>
   </div>
@@ -88,20 +86,7 @@
           <dt class="col-sm-4 text-muted small fw-700 text-uppercase">Code</dt>
           <dd class="col-sm-8"><code class="fw-700">{{ subject.code }}</code></dd>
 
-          <dt class="col-sm-4 text-muted small fw-700 text-uppercase">Level</dt>
-          <dd class="col-sm-8">
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ level_display }}</span>
-          </dd>
-
-          <dt class="col-sm-4 text-muted small fw-700 text-uppercase">Type</dt>
-          <dd class="col-sm-8">
-            {% if subject.is_compulsory %}
-              <span class="badge bg-success-subtle text-success border border-success-subtle">Compulsory</span>
-            {% else %}
-              <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Optional</span>
-            {% endif %}
-          </dd>
-
+          
           <dt class="col-sm-4 text-muted small fw-700 text-uppercase">Status</dt>
           <dd class="col-sm-8">
             {% if subject.is_active %}
@@ -110,9 +95,6 @@
               <span class="badge bg-danger rounded-pill">Inactive</span>
             {% endif %}
           </dd>
-
-          <dt class="col-sm-4 text-muted small fw-700 text-uppercase">Sort Order</dt>
-          <dd class="col-sm-8">{{ subject.sort_order }}</dd>
 
           {% if subject.description %}
           <dt class="col-sm-4 text-muted small fw-700 text-uppercase">Description</dt>

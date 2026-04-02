@@ -52,9 +52,17 @@ from academics.views.subject_views import (
     subject_detail_classes,
 )
 
+
+from academics.views import views
+
 app_name = 'academics'
 
 urlpatterns = [
+
+    path("supported-classes/add/", views.school_supported_classes_form, name="school_supported_classes_form"),
+
+
+
 
     # ── Term CRUD ─────────────────────────────────────────────────────────────
     path(

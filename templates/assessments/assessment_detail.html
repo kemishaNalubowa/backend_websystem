@@ -395,14 +395,7 @@
           {% if subject_errors.subject %}<div class="invalid-feedback">{{ subject_errors.subject }}</div>{% endif %}
         </div>
 
-        <div class="col-12 col-sm-4 col-md-2">
-          <label class="form-label fw-700 small">Total Marks <span class="text-danger">*</span></label>
-          <input type="number" name="total_marks"
-            class="form-control form-control-sm {% if subject_errors.total_marks %}is-invalid{% endif %}"
-            value="{{ subject_post.total_marks|default:assessment.total_marks }}"
-            min="1" max="9999" step="0.5"/>
-          {% if subject_errors.total_marks %}<div class="invalid-feedback">{{ subject_errors.total_marks }}</div>{% endif %}
-        </div>
+        
 
         <div class="col-12 col-sm-4 col-md-2">
           <label class="form-label fw-700 small">Sort Order</label>
@@ -942,14 +935,6 @@
           {% if perf_errors.marks_obtained %}<div class="invalid-feedback">{{ perf_errors.marks_obtained }}</div>{% endif %}
         </div>
 
-        <div class="col-6 col-sm-4 col-md-2">
-          <label class="form-label fw-700 small">Total Marks <span class="text-danger">*</span></label>
-          <input type="number" name="total_marks"
-            class="form-control form-control-sm {% if perf_errors.total_marks %}is-invalid{% endif %}"
-            value="{{ perf_post.total_marks|default:assessment.total_marks }}"
-            min="1" max="9999" step="0.5"/>
-          {% if perf_errors.total_marks %}<div class="invalid-feedback">{{ perf_errors.total_marks }}</div>{% endif %}
-        </div>
 
         <div class="col-12 col-sm-4 col-md-2">
           <label class="form-label fw-700 small">Nursery Rating</label>

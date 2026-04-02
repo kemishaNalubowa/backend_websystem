@@ -11,6 +11,7 @@
 
 from django.db import models
 from . base import TimeStampedModel 
+from . import base
 
 
 
@@ -329,22 +330,28 @@ class Subject(TimeStampedModel):
                         help_text='E.g. English Language, Mathematics, Science, SST, MTC, CRE, IRE')
     code          = models.CharField(max_length=10, unique=True,
                         help_text='Short code e.g. ENG, MAT, SCI, SST, MTC, CRE, IRE, LIT')
-    level         = models.CharField(max_length=20, choices=LEVEL_CHOICES,
-                        help_text='Which school level this subject belongs to')
+    # level         = models.CharField(max_length=20, choices=LEVEL_CHOICES,
+                        # help_text='Which school level this subject belongs to')
     description   = models.TextField(blank=True)
-    is_compulsory = models.BooleanField(default=True,
-                        help_text='Is this subject compulsory for all students at the level?')
+    # is_compulsory = models.BooleanField(default=True,
+                        # help_text='Is this subject compulsory for all students at the level?')
     is_active     = models.BooleanField(default=True)
-    sort_order    = models.PositiveIntegerField(default=0,
-                        help_text='Order in which subject appears on report cards')
+    # sort_order    = models.PositiveIntegerField(default=0,
+                        # help_text='Order in which subject appears on report cards')
 
     class Meta:
         verbose_name        = 'Subject'
         verbose_name_plural = 'Subjects'
-        ordering            = ['sort_order', 'name']
+        ordering            = ['name']
 
     def __str__(self):
         return f"{self.code} — {self.name}"
+
+
+
+
+
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -378,6 +385,17 @@ class SchoolClass(TimeStampedModel):
 
     # def delete(self, *args, **kwargs):
     #     raise PermissionError("Class records are static and cannot be deleted.")
+
+
+
+class SchoolSupportedClasses(TimeStampedModel):
+    supported_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE, related_name="school_supported_classess")
+    def __str__(self):
+        return self.supported_class
+    
+
+
+
 
 
 class SchoolStream(TimeStampedModel):
@@ -482,28 +500,28 @@ class ClassSubject(TimeStampedModel):
     E.g. P4 teaches: English, Maths, Science, SST, MTC, CRE.
     """
     school_class = models.ForeignKey(
-                        SchoolClass, on_delete=models.CASCADE,
+                        SchoolSupportedClasses, on_delete=models.CASCADE,
                         related_name='class_subjects'
                     )
     
-    school_stream = models.ForeignKey(
-                        SchoolStream, on_delete=models.CASCADE,
-                        related_name='class_subjects',
-                        null=True, blank=True
-                    )
+    # school_stream = models.ForeignKey(
+    #                     SchoolStream, on_delete=models.CASCADE,
+    #                     related_name='class_subjects',
+    #                     null=True, blank=True
+    #                 )
     
     subject      = models.ForeignKey(
                         Subject, on_delete=models.CASCADE,
                         related_name='class_subjects'
                     )
-    is_active    = models.BooleanField(default=True)
-    notes        = models.CharField(max_length=200, blank=True)
+    # is_active    = models.BooleanField(default=True)
+    # notes        = models.CharField(max_length=200, blank=True)
 
     class Meta:
         verbose_name        = 'Class Subject'
         verbose_name_plural = 'Class Subjects'
         unique_together     = ['school_class', 'subject']
-        ordering            = ['school_class', 'subject__sort_order']
+        ordering            = ['school_class',]
 
     def __str__(self):
         return f"{self.school_class} → {self.subject.code}"

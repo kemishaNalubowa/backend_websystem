@@ -153,7 +153,7 @@ class ParentProfile(models.Model):
 #  STAFF PROFILE  (unchanged from previous version)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-class StaffProfile(models.Model):
+class StaffProfile(models.Model): 
     """
     Extended professional profile for teaching and non-teaching staff.
     Linked 1-to-1 with a CustomUser whose user_type in ('teacher','staff','admin').

@@ -3,6 +3,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib                 import messages
 from django.db                      import transaction
 
+from authentication.models import CustomUser
+from accounts.models import StaffProfile
+from academics.base import TEACHING_STAFF_ROLES
+
 from .models import (
     Assessment,
     AssessmentClass,
@@ -140,6 +144,31 @@ def add_assessment(request):
     return render(request, 'assessments/add_assessment.html', ctx)
 
 
+
+def assign_teacher_to_assessment(request):
+    staffs = StaffProfile.objects.all()
+
+    teaching_staffs = []
+
+    for t in staffs:
+        if t.role in TEACHING_STAFF_ROLES:
+            teaching_staffs.append(t)
+
+    teachers = []
+
+    for ts in teaching_staffs:
+        tr = CustomUser.objects.filter(pk=ts.user__id)
+        for t in tr:
+            teachers.append(t)
+
+    return render(request, "assessments/assign_teacher_to_assessment.html")
+    
+
+    
+
+    
+
+
 # =============================================================================
 # 3. Edit Assessment
 # =============================================================================
@@ -189,10 +218,10 @@ def assessment_detail(request, pk):
         Assessment.objects.select_related('term', 'created_by'), pk=pk
     )
 
-    classes      = assessment.assessment_classes.select_related('school_class', 'invigilator__user')
+    classes      = assessment.assessment_classes.select_related('school_class')
     subjects     = assessment.assessment_subjects.select_related('subject')
-    teachers     = assessment.assessment_teachers.select_related('teacher__user', 'subject', 'school_class')
-    pass_marks   = assessment.pass_marks.select_related('subject', 'set_by__user', 'approved_by')
+    teachers     = assessment.assessment_teachers.select_related( 'subject', 'school_class')
+    # pass_marks   = assessment.pass_marks.select_related('subject', 'set_by__user', 'approved_by')
     performances = assessment.performances.select_related(
         'student', 'subject', 'school_class', 'entered_by', 'verified_by'
     )
@@ -220,7 +249,7 @@ def assessment_detail(request, pk):
         'classes':         classes,
         'subjects':        subjects,
         'teachers':        teachers,
-        'pass_marks':      pass_marks,
+        # 'pass_marks':      pass_marks,
         'performances':    performances,
         'summary':         summary,
         # form states for inline add forms

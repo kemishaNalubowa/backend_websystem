@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academics:subject_list' %}" class="text-secondary">Subjects</a></li>
+{% if action == 'edit' %}
+<li class="breadcrumb-item">
+  <a href="{% url 'academics:subject_detail_info' subject.pk %}" class="text-secondary">{{ subject.code }}</a>
+</li>
+<li class="breadcrumb-item active">Edit</li>
+{% else %}
+<li class="breadcrumb-item active">Add Subject</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ form_title }}</h4>
+    <p class="text-muted small mb-0">
+      {% if action == 'edit' %}Update the details for this subject.{% else %}Fill in the fields below to create a new subject.{% endif %}
+    </p>
+  </div>
+  {% if action == 'edit' %}
+  <a href="{% url 'academics:subject_detail_info' subject.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to Subject
+  </a>
+  {% else %}
+  <a href="{% url 'academics:subject_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to List
+  </a>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-journal-bookmark me-2 text-primary"></i>Choose Supported Classes</h6>
+      </div>
+      <div class="card-body">
+
+        <form method="post">
+          {% csrf_token %}
+
+
+
+
+
+            <div class="col-12">
+              <label class="form-label fw-700 small">Classes Attending Holiday Studies</label>
+              <div class="row g-2">
+                {% for cls in classes %}
+                <div class="col-6 col-sm-4 col-md-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="class_{{ cls.key }}"
+                      id="cls_{{ cls.key }}" value="{{ cls.key }}"
+                      {% if action == 'edit' %}
+                        {% if cls.key in selected_class_ids %}checked{% endif %}
+                      {% endif %}
+                    />
+                    <label class="form-check-label small fw-600" for="cls_{{ cls.key }}">{{ cls.name }}</label>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+
+
+
+          <!-- Actions -->
+          <div class="d-flex mt-5 gap-2">
+            <button type="submit" class="btn btn-primary px-4">
+              Choose Classes
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Help panel -->
+  <div class="col-12 col-lg-4">
+    <div class="card border-primary-subtle">
+      <div class="card-header py-3 bg-primary-subtle">
+        <h6 class="fw-700 mb-0 text-primary"><i class="bi bi-info-circle me-2"></i>Field Guide</h6>
+      </div>
+      <div class="card-body small text-secondary">
+        <dl class="mb-0">
+          <dt class="fw-700 text-dark">Subject Name</dt>
+          <dd class="mb-3">Full official name, e.g. <em>English Language</em>, <em>Mathematics</em>, <em>Social Studies (SST)</em>.</dd>
+
+          <dt class="fw-700 text-dark">Code</dt>
+          <dd class="mb-3">Unique short code printed on report cards. E.g. <code>ENG</code>, <code>MAT</code>, <code>SCI</code>, <code>SST</code>, <code>CRE</code>.</dd>
+
+          <dt class="fw-700 text-dark">Level</dt>
+          <dd class="mb-3">Determines which classes this subject appears in. Use <strong>All Levels</strong> for cross-cutting subjects.</dd>
+
+          <dt class="fw-700 text-dark">Sort Order</dt>
+          <dd class="mb-0">Subjects with lower numbers appear first on report cards. Set <code>0</code> for the first subject.</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

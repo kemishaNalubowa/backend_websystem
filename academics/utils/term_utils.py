@@ -620,6 +620,8 @@ def get_all_classes() -> list:
     return SchoolClass.objects.order_by('section')
 
 
+
+
 def get_terms_list_stats() -> dict:
     """
     High-level stats shown above the terms list page.

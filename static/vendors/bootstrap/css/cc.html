@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toggle Switch</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        /* Base styles for the body */
+        body {
+            display: flex;
+            flex-direction: column; /* Arrange toggles vertically */
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f3f4f6; /* Equivalent to bg-gray-100 */
+            font-family: 'Inter', sans-serif; /* Using Inter font as per instructions */
+            margin: 0;
+            gap: 2rem; /* Space between multiple toggle containers */
+        }
+
+        /* Container for the toggle switch and label */
+        .toggle-container {
+            padding: 1.5rem; /* Equivalent to p-6 */
+            background-color: #fff; /* Equivalent to bg-white */
+            border-radius: 0.75rem; /* Equivalent to rounded-xl */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Equivalent to shadow-lg */
+            display: flex;
+            align-items: center;
+            gap: 1rem; /* Equivalent to space-x-4 */
+        }
+
+        /* Label for the feature */
+        .feature-label {
+            font-size: 1.125rem; /* Equivalent to text-lg */
+            font-weight: 500; /* Equivalent to font-medium */
+            color: #374151; /* Equivalent to text-gray-700 */
+        }
+
+        /* Wrapper for the actual toggle switch (track and circle) */
+        .toggle-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 3rem; /* Increased width to 3rem for a longer switch */
+            margin-right: 0.5rem; /* Equivalent to mr-2 */
+            vertical-align: middle;
+            user-select: none;
+            transition: all 0.2s ease-in;
+        }
+
+        /* Hidden checkbox for functionality */
+        .toggle-checkbox {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        /* Label acts as the track for the switch */
+        .toggle-label {
+            display: block;
+            overflow: hidden;
+            height: 1.25rem; /* A bit bigger height */
+            border-radius: 9999px; /* Equivalent to rounded-full */
+            background-color: #d1d5db; /* Equivalent to bg-gray-300 */
+            cursor: pointer;
+            position: relative;
+            /* Inset shadow for the "off" state */
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15); /* Darker inset shadow */
+            transition: background-color 0.2s ease-in, box-shadow 0.2s ease-in; /* Add box-shadow to transition */
+        }
+
+        /* Circle/handle of the switch */
+        .toggle-circle {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 1.25rem; /* A bit bigger circle, matching label height */
+            height: 1.25rem; /* A bit bigger circle, matching label height */
+            border-radius: 9999px; /* Equivalent to rounded-full */
+            /* Default background color for the circle when off */
+            background-color: #4B5563; /* Dark gray for off state */
+            /* More prominent shadow for the circle */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: translateX(0); /* Initial position */
+            transition: transform 0.2s ease-in, background-color 0.2s ease-in, box-shadow 0.2s ease-in; /* Add background-color to transition */
+            display: flex; /* Use flexbox to center the icon */
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem; /* Size for the icon, adjusted for bigger circle */
+            color: #fff; /* White icon color when off */
+        }
+
+        /* When the toggle-label has the 'is-checked' class: */
+        .toggle-label.is-checked {
+            background-color: #86EFAC; /* Darker light green for the track when on */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle outer shadow when on */
+        }
+        .toggle-label.is-checked .toggle-circle {
+            transform: translateX(1.75rem); /* Adjusted for the new length (3rem track - 1.25rem circle = 1.75rem) */
+            background-color: #15803D; /* Dark green for the circle when on */
+            color: #fff; /* White icon color when on for better contrast */
+            /* Subtle shadow when on, to make it look "pressed" or part of the track */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="toggle-container">
+        <label class="feature-label">Enable Feature A</label>
+        <div class="toggle-wrapper">
+            <label class="toggle-label">
+                <input type="checkbox" class="toggle-checkbox"/>
+                <div class="toggle-circle">
+                    <i class="toggle-icon bi bi-dash"></i>
+                </div>
+            </label>
+        </div>
+    </div>
+
+    <div class="toggle-container">
+        <label class="feature-label">Enable Feature B</label>
+        <div class="toggle-wrapper">
+            <label class="toggle-label">
+                <input type="checkbox" class="toggle-checkbox"/>
+                <div class="toggle-circle">
+                    <i class="toggle-icon bi bi-dash"></i>
+                </div>
+            </label>
+        </div>
+    </div>
+
+    <div class="toggle-container">
+        <label class="feature-label">Enable Feature C</label>
+        <div class="toggle-wrapper">
+            <label class="toggle-label">
+                <input type="checkbox" class="toggle-checkbox" checked/>
+                <div class="toggle-circle">
+                    <i class="toggle-icon bi bi-dash"></i> </div>
+            </label>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Select all toggle checkboxes on the page
+            const toggleCheckboxes = document.querySelectorAll('.toggle-checkbox');
+
+            // Iterate over each toggle checkbox to set up its behavior
+            toggleCheckboxes.forEach(function(checkbox) {
+                // Find the corresponding toggle-label (the track) and toggle-icon within this specific toggle's structure
+                const toggleLabel = checkbox.closest('.toggle-label');
+                const toggleIcon = toggleLabel.querySelector('.toggle-icon');
+
+                // Function to update the icon and the 'is-checked' class based on the checkbox's checked state
+                function updateToggleState() {
+                    if (checkbox.checked) {
+                        toggleLabel.classList.add('is-checked');
+                        toggleIcon.classList.remove('bi-dash');
+                        toggleIcon.classList.add('bi-check');
+                        console.log('Toggle is ON');
+                    } else {
+                        toggleLabel.classList.remove('is-checked');
+                        toggleIcon.classList.remove('bi-check');
+                        toggleIcon.classList.add('bi-dash');
+                        console.log('Toggle is OFF');
+                    }
+                }
+
+                // Set the initial state when the page loads
+                updateToggleState();
+
+                // Add an event listener to update the state whenever the checkbox state changes
+                checkbox.addEventListener('change', updateToggleState);
+            });
+        });
+    </script>
+</body>
+</html>

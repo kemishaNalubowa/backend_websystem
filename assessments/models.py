@@ -240,7 +240,7 @@ class AssessmentSubject(TimeStampedModel):
         verbose_name        = 'Assessment Subject'
         verbose_name_plural = 'Assessment Subjects'
         unique_together     = ['assessment', 'subject']
-        ordering            = ['assessment', 'sort_order', 'subject__sort_order']
+        ordering            = ['assessment', 'sort_order', ]
 
     def __str__(self):
         return f"{self.assessment.title} | {self.subject.code} | Max: {self.total_marks}"
@@ -365,7 +365,7 @@ class AssessmentPassMark(TimeStampedModel):
         verbose_name        = 'Assessment Pass Mark'
         verbose_name_plural = 'Assessment Pass Marks'
         unique_together     = ['assessment', 'subject']
-        ordering            = ['assessment', 'subject__sort_order']
+        ordering            = ['assessment']
 
     def get_absolute_pass_mark(self, total_marks):
         """
@@ -491,7 +491,7 @@ class AssessmentPerformance(TimeStampedModel):
         verbose_name        = 'Assessment Performance'
         verbose_name_plural = 'Assessment Performances'
         unique_together     = ['assessment', 'student', 'subject']
-        ordering            = ['assessment', 'school_class', 'student__last_name', 'subject__sort_order']
+        ordering            = ['assessment', 'school_class', 'student__last_name', ]
 
     # Computed helpers
 
