@@ -18,6 +18,7 @@ from accounts.views import (
     register_staff,
     user_detail,
     user_toggle_active,
+    edit_staff,
 )
 
 app_name = 'accounts'
@@ -37,4 +38,5 @@ urlpatterns = [
     #   /accounts/register/staff/    → register teacher/staff/admin
     # path('register/parent/', register_parent, name='register_parent'),
     path('register/staff/',  register_staff,  name='register_staff'),
+    path('users/<int:pk>/edit/', edit_staff, name='edit_staff'),
 ]

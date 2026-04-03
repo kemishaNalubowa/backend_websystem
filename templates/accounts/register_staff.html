@@ -42,261 +42,260 @@
 
 
     {% if not request.session.is_a_teaching_staff %}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-person-circle me-2 text-primary"></i>Personal Information
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">
-              Role <span class="text-danger">*</span>
-            </label>
-            <select name="role"
-              class="form-select {% if errors.role %}is-invalid{% endif %}">
-              <option value="">— Select role —</option>
-              {# Teaching #}
-              <optgroup label="Teaching Staff">
-                {% for key, label in role_choices %}
-                  {% if key in 'head_teacher,deputy_head,teacher,subject_teacher' %}
-                  <option value="{{ key }}" {% if post.role == key %}selected{% endif %}>{{ label }}</option>
-                  {% endif %}
-                {% endfor %}
-              </optgroup>
-              {# Non-teaching #}
-              <optgroup label="Non-Teaching / Support">
-                {% for key, label in role_choices %}
-                  {% if key not in 'head_teacher,deputy_head,teacher,subject_teacher' %}
-                  <option value="{{ key }}" {% if post.role == key %}selected{% endif %}>{{ label }}</option>
-                  {% endif %}
-                {% endfor %}
-              </optgroup>
-            </select>
-            {% if errors.role %}
-            <div class="invalid-feedback">{{ errors.role }}</div>
-            {% endif %}
-          </div>
-
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">
-              First Name <span class="text-danger">*</span>
-            </label>
-            <input type="text" name="first_name"
-              class="form-control {% if errors.first_name %}is-invalid{% endif %}"
-              value="{{ post.first_name|default:'' }}"
-              placeholder="e.g. John" maxlength="50"/>
-            {% if errors.first_name %}
-            <div class="invalid-feedback">{{ errors.first_name }}</div>
-            {% endif %}
-          </div>
-
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">
-              Last Name <span class="text-danger">*</span>
-            </label>
-            <input type="text" name="last_name"
-              class="form-control {% if errors.last_name %}is-invalid{% endif %}"
-              value="{{ post.last_name|default:'' }}"
-              placeholder="e.g. Ssemakula" maxlength="50"/>
-            {% if errors.last_name %}
-            <div class="invalid-feedback">{{ errors.last_name }}</div>
-            {% endif %}
-          </div>
-
-          <!-- <div class="col-12 col-sm-4">
-            <label class="form-label fw-700 small">Other Names</label>
-            <input type="text" name="other_names"
-              class="form-control"
-              value="{{ post.other_names|default:'' }}"
-              placeholder="Middle / other names" maxlength="100"/>
-          </div> -->
-
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">
-              Gender <span class="text-danger">*</span>
-            </label>
-            <select name="gender"
-              class="form-select {% if errors.gender %}is-invalid{% endif %}">
-              <option value="">— Select —</option>
-              <option value="male"              {% if post.gender == 'male' %}selected{% endif %}>Male</option>
-              <option value="female"            {% if post.gender == 'female' %}selected{% endif %}>Female</option>
-            </select>
-            {% if errors.gender %}
-            <div class="invalid-feedback">{{ errors.gender }}</div>
-            {% endif %}
-          </div>
-
-
-
-                    <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">
-              Phone <span class="text-danger">*</span>
-            </label>
-            <div class="input-group">
-              <span class="input-group-text bg-light"><i class="bi bi-phone text-secondary"></i></span>
-              <input type="tel" name="phone"
-                class="form-control {% if errors.phone %}is-invalid{% endif %}"
-                value="{{ post.phone|default:'' }}"
-                placeholder="+256 700 000 000" maxlength="15"/>
-              {% if errors.phone %}
-              <div class="invalid-feedback">{{ errors.phone }}</div>
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Alt. Phone</label>
-            <div class="input-group">
-              <span class="input-group-text bg-light"><i class="bi bi-phone text-secondary"></i></span>
-              <input type="tel" name="alt_phone"
-                class="form-control"
-                value="{{ post.alt_phone|default:'' }}"
-                placeholder="+256 700 000 000" maxlength="15"/>
-            </div>
-          </div>
-
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Email</label>
-            <div class="input-group">
-              <span class="input-group-text bg-light"><i class="bi bi-envelope text-secondary"></i></span>
-              <input type="email" name="email"
-                class="form-control {% if errors.email %}is-invalid{% endif %}"
-                value="{{ post.email|default:'' }}"
-                placeholder="staff@school.ac.ug" maxlength="254"/>
-              {% if errors.email %}
-              <div class="invalid-feedback">{{ errors.email }}</div>
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="col-12 col-sm-6 d-flex align-items-center">
-            <div class="form-check form-switch mt-4">
-              <input class="form-check-input" type="checkbox" role="switch"
-                id="is_a_teaching_staff" name="is_a_teaching_staff" value="1"
-                {% if post.is_a_teaching_staff %}checked{% endif %}/>
-              <label class="form-check-label fw-700" for="is_class_teacher">
-                Assigned as Class / Form Teacher
-              </label>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    {% else %}
-    
-    {% if not request.session.configure_class_tr %}
-
-      {# THIS IS FOR FORM 2  STAFF IS A TEACHING STAFF #}
-
-      {# ── SECTION 6: Teaching-specific ── #}
       <div class="card mb-4">
         <div class="card-header py-3">
           <h6 class="fw-700 mb-0">
-            <i class="bi bi-book me-2 text-success"></i>Teaching Details
-            <span class="text-muted small fw-400 ms-1">(teachers only)</span>
+            <i class="bi bi-person-circle me-2 text-primary"></i>Personal Information
           </h6>
         </div>
         <div class="card-body">
           <div class="row g-3">
 
-
-            <div class="col-12">
-              <label class="form-label mb-3 fw-700">
-                Classes Tought <span class="text-danger">*</span>
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700 small">
+                Role <span class="text-danger">*</span>
               </label>
-                <div class="row g-2">
-                  {% for cls in classes %}
-                  <div class="col-6 col-sm-4 col-md-3">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" name="tought_class_{{ cls.supported_class.key }}"
-                        id="cls_{{ cls.supported_class.key }}" value="{{ cls.supported_class.key }}"
-                        {% if action == 'edit' %}
-                          {% if cls.supported_class.key in selected_class_ids %}checked{% endif %}
-                        {% endif %}
-                      />
-                      <label class="form-check-label small fw-600" for="cls_{{ cls.supported_class.key }}">{{ cls.supported_class.name }}</label>
-                    </div>
-                  </div>
+              <select name="role"
+                class="form-select {% if errors.role %}is-invalid{% endif %}">
+                <option value="">— Select role —</option>
+                {# Teaching #}
+                <optgroup label="Teaching Staff">
+                  {% for key, label in role_choices %}
+                    {% if key in 'head_teacher,deputy_head,teacher,subject_teacher' %}
+                    <option value="{{ key }}" {% if post.role == key %}selected{% endif %}>{{ label }}</option>
+                    {% endif %}
                   {% endfor %}
-                  
-                </div>
-                {% if errors.code %}
-                  <div class="text-danger small">{{ errors.classes }}</div>
+                </optgroup>
+                {# Non-teaching #}
+                <optgroup label="Non-Teaching / Support">
+                  {% for key, label in role_choices %}
+                    {% if key not in 'head_teacher,deputy_head,teacher,subject_teacher' %}
+                    <option value="{{ key }}" {% if post.role == key %}selected{% endif %}>{{ label }}</option>
+                    {% endif %}
+                  {% endfor %}
+                </optgroup>
+              </select>
+              {% if errors.role %}
+              <div class="invalid-feedback">{{ errors.role }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700 small">
+                First Name <span class="text-danger">*</span>
+              </label>
+              <input type="text" name="first_name"
+                class="form-control {% if errors.first_name %}is-invalid{% endif %}"
+                value="{{ post.first_name|default:'' }}"
+                placeholder="e.g. John" maxlength="50"/>
+              {% if errors.first_name %}
+              <div class="invalid-feedback">{{ errors.first_name }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700 small">
+                Last Name <span class="text-danger">*</span>
+              </label>
+              <input type="text" name="last_name"
+                class="form-control {% if errors.last_name %}is-invalid{% endif %}"
+                value="{{ post.last_name|default:'' }}"
+                placeholder="e.g. Ssemakula" maxlength="50"/>
+              {% if errors.last_name %}
+              <div class="invalid-feedback">{{ errors.last_name }}</div>
+              {% endif %}
+            </div>
+
+            <!-- <div class="col-12 col-sm-4">
+              <label class="form-label fw-700 small">Other Names</label>
+              <input type="text" name="other_names"
+                class="form-control"
+                value="{{ post.other_names|default:'' }}"
+                placeholder="Middle / other names" maxlength="100"/>
+            </div> -->
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700 small">
+                Gender <span class="text-danger">*</span>
+              </label>
+              <select name="gender"
+                class="form-select {% if errors.gender %}is-invalid{% endif %}">
+                <option value="">— Select —</option>
+                <option value="male"              {% if post.gender == 'male' %}selected{% endif %}>Male</option>
+                <option value="female"            {% if post.gender == 'female' %}selected{% endif %}>Female</option>
+              </select>
+              {% if errors.gender %}
+              <div class="invalid-feedback">{{ errors.gender }}</div>
+              {% endif %}
+            </div>
+
+
+
+                      <div class="col-12 col-sm-6">
+              <label class="form-label fw-700 small">
+                Phone <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="bi bi-phone text-secondary"></i></span>
+                <input type="tel" name="phone"
+                  class="form-control {% if errors.phone %}is-invalid{% endif %}"
+                  value="{{ post.phone|default:'' }}"
+                  placeholder="+256 700 000 000" maxlength="15"/>
+                {% if errors.phone %}
+                <div class="invalid-feedback">{{ errors.phone }}</div>
                 {% endif %}
+              </div>
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700 small">Alt. Phone</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="bi bi-phone text-secondary"></i></span>
+                <input type="tel" name="alt_phone"
+                  class="form-control"
+                  value="{{ post.alt_phone|default:'' }}"
+                  placeholder="+256 700 000 000" maxlength="15"/>
+              </div>
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label class="form-label fw-700 small">Email</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="bi bi-envelope text-secondary"></i></span>
+                <input type="email" name="email"
+                  class="form-control {% if errors.email %}is-invalid{% endif %}"
+                  value="{{ post.email|default:'' }}"
+                  placeholder="staff@school.ac.ug" maxlength="254"/>
+                {% if errors.email %}
+                <div class="invalid-feedback">{{ errors.email }}</div>
+                {% endif %}
+              </div>
             </div>
 
             <div class="col-12 col-sm-6 d-flex align-items-center">
               <div class="form-check form-switch mt-4">
                 <input class="form-check-input" type="checkbox" role="switch"
-                  id="is_class_teacher" name="is_class_teacher" value="1"
-                  {% if post.is_class_teacher %}checked{% endif %}/>
+                  id="is_a_teaching_staff" name="is_a_teaching_staff" value="1"
+                  {% if post.is_a_teaching_staff %}checked{% endif %}/>
                 <label class="form-check-label fw-700" for="is_class_teacher">
-                  Is this a class teacher in any class ?
+                  Assigned as Class / Form Teacher
                 </label>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    {% else %}
+    
+      {% if not request.session.configure_class_tr %}
+
+        {# THIS IS FOR FORM 2  STAFF IS A TEACHING STAFF #}
+
+        {# ── SECTION 6: Teaching-specific ── #}
+        <div class="card mb-4">
+          <div class="card-header py-3">
+            <h6 class="fw-700 mb-0">
+              <i class="bi bi-book me-2 text-success"></i>Teaching Details
+              <span class="text-muted small fw-400 ms-1">(teachers only)</span>
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+
+
+              <div class="col-12">
+                <label class="form-label mb-3 fw-700">
+                  Classes Tought <span class="text-danger">*</span>
+                </label>
+                  <div class="row g-2">
+                    {% for cls in classes %}
+                    <div class="col-6 col-sm-4 col-md-3">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="tought_class_{{ cls.supported_class.key }}"
+                          id="cls_{{ cls.supported_class.key }}" value="{{ cls.supported_class.key }}"
+                          {% if action == 'edit' %}
+                            {% if cls.supported_class.key in selected_class_ids %}checked{% endif %}
+                          {% endif %}
+                        />
+                        <label class="form-check-label small fw-600" for="cls_{{ cls.supported_class.key }}">{{ cls.supported_class.name }}</label>
+                      </div>
+                    </div>
+                    {% endfor %}
+                    
+                  </div>
+                  {% if errors.code %}
+                    <div class="text-danger small">{{ errors.classes }}</div>
+                  {% endif %}
+              </div>
+
+              <div class="col-12 col-sm-6 d-flex align-items-center">
+                <div class="form-check form-switch mt-4">
+                  <input class="form-check-input" type="checkbox" role="switch"
+                    id="is_class_teacher" name="is_class_teacher" value="1"
+                    {% if post.is_class_teacher %}checked{% endif %}/>
+                  <label class="form-check-label fw-700" for="is_class_teacher">
+                    Is this a class teacher in any class ?
+                  </label>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    {% else %}
+      {% else %}
 
 
 
-      {%  for tcs in tought_classes_subjects %}
+        {%  for tcs in tought_classes_subjects %}
 
-      <div class="col-12 mb-5">
-              <label class="form-label mb-3 fw-700">
-                Teacher's subjects tought in {{ tcs.name }} — {{ tcs.key.upper }} <span class="text-danger">*</span>
-              </label>
-                <div class="row g-2">
-                  {% for s in tcs.subjects %}
-                  <div class="col-6 col-sm-4 col-md-3">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" name="{{ tcs.key }}_tought_subject_{{ s.code.lower }}"
-                        id="{{ tcs.key }}_tought_subject_{{ s.code.lower }}" value="{{ s.code.lower }}"
-                        {% if action == 'edit' %}
-                          {% if cls.supported_class.key in selected_class_ids %}checked{% endif %}
-                        {% endif %}
-                      />
-                      <label class="form-check-label small fw-600" for="{{ tcs.key }}_tought_subject_{{ s.code.lower }}">{{ s.name.capitalize }}</label>
+        <div class="col-12 mb-5">
+                <label class="form-label mb-3 fw-700">
+                  Teacher's subjects tought in {{ tcs.name }} — {{ tcs.key.upper }} <span class="text-danger">*</span>
+                </label>
+                  <div class="row g-2">
+                    {% for s in tcs.subjects %}
+                    <div class="col-6 col-sm-4 col-md-3">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="{{ tcs.key }}_tought_subject_{{ s.code.lower }}"
+                          id="{{ tcs.key }}_tought_subject_{{ s.code.lower }}" value="{{ s.code.lower }}"
+                          {% if action == 'edit' %}
+                            {% if cls.supported_class.key in selected_class_ids %}checked{% endif %}
+                          {% endif %}
+                        />
+                        <label class="form-check-label small fw-600" for="{{ tcs.key }}_tought_subject_{{ s.code.lower }}">{{ s.name.capitalize }}</label>
+                      </div>
                     </div>
+                    {% endfor %}
                   </div>
-                  {% endfor %}
-                </div>
-                {% if errors.code %}
-                  <div class="text-danger small">{{ errors.classes }}</div>
-                {% endif %}
-            </div>
+                  {% if errors.code %}
+                    <div class="text-danger small">{{ errors.classes }}</div>
+                  {% endif %}
+              </div>
 
-      {% endfor %}
+        {% endfor %}
 
 
-      {% if request.session.is_a_class_tr %}
-        <div class="col-12 col-sm-6 mb-5">
-          <label class="form-label fw-700">In which class is he or She a Class Teacher</label>
-          <select name="cls_tr_class" class="form-select">
-            <option hidden selected disabled></option>
-            {% for cls in classes %}
-              {% for tc in tought_classes_subjects %}
-                {% if cls.supported_class.key.lower == tc.key %}
-                  <option value="{{ cls.supported_class.key }}">
-                    {{cls.supported_class.key.upper}} — {{ cls.supported_class.name }}
-                  </option>
-                {% endif %}
+        {% if request.session.is_a_class_tr %}
+          <div class="col-12 col-sm-6 mb-5">
+            <label class="form-label fw-700">In which class is he or She a Class Teacher</label>
+            <select name="cls_tr_class" class="form-select">
+              <option hidden selected disabled></option>
+              {% for cls in classes %}
+                {% for tc in tought_classes_subjects %}
+                  {% if cls.supported_class.key.lower == tc.key %}
+                    <option value="{{ cls.supported_class.key }}">
+                      {{cls.supported_class.key.upper}} — {{ cls.supported_class.name }}
+                    </option>
+                  {% endif %}
+                {% endfor %}
               {% endfor %}
-            {% endfor %}
-          </select>
-          
-        </div>
+            </select>
+            
+          </div>
+        {% endif %}
+
       {% endif %}
-
-
-    {% endif %}
 
     {% endif %}
 

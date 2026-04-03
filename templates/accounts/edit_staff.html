@@ -1,0 +1,615 @@
+{% extends "base.html" %}
+
+{% load dict_extras %}
+
+{% block title %}Edit Staff{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'accounts:user_list' %}" class="text-secondary">Users</a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">Edit Staff</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ form_title }}</h4>
+    <p class="text-muted small mb-0">
+      Edit a teacher, support staff member, or administrator.
+    </p>
+  </div>
+  <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to Users
+  </a>
+</div>
+
+{# ── User-type notice banner ── #}
+<div class="alert alert-light border mb-4 small">
+  <i class="bi bi-info-circle text-primary me-1"></i>
+  Select the <strong>User Type</strong> below. Teaching-specific fields (qualification, class, etc.)
+  appear for <em>Teacher</em>; payroll and HR fields are available for all staff types.
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+{% csrf_token %}
+
+<div class="row g-4">
+
+    <div class="col-12 col-lg-8">
+
+        {# ════════════════════════════════════════════════════════════════════════
+        STAGE 1 — Personal Information
+        Shown when NOT yet in teaching-staff session flow
+        ════════════════════════════════════════════════════════════════════════ #}
+
+      is_a_teaching_staff  {{ request.session.is_a_teaching_staff }}
+
+        {% if not request.session.is_a_teaching_staff %}
+            <div class="card mb-4">
+            <div class="card-header py-3">
+                <h6 class="fw-700 mb-0">
+                <i class="bi bi-person-circle me-2 text-primary"></i>Personal Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+
+                {# Role #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">
+                    Role <span class="text-danger">*</span>
+                    </label>
+                    <select name="role"
+                    class="form-select {% if errors.role %}is-invalid{% endif %}">
+                    <option value="">— Select role —</option>
+                    <optgroup label="Teaching Staff">
+                        {% for key, label in role_choices %}
+                        {% if key in 'head_teacher,deputy_head,teacher,subject_teacher' %}
+                        <option value="{{ key }}" {% if post.role == key %}selected{% endif %}>{{ label }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="Non-Teaching / Support">
+                        {% for key, label in role_choices %}
+                        {% if key not in 'head_teacher,deputy_head,teacher,subject_teacher' %}
+                        <option value="{{ key }}" {% if post.role == key %}selected{% endif %}>{{ label }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </optgroup>
+                    </select>
+                    {% if errors.role %}
+                    <div class="invalid-feedback">{{ errors.role }}</div>
+                    {% endif %}
+                </div>
+
+                {# First Name #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">
+                    First Name <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" name="first_name"
+                    class="form-control {% if errors.first_name %}is-invalid{% endif %}"
+                    value="{{ post.first_name|default:'' }}"
+                    placeholder="e.g. John" maxlength="50"/>
+                    {% if errors.first_name %}
+                    <div class="invalid-feedback">{{ errors.first_name }}</div>
+                    {% endif %}
+                </div>
+
+                {# Last Name #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">
+                    Last Name <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" name="last_name"
+                    class="form-control {% if errors.last_name %}is-invalid{% endif %}"
+                    value="{{ post.last_name|default:'' }}"
+                    placeholder="e.g. Ssemakula" maxlength="50"/>
+                    {% if errors.last_name %}
+                    <div class="invalid-feedback">{{ errors.last_name }}</div>
+                    {% endif %}
+                </div>
+
+                {# Other Names #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">Other Names</label>
+                    <input type="text" name="other_names"
+                    class="form-control"
+                    value="{{ post.other_names|default:'' }}"
+                    placeholder="Middle / other names" maxlength="100"/>
+                </div>
+
+                {# Gender #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">
+                    Gender <span class="text-danger">*</span>
+                    </label>
+                    <select name="gender"
+                    class="form-select {% if errors.gender %}is-invalid{% endif %}">
+                    <option value="">— Select —</option>
+                    <option value="male"   {% if post.gender == 'male' %}selected{% endif %}>Male</option>
+                    <option value="female" {% if post.gender == 'female' %}selected{% endif %}>Female</option>
+                    <option value="other"  {% if post.gender == 'other' %}selected{% endif %}>Other</option>
+                    <option value="prefer_not_to_say" {% if post.gender == 'prefer_not_to_say' %}selected{% endif %}>Prefer not to say</option>
+                    </select>
+                    {% if errors.gender %}
+                    <div class="invalid-feedback">{{ errors.gender }}</div>
+                    {% endif %}
+                </div>
+
+                {# Date of Birth #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">Date of Birth</label>
+                    <input type="date" name="date_of_birth"
+                    class="form-control"
+                    value="{{ post.date_of_birth|default:'' }}"/>
+                </div>
+
+                {# Phone #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">
+                    Phone <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="bi bi-phone text-secondary"></i></span>
+                    <input type="tel" name="phone"
+                        class="form-control {% if errors.phone %}is-invalid{% endif %}"
+                        value="{{ post.phone|default:'' }}"
+                        placeholder="+256 700 000 000" maxlength="15"/>
+                    {% if errors.phone %}
+                    <div class="invalid-feedback">{{ errors.phone }}</div>
+                    {% endif %}
+                    </div>
+                </div>
+
+                {# Alt Phone #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">Alt. Phone</label>
+                    <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="bi bi-phone text-secondary"></i></span>
+                    <input type="tel" name="alt_phone"
+                        class="form-control"
+                        value="{{ post.alt_phone|default:'' }}"
+                        placeholder="+256 700 000 000" maxlength="15"/>
+                    </div>
+                </div>
+
+                {# Email #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">Email</label>
+                    <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="bi bi-envelope text-secondary"></i></span>
+                    <input type="email" name="email"
+                        class="form-control {% if errors.email %}is-invalid{% endif %}"
+                        value="{{ post.email|default:'' }}"
+                        placeholder="staff@school.ac.ug" maxlength="254"/>
+                    {% if errors.email %}
+                    <div class="invalid-feedback">{{ errors.email }}</div>
+                    {% endif %}
+                    </div>
+                </div>
+
+                {# NIN #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">National ID Number (NIN)</label>
+                    <input type="text" name="nin"
+                    class="form-control"
+                    value="{{ post.nin|default:'' }}"
+                    placeholder="e.g. CM90100012345W" maxlength="20"/>
+                </div>
+
+                {# Address #}
+                <div class="col-12">
+                    <label class="form-label fw-700 small">Residential Address</label>
+                    <textarea name="address" class="form-control" rows="2"
+                    placeholder="Village / Sub-county / District">{{ post.address|default:'' }}</textarea>
+                </div>
+
+                {# Teaching Staff toggle #}
+                <div class="col-12 col-sm-6 d-flex align-items-center">
+                    <div class="form-check form-switch mt-4">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                        id="is_a_teaching_staff" name="is_a_teaching_staff" value="1"
+                        {% if post.is_a_teaching_staff %}checked{% endif %}/>
+                    <label class="form-check-label fw-700" for="is_a_teaching_staff">
+                        Assigned as Class / Form Teacher
+                    </label>
+                    </div>
+                </div>
+
+                </div>
+            </div>
+            </div>
+
+            {# ── Employment & Qualifications (Stage 1, non-teaching visible) ── #}
+            <div class="card mb-4">
+            <div class="card-header py-3">
+                <h6 class="fw-700 mb-0">
+                <i class="bi bi-briefcase me-2 text-warning"></i>Employment Details
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+
+                {# Employment Type #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">Employment Type</label>
+                    <select name="employment_type" class="form-select">
+                    {% for key, label in employment_choices %}
+                    <option value="{{ key }}" {% if post.employment_type == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+
+                {# Date Joined #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">Date Joined</label>
+                    <input type="date" name="date_joined"
+                    class="form-control"
+                    value="{{ post.date_joined|default:'' }}"/>
+                </div>
+
+                {# Date Left #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">Date Left <span class="text-muted fw-400">(if applicable)</span></label>
+                    <input type="date" name="date_left"
+                    class="form-control"
+                    value="{{ post.date_left|default:'' }}"/>
+                </div>
+
+                {# Qualification #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">Qualification</label>
+                    <select name="qualification" class="form-select">
+                    <option value="">— Select —</option>
+                    {% for key, label in qualification_choices %}
+                    <option value="{{ key }}" {% if post.qualification == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+
+                {# Specialization #}
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">Specialization</label>
+                    <input type="text" name="specialization"
+                    class="form-control"
+                    value="{{ post.specialization|default:'' }}"
+                    placeholder="e.g. Mathematics, Science" maxlength="100"/>
+                </div>
+
+                </div>
+            </div>
+            </div>
+
+            {# ── Payroll / HR ── #}
+            <div class="card mb-4">
+            <div class="card-header py-3">
+                <h6 class="fw-700 mb-0">
+                <i class="bi bi-cash-coin me-2 text-success"></i>Payroll &amp; HR
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">NSSF Number</label>
+                    <input type="text" name="nssf_number"
+                    class="form-control"
+                    value="{{ post.nssf_number|default:'' }}"
+                    placeholder="National Social Security Fund #" maxlength="20"/>
+                </div>
+
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">TIN Number</label>
+                    <input type="text" name="tin_number"
+                    class="form-control"
+                    value="{{ post.tin_number|default:'' }}"
+                    placeholder="Tax Identification Number" maxlength="20"/>
+                </div>
+
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">Salary Scale</label>
+                    <input type="text" name="salary_scale"
+                    class="form-control"
+                    value="{{ post.salary_scale|default:'' }}"
+                    placeholder="e.g. U4, U5, T3" maxlength="50"/>
+                </div>
+
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">Bank Name</label>
+                    <input type="text" name="bank_name"
+                    class="form-control"
+                    value="{{ post.bank_name|default:'' }}"
+                    placeholder="e.g. Stanbic Bank Uganda" maxlength="100"/>
+                </div>
+
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">Bank Account Number</label>
+                    <input type="text" name="bank_account"
+                    class="form-control"
+                    value="{{ post.bank_account|default:'' }}"
+                    placeholder="Account number" maxlength="30"/>
+                </div>
+
+                </div>
+            </div>
+            </div>
+
+            {# ── Bio / Notes ── #}
+            <div class="card mb-4">
+            <div class="card-header py-3">
+                <h6 class="fw-700 mb-0">
+                <i class="bi bi-journal-text me-2 text-secondary"></i>Additional Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+
+                <div class="col-12">
+                    <label class="form-label fw-700 small">Bio</label>
+                    <textarea name="bio" class="form-control" rows="3"
+                    placeholder="Short professional bio (optional)">{{ post.bio|default:'' }}</textarea>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-700 small">Internal Notes</label>
+                    <textarea name="notes" class="form-control" rows="2"
+                    placeholder="Admin-only notes (not visible to staff)">{{ post.notes|default:'' }}</textarea>
+                </div>
+
+                </div>
+            </div>
+            </div>
+
+            {# ── File Uploads ── #}
+            <div class="card mb-4">
+            <div class="card-header py-3">
+                <h6 class="fw-700 mb-0">
+                <i class="bi bi-image me-2 text-info"></i>Profile Photo &amp; Signature
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">Profile Photo</label>
+                    <input type="file" name="profile_photo"
+                    class="form-control" accept="image/*"/>
+                    {% if post.profile_photo %}
+                    <div class="mt-2">
+                    <img src="{{ post.profile_photo.url }}" class="rounded" height="60" alt="Current photo"/>
+                    <span class="text-muted small ms-2">Current photo</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-12 col-sm-6">
+                    <label class="form-label fw-700 small">
+                    Signature
+                    <span class="text-muted fw-400">(used on report cards)</span>
+                    </label>
+                    <input type="file" name="signature"
+                    class="form-control" accept="image/*"/>
+                    {% if post.signature %}
+                    <div class="mt-2">
+                    <img src="{{ post.signature.url }}" class="border rounded p-1" height="50" alt="Current signature"/>
+                    <span class="text-muted small ms-2">Current signature</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                </div>
+            </div>
+            </div>
+
+        {% else %}
+            {# ════════════════════════════════════════════════════════════════════════
+            STAGE 2 — Teaching Details (classes + is_class_teacher)
+            Shown when is_a_teaching_staff is set in session but configure_class_tr is NOT yet set
+            ════════════════════════════════════════════════════════════════════════ #}
+
+            {% if not request.session.configure_class_tr %}
+                <div class="card mb-4">
+                <div class="card-header py-3">
+                    <h6 class="fw-700 mb-0">
+                    <i class="bi bi-book me-2 text-success"></i>Teaching Details
+                    <span class="text-muted small fw-400 ms-1">(teachers only)</span>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+
+                    <div class="col-12">
+                        <label class="form-label mb-3 fw-700">
+                        Classes Taught <span class="text-danger">*</span>
+                        </label>
+                        <div class="row g-2">
+                        {% for cls in classes %}
+                        <div class="col-6 col-sm-4 col-md-3">
+                            <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                name="tought_class_{{ cls.supported_class.key }}"
+                                id="cls_{{ cls.supported_class.key }}"
+                                value="{{ cls.supported_class.key }}"
+                                {% if action == 'edit' %}
+                                {% if cls.supported_class.key in selected_class_ids %}checked{% endif %}
+                                {% endif %}
+                            />
+                            <label class="form-check-label small fw-600"
+                                for="cls_{{ cls.supported_class.key }}">
+                                {{ cls.supported_class.name }}
+                            </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        </div>
+                        {% if errors.classes %}
+                        <div class="text-danger small mt-1">{{ errors.classes }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-12 col-sm-6 d-flex align-items-center">
+                        <div class="form-check form-switch mt-4">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                            id="is_class_teacher" name="is_class_teacher" value="1"
+                            {% if post.is_class_teacher %}checked{% endif %}/>
+                        <label class="form-check-label fw-700" for="is_class_teacher">
+                            Is this a class teacher in any class?
+                        </label>
+                        </div>
+                    </div>
+
+                    </div>
+                </div>
+                </div>
+
+            {% else %}
+                {# ════════════════════════════════════════════════════════════════════════
+                STAGE 3 — Subjects per chosen class
+                Shown when both is_a_teaching_staff AND configure_class_tr are set in session
+                ════════════════════════════════════════════════════════════════════════ #}
+
+                {% for tcs in tought_classes_subjects %}
+                <div class="card mb-4">
+                <div class="card-header py-3">
+                    <h6 class="fw-700 mb-0">
+                    <i class="bi bi-list-check me-2 text-primary"></i>
+                    Subjects taught in <strong>{{ tcs.name }}</strong> — {{ tcs.key|upper }}
+                    <span class="text-danger">*</span>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                    {% for s in tcs.subjects %}
+                    <div class="col-6 col-sm-4 col-md-3">
+                        <div class="form-check">
+                        <input class="form-check-input" type="checkbox"
+                            name="{{ tcs.key }}_tought_subject_{{ s.code|lower }}"
+                            id="{{ tcs.key }}_tought_subject_{{ s.code|lower }}"
+                            value="{{ s.code|lower }}"
+                            {% if action == 'edit' %}
+                            {% if s.code in selected_subjects_per_class|get_item:tcs.key %}checked{% endif %}
+                            {% endif %}
+                        />
+                        <label class="form-check-label small fw-600"
+                            for="{{ tcs.key }}_tought_subject_{{ s.code|lower }}">
+                            {{ s.name|capfirst }}
+                        </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    </div>
+                    {% if errors.classes %}
+                    <div class="text-danger small mt-1">{{ errors.classes }}</div>
+                    {% endif %}
+                </div>
+                </div>
+                {% endfor %}
+
+                {# ── Class Teacher assignment ── #}
+                {% if request.session.is_a_class_tr %}
+                    <div class="card mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="fw-700 mb-0">
+                        <i class="bi bi-person-badge me-2 text-warning"></i>Class Teacher Assignment
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="col-12 col-sm-6">
+                        <label class="form-label fw-700">In which class is he or she a Class Teacher?</label>
+                        <select name="cls_tr_class" class="form-select">
+                            <option hidden selected disabled value=""></option>
+                            {% for cls in classes %}
+                            {% for tc in tought_classes_subjects %}
+                                {% if cls.supported_class.key|lower == tc.key %}
+                                <option value="{{ cls.supported_class.key }}"
+                                {% if post.cls_tr_class == cls.supported_class.key %}selected{% endif %}>
+                                {{ cls.supported_class.key|upper }} — {{ cls.supported_class.name }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                            {% endfor %}
+                        </select>
+                        </div>
+                    </div>
+                    </div>
+                {% endif %}
+
+            {% endif %}{# end configure_class_tr #}
+
+        {% endif %}{# end is_a_teaching_staff #}
+
+
+
+
+        {# ── SUBMIT ── #}
+        <div class="d-flex gap-2 pb-2">
+        <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-person-check me-1"></i>
+            {% if not request.session.is_a_teaching_staff %}
+            Save Changes
+            {% elif not request.session.configure_class_tr %}
+            Next — Configure Subjects
+            {% else %}
+            Save Changes
+            {% endif %}
+        </button>
+        <a href="{% url 'accounts:user_detail' pk=pk %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+
+    </div>{# /col-lg-8 #}
+
+
+  {# ── Sidebar guide ── #}
+  <div class="col-12 col-lg-4">
+    <div class="card border-primary-subtle mb-3 sticky-top" style="top:76px;">
+      <div class="card-header bg-primary-subtle border-primary-subtle py-3">
+        <h6 class="fw-700 mb-0 text-primary">
+          <i class="bi bi-lightbulb me-2"></i>Edit Guide
+        </h6>
+      </div>
+      <div class="card-body small text-secondary">
+
+        {% if not request.session.is_a_teaching_staff %}
+        <div class="fw-700 text-dark mb-1">Step 1 — Personal &amp; Employment</div>
+        <p class="mb-3">
+          Update personal details, employment type, qualifications, payroll info,
+          and file uploads. Toggle <em>Assigned as Class / Form Teacher</em> to unlock
+          teaching steps.
+        </p>
+        {% elif not request.session.configure_class_tr %}
+        <div class="fw-700 text-dark mb-1">Step 2 — Classes Taught</div>
+        <p class="mb-3">
+          Tick every class this teacher delivers lessons in.
+          Then indicate whether they are also a class / form teacher.
+        </p>
+        {% else %}
+        <div class="fw-700 text-dark mb-1">Step 3 — Subjects per Class</div>
+        <p class="mb-3">
+          For each class selected in Step 2, tick only the subjects this teacher
+          actually teaches. Only those classes appear here.
+          {% if request.session.is_a_class_tr %}
+          Also choose the specific class they are the class teacher of.
+          {% endif %}
+        </p>
+        {% endif %}
+
+        <hr class="my-2"/>
+
+        <div class="fw-700 text-dark mb-1">File uploads</div>
+        <p class="mb-0">
+          Profile photo and signature are optional. Signature is used on
+          auto-generated report cards and official letters. Leave blank to keep
+          the current file.
+        </p>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+</form>
+
+{% endblock %}

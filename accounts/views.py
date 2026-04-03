@@ -22,6 +22,9 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from academics.utils.subject_utils import get_sch_supported_classes
+from academics.models import SchoolClassTeacher, TeacherClass, TeacherSubject,Subject,ClassSubject
+
+
 
 from academics.models import SchoolClass
 from accounts.models import ParentProfile, StaffProfile, USER_TYPE_CHOICES
@@ -293,8 +296,6 @@ def register_staff(request):
 
 
 
-            from academics.models import SchoolClassTeacher, TeacherClass, TeacherSubject,Subject
-
 
             staff_data =request.session.get("StaffData", {})
 
@@ -465,4 +466,358 @@ def user_toggle_active(request, pk):
     next_url = request.POST.get('next') or request.META.get('HTTP_REFERER')
     if next_url:
         return redirect(next_url)
+    return redirect('accounts:user_detail', pk=user.pk)
+
+
+
+
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  5. EDIT STAFF (full fields + same teaching logic as register_staff)
+# ═══════════════════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════════
+#  5. EDIT STAFF — Exact same staged flow as register_staff
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+def edit_staff(request, pk):
+    """
+    Edit staff — exact same multi-stage flow as register_staff.
+
+    Stage 1 (everyone)       – full personal + employment fields.
+                               Non-teaching staff → save immediately.
+                               Teaching staff     → session, redirect → Stage 2.
+
+    Stage 2 (teaching only)  – which classes they teach + is_class_teacher flag.
+                               → session, redirect → Stage 3.
+
+    Stage 3 (teaching only)  – subjects taught per chosen class (only those
+                               classes) → save.
+    """
+    user = get_object_or_404(User, pk=pk)
+    if user.user_type not in ('teacher', 'staff', 'admin'):
+        messages.error(request, 'Only staff accounts can be edited here.')
+        return redirect('accounts:user_list')
+
+    try:
+        profile = StaffProfile.objects.get(user=user)
+    except StaffProfile.DoesNotExist:
+        messages.error(request, 'Staff profile not found.')
+        return redirect('accounts:user_detail', pk=pk)
+
+    lookups = _staff_form_lookups()
+
+    # ── On the very first GET, clear any leftover session from a previous edit
+    #    and do NOT pre-set is_a_teaching_staff so Stage 1 is always shown first.
+    # ─────────────────────────────────────────────────────────────────────────
+    if request.method == 'GET' and not request.session.get("is_a_teaching_staff"):
+        for key in ("StaffData", "is_a_teaching_staff", "configure_class_tr", "is_a_class_tr"):
+            request.session.pop(key, None)
+
+    # ── Build tought_classes_subjects when already in teaching session flow ──
+    tought_classes_subjects = []
+    if request.session.get("is_a_teaching_staff"):
+        staff_data   = request.session.get("StaffData") or {}
+        teaching_req = staff_data.get("teaching_req") or {}
+        tought_classes = teaching_req.get("tought_classes") or []
+        if tought_classes:
+            tought_classes_subjects = get_selected_clases_subjects(subjects=tought_classes)
+
+    # ── Build selected_class_ids for Stage 2 pre-tick (existing assignments) ─
+    selected_class_ids = list(
+        TeacherClass.objects.filter(teacher=user)
+        .values_list('school_class__supported_class__key', flat=True)
+    )
+
+    # ── Build selected_subjects_per_class for Stage 3 pre-tick ───────────────
+    selected_subjects_per_class = {}
+    for ts in TeacherSubject.objects.filter(teacher=user).select_related(
+        'school_class__supported_class', 'subject'
+    ):
+        cls_key = ts.school_class.supported_class.key
+        selected_subjects_per_class.setdefault(cls_key, [])
+        selected_subjects_per_class[cls_key].append(ts.subject.code)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  GET — render the appropriate stage
+    # ─────────────────────────────────────────────────────────────────────────
+    if request.method == 'GET':
+        post = {
+            # CustomUser fields
+            'first_name':   user.first_name,
+            'last_name':    user.last_name,
+            'other_names':  user.other_names or '',
+            'gender':       user.gender or '',
+            'date_of_birth': user.date_of_birth or '',
+            'phone':        user.phone or '',
+            'alt_phone':    user.alt_phone or '',
+            'email':        user.email or '',
+            'nin':          user.nin or '',
+            'address':      user.address or '',
+            'profile_photo': user.profile_photo or None,
+            # StaffProfile fields
+            'role':             profile.role,
+            'employment_type':  profile.employment_type,
+            'date_joined':      profile.date_joined or '',
+            'date_left':        profile.date_left or '',
+            'qualification':    profile.qualification or '',
+            'specialization':   profile.specialization or '',
+            'nssf_number':      profile.nssf_number or '',
+            'tin_number':       profile.tin_number or '',
+            'salary_scale':     profile.salary_scale or '',
+            'bank_name':        profile.bank_name or '',
+            'bank_account':     profile.bank_account or '',
+            'bio':              profile.bio or '',
+            'notes':            profile.notes or '',
+            'signature':        profile.signature or None,
+            # teaching toggle — reflect current state
+            'is_a_teaching_staff': bool(selected_class_ids),
+            'is_class_teacher':    profile.is_class_teacher,
+        }
+
+        return render(request, f'{_T}edit_staff.html', {
+            'form_title':             'Edit Staff / Teacher',
+            'post':                   post,
+            'errors':                 {},
+            'classes':                get_sch_supported_classes(),
+            'tought_classes_subjects': tought_classes_subjects,
+            'selected_class_ids':     selected_class_ids,
+            'selected_subjects_per_class': selected_subjects_per_class,
+            'action':                 'edit',
+            'pk':                     pk,
+            **lookups,
+        })
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  POST — stage dispatch (mirrors register_staff exactly)
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # tr_tought_subjects_in_class is only populated in Stage 3; initialise here
+    # so the save block can always reference it safely.
+    tr_tought_subjects_in_class = {}
+
+    # ── Stage 1 — not yet in teaching-staff flow ──────────────────────────────
+    if not request.session.get("is_a_teaching_staff"):
+        user_c, prof_c, errors = validate_and_parse_staff_registration(request.POST)
+
+        if errors:
+            for msg in errors.values():
+                messages.error(request, msg)
+            return render(request, f'{_T}edit_staff.html', {
+                'form_title':             'Edit Staff / Teacher',
+                'post':                   request.POST,
+                'errors':                 errors,
+                'classes':                get_sch_supported_classes(),
+                'tought_classes_subjects': tought_classes_subjects,
+                'selected_class_ids':     selected_class_ids,
+                'selected_subjects_per_class': selected_subjects_per_class,
+                'action':                 'edit',
+                'pk':                     pk,
+                **lookups,
+            })
+
+        # Teaching staff needs two more stages
+        if prof_c.get('is_a_teaching_staff'):
+            request.session["StaffData"] = {
+                "user_data":    user_c,
+                "profile_data": prof_c,
+            }
+            request.session["is_a_teaching_staff"] = True
+            return redirect(reverse("accounts:edit_staff", args=[pk]))
+
+        # Non-teaching → fall straight through to save block
+
+    # ── Stage 2 / 3 — teaching-staff extra steps ──────────────────────────────
+    else:
+        if not request.session.get("configure_class_tr"):
+            # ── Stage 2: collect which classes + is_class_teacher ─────────────
+            supported_classes = get_sch_supported_classes()
+            submitted_classes = []
+            for sc in supported_classes:
+                key    = sc.supported_class.key
+                class_ = (request.POST.get(f"tought_class_{key}") or '').strip()
+                if class_:
+                    submitted_classes.append({f"class_{key}": class_})
+
+            is_a_class_tr = (
+                str(request.POST.get('is_class_teacher', '')).strip().lower()
+                in ('1', 'true', 'on', 'yes')
+            )
+
+            prev_session = request.session.get("StaffData", {})
+            prev_session["teaching_req"] = {
+                "is_class_teacher": is_a_class_tr,
+                "tought_classes":   submitted_classes,
+            }
+            request.session["StaffData"]          = prev_session
+            request.session["configure_class_tr"] = True
+            if is_a_class_tr:
+                request.session["is_a_class_tr"] = True
+
+            return redirect(reverse("accounts:edit_staff", args=[pk]))
+
+        else:
+            # ── Stage 3: collect subjects per class, then save ────────────────
+            for cls in tought_classes_subjects:
+                class_key      = cls["key"]
+                tought_subjects = []
+
+                for cs in cls["subjects"]:
+                    cs_code = cs.get("code")
+                    submitted_value = str(request.POST.get(
+                        f"{class_key.lower()}_tought_subject_{cs_code.lower()}"
+                    ) or '').strip()
+
+                    if submitted_value:
+                        tought_subjects.append(submitted_value)
+
+                if tought_subjects:
+                    tr_tought_subjects_in_class[class_key] = tought_subjects
+
+            staff_data = request.session.get("StaffData", {})
+            user_c     = staff_data.get("user_data", {})
+            prof_c     = staff_data.get("profile_data", {})
+
+            # If flagged as class teacher in Stage 2, grab their assigned class
+            if request.session.get("is_a_class_tr") is True:
+                cls_tr_class = str(request.POST.get("cls_tr_class", "")).strip()
+                if cls_tr_class:
+                    class_ = get_sch_supported_classes().filter(
+                        supported_class__key=cls_tr_class
+                    ).first()
+                    try:
+                        prof_c["class_managed_id"] = class_
+                    except ValueError:
+                        messages.error(request, "Invalid class selected for class teacher.")
+                        return redirect(reverse("accounts:edit_staff", args=[pk]))
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  SAVE — reached by non-teaching (Stage 1) and teaching staff (Stage 3)
+    # ─────────────────────────────────────────────────────────────────────────
+    try:
+        with transaction.atomic():
+            # ── Update CustomUser ────────────────────────────────────────────
+            user.first_name  = user_c.get('first_name',  user.first_name)
+            user.last_name   = user_c.get('last_name',   user.last_name)
+            user.other_names = user_c.get('other_names', user.other_names)
+            user.gender      = user_c.get('gender',      user.gender)
+            user.phone       = user_c.get('phone',       user.phone)
+            user.alt_phone   = user_c.get('alt_phone',   user.alt_phone)
+            user.email       = user_c.get('email',       user.email)
+            user.address     = user_c.get('address',     user.address)
+            user.nin         = user_c.get('nin',         user.nin)
+
+            # date_of_birth — optional, parse carefully
+            dob_raw = user_c.get('date_of_birth', '')
+            if dob_raw:
+                from datetime import datetime as _dt
+                for fmt in ('%Y-%m-%d', '%d/%m/%Y'):
+                    try:
+                        user.date_of_birth = _dt.strptime(dob_raw, fmt).date()
+                        break
+                    except ValueError:
+                        continue
+
+            # Profile photo (only replace if a new file was uploaded)
+            if request.FILES.get('profile_photo'):
+                user.profile_photo = request.FILES['profile_photo']
+
+            user.save()
+
+            # ── Update StaffProfile ──────────────────────────────────────────
+            profile.role            = prof_c.get('role',            profile.role)
+            profile.specialization  = prof_c.get('specialization',  profile.specialization)
+            profile.is_class_teacher = prof_c.get('is_class_teacher', profile.is_class_teacher)
+
+            # Employment fields (Stage 1 always submits these)
+            emp_type = (request.POST.get('employment_type') or '').strip()
+            if emp_type in {c[0] for c in StaffProfile.EMPLOYMENT_TYPE_CHOICES}:
+                profile.employment_type = emp_type
+
+            qual = (request.POST.get('qualification') or '').strip()
+            if qual in {c[0] for c in StaffProfile.QUALIFICATION_CHOICES}:
+                profile.qualification = qual
+
+            # Date fields
+            from datetime import datetime as _dt
+            for field_name in ('date_joined', 'date_left'):
+                raw = (request.POST.get(field_name) or '').strip()
+                if raw:
+                    for fmt in ('%Y-%m-%d', '%d/%m/%Y'):
+                        try:
+                            setattr(profile, field_name, _dt.strptime(raw, fmt).date())
+                            break
+                        except ValueError:
+                            continue
+                elif field_name == 'date_left':
+                    profile.date_left = None     # allow clearing
+
+            # Payroll / HR text fields
+            for f in ('nssf_number', 'tin_number', 'salary_scale',
+                      'bank_name', 'bank_account', 'bio', 'notes'):
+                val = (request.POST.get(f) or '').strip()
+                setattr(profile, f, val)
+
+            # Signature (only replace if a new file was uploaded)
+            if request.FILES.get('signature'):
+                profile.signature = request.FILES['signature']
+
+            profile.save()
+
+            # ── Clear and re-create teaching assignments ─────────────────────
+            TeacherClass.objects.filter(teacher=user).delete()
+            TeacherSubject.objects.filter(teacher=user).delete()
+            SchoolClassTeacher.objects.filter(teacher=user).delete()
+
+            if request.session.get("is_a_teaching_staff"):
+                teaching_req = request.session.get("StaffData", {}).get("teaching_req", {})
+
+                # Class teacher assignment
+                if teaching_req.get("is_class_teacher"):
+                    cls_tr_class = str(request.POST.get("cls_tr_class", "")).strip()
+                    if cls_tr_class:
+                        cls = get_sch_supported_classes().filter(
+                            supported_class__key=cls_tr_class
+                        ).first()
+                        if cls:
+                            SchoolClassTeacher.objects.create(teacher=user, school_class=cls)
+
+                # Taught classes
+                for tc in teaching_req.get("tought_classes", []):
+                    for k, v in tc.items():
+                        cls = get_sch_supported_classes().filter(
+                            supported_class__key=v
+                        ).first()
+                        if cls:
+                            TeacherClass.objects.create(school_class=cls, teacher=user)
+
+                # Subjects per class
+                for class_key, subjects in tr_tought_subjects_in_class.items():
+                    class_obj = get_sch_supported_classes().filter(
+                        supported_class__key=class_key.lower()
+                    ).first()
+                    if class_obj:
+                        for subject_code in subjects:
+                            subject_obj = Subject.objects.filter(
+                                code=subject_code.upper()
+                            ).first()
+                            if subject_obj:
+                                TeacherSubject.objects.create(
+                                    teacher=user,
+                                    school_class=class_obj,
+                                    subject=subject_obj,
+                                )
+
+            # ── Clear session ────────────────────────────────────────────────
+            for key in ("StaffData", "is_a_teaching_staff",
+                        "configure_class_tr", "is_a_class_tr"):
+                request.session.pop(key, None)
+
+    except Exception as exc:
+        messages.error(request, f'Could not update staff: {exc}')
+        return redirect('accounts:edit_staff', pk=pk)
+
+    messages.success(request, f'Staff account for {user.full_name} updated successfully.')
     return redirect('accounts:user_detail', pk=user.pk)
