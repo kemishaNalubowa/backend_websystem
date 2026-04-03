@@ -29,7 +29,8 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
-from academics.models import SchoolClass, Term
+from academics.utils.subject_utils import get_sch_supported_classes
+from academics.models import SchoolSupportedClasses, Term
 from fees.models import SchoolFees
 from fees.utils.fees_utils import (
     FEES_TYPE_LABELS,
@@ -54,9 +55,7 @@ _CLASS_LEVEL_CHOICES = [
 def _get_form_lookups() -> dict:
     """Common querysets every fee form template needs."""
     return {
-        'all_classes':       SchoolClass.objects.filter(
-                                 is_active=True
-                             ).order_by('section', 'level', 'stream'),
+        'all_classes':       SchoolSupportedClasses.objects.order_by('supported_class__section', 'supported_class__key'),
         'all_terms':         Term.objects.all().order_by('-start_date'),
         'fees_type_choices': _FEES_TYPE_CHOICES,
     }
@@ -158,8 +157,7 @@ def fees_list(request):
         )
 
     qs = qs.order_by(
-        '-term__start_date', 'school_class__section',
-        'school_class__level', 'fees_type',
+        '-term__start_date', 'school_class__supported_class__section', 'fees_type',
     )
 
     # ── Pagination ────────────────────────────────────────────────────────────
@@ -222,6 +220,7 @@ def fees_add(request):
             'action':       'add',
             'post':         {},
             'errors':       {},
+            "classes":get_sch_supported_classes(),
             'current_term': current_term,
             **lookups,
         })
@@ -235,6 +234,7 @@ def fees_add(request):
         return render(request, f'{_T}form.html', {
             'form_title': 'Add Fee Structure',
             'action':     'add',
+            "classes":get_sch_supported_classes(),
             'post':       request.POST,
             'errors':     errors,
             **lookups,

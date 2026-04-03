@@ -209,21 +209,19 @@ def get_fees_list_stats() -> dict:
     # By class section
     by_section = list(
         qs.filter(is_active=True)
-        .values('school_class__section')
+        .values('school_class__supported_class__section')
         .annotate(count=Count('id'), total_amount=Sum('amount'))
-        .order_by('school_class__section')
+        .order_by('school_class__supported_class__section')
     )
 
     # By class level
     by_class = list(
         qs.filter(is_active=True)
         .values(
-            'school_class__level',
-            'school_class__stream',
-            'school_class__section',
+            'school_class__supported_class__section',
         )
         .annotate(count=Count('id'), total_amount=Sum('amount'))
-        .order_by('school_class__section', 'school_class__level')
+        .order_by('school_class__supported_class__section')
     )
 
     # Highest and lowest single fee amount
@@ -242,7 +240,7 @@ def get_fees_list_stats() -> dict:
         current_term_fees = qs.filter(
             term=current_term, is_active=True
         ).select_related('school_class').order_by(
-            'school_class__section', 'school_class__level', 'fees_type'
+            'school_class__supported_class__section', 'fees_type'
         )
         current_term_total = (
             current_term_fees.aggregate(s=Sum('amount'))['s'] or Decimal('0')

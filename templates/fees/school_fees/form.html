@@ -62,47 +62,32 @@
       <div class="card-body">
         <div class="row g-3">
 
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">
-              Class <span class="text-danger">*</span>
+
+          <div class="col-12">
+            <label class="form-label mb-3 fw-700">
+              Classes Affected <span class="text-danger">*</span>
             </label>
-            <select name="school_class"
-              class="form-select {% if errors.school_class %}is-invalid{% endif %}">
-              <option value="">— Select class —</option>
-              {# Group by section #}
-              <optgroup label="Nursery">
-                {% for cls in all_classes %}
-                  {% if cls.section == 'nursery' %}
-                  <option value="{{ cls.pk }}"
-                    {% if post %}
-                      {% if post.school_class == cls.pk|stringformat:"s" %}selected{% endif %}
-                    {% elif action == 'edit' %}
-                      {% if fee.school_class_id == cls.pk %}selected{% endif %}
-                    {% endif %}>
-                    {{ cls.display_name }}
-                  </option>
-                  {% endif %}
+              <div class="row g-2">
+                {% for cls in classes %}
+                <div class="col-6 col-sm-4 col-md-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="class_{{ cls.supported_class.key }}"
+                      id="cls_{{ cls.supported_class.key }}" value="{{ cls.supported_class.key }}"
+                      {% if action == 'edit' %}
+                        {% if cls.supported_class.key in selected_class_ids %}checked{% endif %}
+                      {% endif %}
+                    />
+                    <label class="form-check-label small fw-600" for="cls_{{ cls.supported_class.key }}">{{ cls.supported_class.name }}</label>
+                  </div>
+                </div>
                 {% endfor %}
-              </optgroup>
-              <optgroup label="Primary">
-                {% for cls in all_classes %}
-                  {% if cls.section == 'primary' %}
-                  <option value="{{ cls.pk }}"
-                    {% if post %}
-                      {% if post.school_class == cls.pk|stringformat:"s" %}selected{% endif %}
-                    {% elif action == 'edit' %}
-                      {% if fee.school_class_id == cls.pk %}selected{% endif %}
-                    {% endif %}>
-                    {{ cls.display_name }}
-                  </option>
-                  {% endif %}
-                {% endfor %}
-              </optgroup>
-            </select>
-            {% if errors.school_class %}
-            <div class="invalid-feedback">{{ errors.school_class }}</div>
-            {% endif %}
+                
+              </div>
+              {% if errors.code %}
+                <div class="text-danger small">{{ errors.classes }}</div>
+              {% endif %}
           </div>
+
 
           <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
@@ -130,21 +115,6 @@
             {% endif %}
           </div>
 
-        </div>
-      </div>
-    </div>
-
-    {# ── Fee details ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-cash-coin me-2 text-success"></i>Fee Details
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-
-          {# Fee type #}
           <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
               Fee Type <span class="text-danger">*</span>
@@ -169,6 +139,38 @@
             {% endif %}
           </div>
 
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">
+              Title (Optional)</span>
+            </label>
+            <div class="input-group {% if errors.amount %}is-invalid{% endif %}">
+              <input
+                type="text"
+                name="amount"
+                class="form-control font-monospace {% if errors.amount %}is-invalid{% endif %}"
+                value=""
+     
+              />
+            </div>
+            <div class="form-text">You can skip the title if the Fee Type is not others.</div>
+            {% if errors.amount %}
+            <div class="invalid-feedback d-block">{{ errors.amount }}</div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Fee details ── #}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0">
+          <i class="bi bi-cash-coin me-2 text-success"></i>Fee Details
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
           {# Amount #}
           <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
@@ -216,46 +218,6 @@
             >{% if post %}{{ post.description|default:'' }}{% elif action == 'edit' %}{{ fee.description }}{% endif %}</textarea>
           </div>
 
-        </div>
-      </div>
-    </div>
-
-    {# ── Flags ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-toggle-on me-2 text-info"></i>Flags
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-
-          <div class="col-12 col-sm-6">
-            <div class="form-check form-switch">
-              <input
-                class="form-check-input"
-                type="checkbox"
-                role="switch"
-                id="is_compulsory"
-                name="is_compulsory"
-                value="1"
-                {% if post %}
-                  {% if post.is_compulsory %}checked{% endif %}
-                {% elif action == 'edit' %}
-                  {% if fee.is_compulsory %}checked{% endif %}
-                {% else %}
-                  checked
-                {% endif %}
-              />
-              <label class="form-check-label fw-700" for="is_compulsory">
-                Compulsory for all students
-              </label>
-            </div>
-            <div class="form-text ms-5">
-              Compulsory fees are included in the auto-generated fee
-              assessment total for every student in this class.
-            </div>
-          </div>
 
           <div class="col-12 col-sm-6">
             <div class="form-check form-switch">
@@ -287,6 +249,7 @@
         </div>
       </div>
     </div>
+
 
     {# ── Submit ── #}
     <div class="d-flex gap-2 pb-2">

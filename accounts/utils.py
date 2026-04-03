@@ -140,11 +140,11 @@ def _validate_shared_user_fields(post: dict, errors: dict, cleaned: dict) -> Non
 
     cleaned['address'] = (post.get('address') or '').strip()
 
-    nin = (post.get('nin') or '').strip()
-    if len(nin) > 20:
-        errors['nin'] = 'NIN must not exceed 20 characters.'
-    else:
-        cleaned['nin'] = nin
+    # nin = (post.get('nin') or '').strip()
+    # if len(nin) > 20:
+    #     errors['nin'] = 'NIN must not exceed 20 characters.'
+    # else:
+    #     cleaned['nin'] = nin
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -238,11 +238,11 @@ def validate_and_parse_staff_registration(post: dict) -> tuple[dict, dict, dict]
     prof_cleaned:  dict = {}
 
     # user_type
-    user_type = (post.get('user_type') or '').strip()
-    if user_type not in VALID_USER_TYPES_STAFF:
-        errors['user_type'] = 'User type must be Teacher, Staff, or Admin.'
-    else:
-        user_cleaned['user_type'] = user_type
+    # user_type = (post.get('user_type') or '').strip()
+    # if user_type not in VALID_USER_TYPES_STAFF:
+    #     errors['user_type'] = 'User type must be Teacher, Staff, or Admin.'
+    # else:
+    #     user_cleaned['user_type'] = user_type
 
     # # username (unique)
     # username = (post.get('username') or '').strip()
@@ -281,48 +281,54 @@ def validate_and_parse_staff_registration(post: dict) -> tuple[dict, dict, dict]
     else:
         prof_cleaned['role'] = role
 
-    emp_type = (post.get('employment_type') or 'permanent').strip()
-    if emp_type not in VALID_EMPLOYMENT_TYPES:
-        errors['employment_type'] = 'Invalid employment type.'
-    else:
-        prof_cleaned['employment_type'] = emp_type
+
+
+    # emp_type = (post.get('employment_type') or 'permanent').strip()
+    # if emp_type not in VALID_EMPLOYMENT_TYPES:
+    #     errors['employment_type'] = 'Invalid employment type.'
+    # else:
+    #     prof_cleaned['employment_type'] = emp_type
 
     # date_joined
-    from datetime import datetime
-    dj_raw = (post.get('date_joined') or '').strip()
-    if not dj_raw:
-        errors['date_joined'] = 'Date joined is required.'
-    else:
-        parsed = None
-        for fmt in ('%Y-%m-%d', '%d/%m/%Y'):
-            try:
-                parsed = datetime.strptime(dj_raw, fmt).date()
-                break
-            except ValueError:
-                continue
-        if not parsed:
-            errors['date_joined'] = 'Date joined is not a valid date (use YYYY-MM-DD).'
-        else:
-            prof_cleaned['date_joined'] = parsed
+    # from datetime import datetime
+    # dj_raw = (post.get('date_joined') or '').strip()
+    # if not dj_raw:
+    #     errors['date_joined'] = 'Date joined is required.'
+    # else:
+    #     parsed = None
+    #     for fmt in ('%Y-%m-%d', '%d/%m/%Y'):
+    #         try:
+    #             parsed = datetime.strptime(dj_raw, fmt).date()
+    #             break
+    #         except ValueError:
+    #             continue
+    #     if not parsed:
+    #         errors['date_joined'] = 'Date joined is not a valid date (use YYYY-MM-DD).'
+    #     else:
+    #         prof_cleaned['date_joined'] = parsed
 
-    qualification = (post.get('qualification') or '').strip()
-    if qualification not in VALID_QUALIFICATIONS:
-        errors['qualification'] = 'Invalid qualification selected.'
-    else:
-        prof_cleaned['qualification'] = qualification
+    # qualification = (post.get('qualification') or '').strip()
+    # if qualification not in VALID_QUALIFICATIONS:
+    #     errors['qualification'] = 'Invalid qualification selected.'
+    # else:
+    #     prof_cleaned['qualification'] = qualification
 
     prof_cleaned['specialization']   = (post.get('specialization') or '').strip()
     prof_cleaned['is_class_teacher']  = (
         str(post.get('is_class_teacher', '')).lower() in ('1', 'true', 'on', 'yes')
     )
 
-    prof_cleaned['nssf_number']       = (post.get('nssf_number') or '').strip()
-    prof_cleaned['tin_number']        = (post.get('tin_number') or '').strip()
-    prof_cleaned['salary_scale']      = (post.get('salary_scale') or '').strip()
-    prof_cleaned['bank_name']         = (post.get('bank_name') or '').strip()
-    prof_cleaned['bank_account']      = (post.get('bank_account') or '').strip()
-    prof_cleaned['bio']               = (post.get('bio') or '').strip()
-    prof_cleaned['notes']             = (post.get('notes') or '').strip()
+    prof_cleaned['is_a_teaching_staff']  = (
+        str(post.get('is_a_teaching_staff', '')).lower() in ('1', 'true', 'on', 'yes')
+    )
+
+    # prof_cleaned['nssf_number']       = (post.get('nssf_number') or '').strip()
+    # prof_cleaned['tin_number']        = (post.get('tin_number') or '').strip()
+    # prof_cleaned['salary_scale']      = (post.get('salary_scale') or '').strip()
+    # prof_cleaned['bank_name']         = (post.get('bank_name') or '').strip()
+    # prof_cleaned['bank_account']      = (post.get('bank_account') or '').strip()
+    # prof_cleaned['bio']               = (post.get('bio') or '').strip()
+    # prof_cleaned['notes']             = (post.get('notes') or '').strip()
 
     
 
@@ -335,6 +341,10 @@ def validate_and_parse_staff_registration(post: dict) -> tuple[dict, dict, dict]
             errors['class_managed'] = 'Invalid class selected.'
     else:
         prof_cleaned['class_managed_id'] = None
+
+
+ 
+
 
     return user_cleaned, prof_cleaned, errors
 
@@ -362,3 +372,32 @@ def get_user_list_stats() -> dict:
         'active':   qs.filter(is_active=True).count(),
         'inactive': qs.filter(is_active=False).count(),
     }
+
+
+
+
+from academics.models import ClassSubject
+
+def get_selected_clases_subjects(subjects):
+    classes_subjects = []
+    for s in subjects:
+        for k,v in s.items():
+            cls_subjects = ClassSubject.objects.filter(
+                school_class__supported_class__key = v
+            )
+
+            if cls_subjects:
+                class_s = []
+                for cs in cls_subjects:
+                    class_s.append({
+                        "name":cs.subject.name,
+                        "code":cs.subject.code
+                    }) 
+                
+                classes_subjects.append({
+                    "key":v,
+                    "name":cs.school_class.supported_class.name,
+                    "subjects":class_s
+                })
+
+    return classes_subjects

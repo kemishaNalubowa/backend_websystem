@@ -32,22 +32,19 @@ class SchoolFees(TimeStampedModel):
     ]
 
     school_class  = models.ForeignKey(
-                        'academics.SchoolClass',
+                        'academics.SchoolSupportedClasses',
                         on_delete=models.CASCADE,
                         related_name='fee_structures'
                     )
-    school_stream = models.ForeignKey(
-                        SchoolStream, on_delete=models.CASCADE,
-                        related_name='fees_structures',
-                        null=True, blank=True
-                    )
-    
+
     term          = models.ForeignKey(
                         'academics.Term',
                         on_delete=models.CASCADE,
                         related_name='fee_structures'
                     )
     fees_type     = models.CharField(max_length=20, choices=FEES_TYPE_CHOICES)
+    title     = models.CharField(max_length=20,blank=True, null=True)
+    
     amount        = models.DecimalField(max_digits=12, decimal_places=2,
                         help_text='Amount in Uganda Shillings (UGX)')
     description   = models.TextField(blank=True)

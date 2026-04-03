@@ -332,9 +332,8 @@ def get_assessment_fees_list_stats() -> dict:
     # By class
     by_class = list(
         qs.values(
-            'student__current_class__level',
-            'student__current_class__stream',
-            'student__current_class__section',
+            'student__current_class__supported_class__key',
+            'student__current_class__supported_class__section',
         )
         .annotate(
             count        = Count('id'),
@@ -344,8 +343,8 @@ def get_assessment_fees_list_stats() -> dict:
             sum_balance  = Sum('balance'),
         )
         .order_by(
-            'student__current_class__section',
-            'student__current_class__level',
+            'student__current_class__supported_class__section',
+            'student__current_class__supported_class__key',
         )
     )
 

@@ -38,34 +38,18 @@
 
   <div class="col-12 col-lg-8">
 
-    {# ── SECTION 1: Account Type ── #}
+    {# ── SECTION 2: Personal Information ── #}
+
+
+    {% if not request.session.is_a_teaching_staff %}
     <div class="card mb-4">
       <div class="card-header py-3">
         <h6 class="fw-700 mb-0">
-          <i class="bi bi-person-badge me-2 text-primary"></i>Account Type
+          <i class="bi bi-person-circle me-2 text-primary"></i>Personal Information
         </h6>
       </div>
       <div class="card-body">
         <div class="row g-3">
-
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">
-              User Type <span class="text-danger">*</span>
-            </label>
-            <select name="user_type"
-              class="form-select {% if errors.user_type %}is-invalid{% endif %}">
-              <option value="">— Select type —</option>
-              {% for key, label in user_type_choices %}
-              <option value="{{ key }}"
-                {% if post.user_type == key %}selected{% endif %}>
-                {{ label }}
-              </option>
-              {% endfor %}
-            </select>
-            {% if errors.user_type %}
-            <div class="invalid-feedback">{{ errors.user_type }}</div>
-            {% endif %}
-          </div>
 
           <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
@@ -96,21 +80,7 @@
             {% endif %}
           </div>
 
-        </div>
-      </div>
-    </div>
-
-    {# ── SECTION 2: Personal Information ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-person-circle me-2 text-primary"></i>Personal Information
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-
-          <div class="col-12 col-sm-4">
+          <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
               First Name <span class="text-danger">*</span>
             </label>
@@ -123,7 +93,7 @@
             {% endif %}
           </div>
 
-          <div class="col-12 col-sm-4">
+          <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
               Last Name <span class="text-danger">*</span>
             </label>
@@ -136,13 +106,13 @@
             {% endif %}
           </div>
 
-          <div class="col-12 col-sm-4">
+          <!-- <div class="col-12 col-sm-4">
             <label class="form-label fw-700 small">Other Names</label>
             <input type="text" name="other_names"
               class="form-control"
               value="{{ post.other_names|default:'' }}"
               placeholder="Middle / other names" maxlength="100"/>
-          </div>
+          </div> -->
 
           <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
@@ -153,44 +123,15 @@
               <option value="">— Select —</option>
               <option value="male"              {% if post.gender == 'male' %}selected{% endif %}>Male</option>
               <option value="female"            {% if post.gender == 'female' %}selected{% endif %}>Female</option>
-              <option value="other"             {% if post.gender == 'other' %}selected{% endif %}>Other</option>
-              <option value="prefer_not_to_say" {% if post.gender == 'prefer_not_to_say' %}selected{% endif %}>Prefer not to say</option>
             </select>
             {% if errors.gender %}
             <div class="invalid-feedback">{{ errors.gender }}</div>
             {% endif %}
           </div>
 
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">NIN (National ID)</label>
-            <input type="text" name="nin"
-              class="form-control font-monospace"
-              value="{{ post.nin|default:'' }}"
-              placeholder="e.g. CM9000000HDKQ" maxlength="20"/>
-          </div>
 
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Profile Photo</label>
-            <input type="file" name="profile_photo"
-              class="form-control" accept="image/*"/>
-            <div class="form-text">JPG or PNG. Optional — used on staff profiles.</div>
-          </div>
 
-        </div>
-      </div>
-    </div>
-
-    {# ── SECTION 3: Contact ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-telephone me-2 text-success"></i>Contact Details
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-
-          <div class="col-12 col-sm-6">
+                    <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
               Phone <span class="text-danger">*</span>
             </label>
@@ -231,268 +172,145 @@
             </div>
           </div>
 
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Home Address</label>
-            <input type="text" name="address"
-              class="form-control"
-              value="{{ post.address|default:'' }}"
-              placeholder="Village / street" maxlength="200"/>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    {# ── SECTION 4: Login Credentials ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-key me-2 text-info"></i>Login Credentials
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-
-          <div class="col-12 col-sm-4">
-            <label class="form-label fw-700 small">
-              Username <span class="text-danger">*</span>
-            </label>
-            <input type="text" name="username"
-              class="form-control {% if errors.username %}is-invalid{% endif %}"
-              value="{{ post.username|default:'' }}"
-              placeholder="e.g. jssemakula" maxlength="150"
-              autocomplete="username"/>
-            <div class="form-text">Unique login username. No spaces.</div>
-            {% if errors.username %}
-            <div class="invalid-feedback">{{ errors.username }}</div>
-            {% endif %}
-          </div>
-
-          <div class="col-12 col-sm-4">
-            <label class="form-label fw-700 small">
-              Password <span class="text-danger">*</span>
-            </label>
-            <input type="password" name="password"
-              class="form-control {% if errors.password %}is-invalid{% endif %}"
-              placeholder="Temporary password" autocomplete="new-password"/>
-            {% if errors.password %}
-            <div class="invalid-feedback">{{ errors.password }}</div>
-            {% endif %}
-          </div>
-
-          <div class="col-12 col-sm-4">
-            <label class="form-label fw-700 small">
-              Confirm Password <span class="text-danger">*</span>
-            </label>
-            <input type="password" name="password2"
-              class="form-control {% if errors.password2 %}is-invalid{% endif %}"
-              placeholder="Repeat password" autocomplete="new-password"/>
-            {% if errors.password2 %}
-            <div class="invalid-feedback">{{ errors.password2 }}</div>
-            {% endif %}
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    {# ── SECTION 5: Employment ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-briefcase me-2 text-warning"></i>Employment Details
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-
-          <div class="col-12 col-sm-4">
-            <label class="form-label fw-700 small">
-              Employment Type <span class="text-danger">*</span>
-            </label>
-            <select name="employment_type"
-              class="form-select {% if errors.employment_type %}is-invalid{% endif %}">
-              {% for key, label in employment_choices %}
-              <option value="{{ key }}"
-                {% if post.employment_type == key or not post and key == 'permanent' %}selected{% endif %}>
-                {{ label }}
-              </option>
-              {% endfor %}
-            </select>
-            {% if errors.employment_type %}
-            <div class="invalid-feedback">{{ errors.employment_type }}</div>
-            {% endif %}
-          </div>
-
-          <div class="col-12 col-sm-4">
-            <label class="form-label fw-700 small">
-              Date Joined <span class="text-danger">*</span>
-            </label>
-            <input type="date" name="date_joined"
-              class="form-control {% if errors.date_joined %}is-invalid{% endif %}"
-              value="{{ post.date_joined|default:'' }}"/>
-            {% if errors.date_joined %}
-            <div class="invalid-feedback">{{ errors.date_joined }}</div>
-            {% endif %}
-          </div>
-
-          <div class="col-12 col-sm-4">
-            <label class="form-label fw-700 small">Date Left</label>
-            <input type="date" name="date_left"
-              class="form-control"
-              value="{{ post.date_left|default:'' }}"/>
-            <div class="form-text">Leave blank if still employed.</div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    {# ── SECTION 6: Teaching-specific ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-book me-2 text-success"></i>Teaching Details
-          <span class="text-muted small fw-400 ms-1">(teachers only)</span>
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Qualification</label>
-            <select name="qualification" class="form-select">
-              <option value="">— None / N/A —</option>
-              {% for key, label in qualification_choices %}
-              <option value="{{ key }}"
-                {% if post.qualification == key %}selected{% endif %}>
-                {{ label }}
-              </option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Specialization</label>
-            <input type="text" name="specialization"
-              class="form-control"
-              value="{{ post.specialization|default:'' }}"
-              placeholder="e.g. Mathematics, English, Early Childhood"
-              maxlength="100"/>
-          </div>
-
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Class Managed</label>
-            <select name="class_managed_id" class="form-select">
-              <option value="">— Not a class teacher —</option>
-              {% for cls in all_classes %}
-              <option value="{{ cls.pk }}"
-                {% if post.class_managed_id == cls.pk|stringformat:"s" %}selected{% endif %}>
-                {{ cls.display_name }}
-              </option>
-              {% endfor %}
-            </select>
-            <div class="form-text">The class this teacher is directly responsible for.</div>
-          </div>
-
           <div class="col-12 col-sm-6 d-flex align-items-center">
             <div class="form-check form-switch mt-4">
               <input class="form-check-input" type="checkbox" role="switch"
-                id="is_class_teacher" name="is_class_teacher" value="1"
-                {% if post.is_class_teacher %}checked{% endif %}/>
+                id="is_a_teaching_staff" name="is_a_teaching_staff" value="1"
+                {% if post.is_a_teaching_staff %}checked{% endif %}/>
               <label class="form-check-label fw-700" for="is_class_teacher">
                 Assigned as Class / Form Teacher
               </label>
             </div>
           </div>
 
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Signature Upload</label>
-            <input type="file" name="signature" class="form-control" accept="image/*"/>
-            <div class="form-text">Used on report cards. JPG or PNG.</div>
-          </div>
-
         </div>
       </div>
     </div>
 
-    {# ── SECTION 7: Payroll / HR ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-cash me-2 text-secondary"></i>Payroll &amp; HR
-          <span class="text-muted small fw-400 ms-1">(optional)</span>
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
+    {% else %}
+    
+    {% if not request.session.configure_class_tr %}
 
-          <div class="col-12 col-sm-4">
-            <label class="form-label fw-700 small">NSSF Number</label>
-            <input type="text" name="nssf_number"
-              class="form-control font-monospace"
-              value="{{ post.nssf_number|default:'' }}"
-              placeholder="NSSF number" maxlength="20"/>
+      {# THIS IS FOR FORM 2  STAFF IS A TEACHING STAFF #}
+
+      {# ── SECTION 6: Teaching-specific ── #}
+      <div class="card mb-4">
+        <div class="card-header py-3">
+          <h6 class="fw-700 mb-0">
+            <i class="bi bi-book me-2 text-success"></i>Teaching Details
+            <span class="text-muted small fw-400 ms-1">(teachers only)</span>
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+
+            <div class="col-12">
+              <label class="form-label mb-3 fw-700">
+                Classes Tought <span class="text-danger">*</span>
+              </label>
+                <div class="row g-2">
+                  {% for cls in classes %}
+                  <div class="col-6 col-sm-4 col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="tought_class_{{ cls.supported_class.key }}"
+                        id="cls_{{ cls.supported_class.key }}" value="{{ cls.supported_class.key }}"
+                        {% if action == 'edit' %}
+                          {% if cls.supported_class.key in selected_class_ids %}checked{% endif %}
+                        {% endif %}
+                      />
+                      <label class="form-check-label small fw-600" for="cls_{{ cls.supported_class.key }}">{{ cls.supported_class.name }}</label>
+                    </div>
+                  </div>
+                  {% endfor %}
+                  
+                </div>
+                {% if errors.code %}
+                  <div class="text-danger small">{{ errors.classes }}</div>
+                {% endif %}
+            </div>
+
+            <div class="col-12 col-sm-6 d-flex align-items-center">
+              <div class="form-check form-switch mt-4">
+                <input class="form-check-input" type="checkbox" role="switch"
+                  id="is_class_teacher" name="is_class_teacher" value="1"
+                  {% if post.is_class_teacher %}checked{% endif %}/>
+                <label class="form-check-label fw-700" for="is_class_teacher">
+                  Is this a class teacher in any class ?
+                </label>
+              </div>
+            </div>
           </div>
-
-          <div class="col-12 col-sm-4">
-            <label class="form-label fw-700 small">TIN Number</label>
-            <input type="text" name="tin_number"
-              class="form-control font-monospace"
-              value="{{ post.tin_number|default:'' }}"
-              placeholder="Tax ID number" maxlength="20"/>
-          </div>
-
-          <div class="col-12 col-sm-4">
-            <label class="form-label fw-700 small">Salary Scale</label>
-            <input type="text" name="salary_scale"
-              class="form-control"
-              value="{{ post.salary_scale|default:'' }}"
-              placeholder="e.g. U4, U5, Grade A" maxlength="50"/>
-          </div>
-
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Bank Name</label>
-            <input type="text" name="bank_name"
-              class="form-control"
-              value="{{ post.bank_name|default:'' }}"
-              placeholder="e.g. Stanbic, Centenary, Equity" maxlength="100"/>
-          </div>
-
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Bank Account</label>
-            <input type="text" name="bank_account"
-              class="form-control font-monospace"
-              value="{{ post.bank_account|default:'' }}"
-              placeholder="Account number" maxlength="30"/>
-          </div>
-
         </div>
       </div>
-    </div>
+    {% else %}
 
-    {# ── SECTION 8: Bio & Notes ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-journal-text me-2 text-secondary"></i>Bio &amp; Notes
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="mb-3">
-          <label class="form-label fw-700 small">Staff Bio</label>
-          <textarea name="bio" class="form-control" rows="3"
-            placeholder="Brief professional biography shown on the staff profile."
-          >{{ post.bio|default:'' }}</textarea>
+
+
+      {%  for tcs in tought_classes_subjects %}
+
+      <div class="col-12 mb-5">
+              <label class="form-label mb-3 fw-700">
+                Teacher's subjects tought in {{ tcs.name }} — {{ tcs.key.upper }} <span class="text-danger">*</span>
+              </label>
+                <div class="row g-2">
+                  {% for s in tcs.subjects %}
+                  <div class="col-6 col-sm-4 col-md-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="{{ tcs.key }}_tought_subject_{{ s.code.lower }}"
+                        id="{{ tcs.key }}_tought_subject_{{ s.code.lower }}" value="{{ s.code.lower }}"
+                        {% if action == 'edit' %}
+                          {% if cls.supported_class.key in selected_class_ids %}checked{% endif %}
+                        {% endif %}
+                      />
+                      <label class="form-check-label small fw-600" for="{{ tcs.key }}_tought_subject_{{ s.code.lower }}">{{ s.name.capitalize }}</label>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% if errors.code %}
+                  <div class="text-danger small">{{ errors.classes }}</div>
+                {% endif %}
+            </div>
+
+      {% endfor %}
+
+
+      {% if request.session.is_a_class_tr %}
+        <div class="col-12 col-sm-6 mb-5">
+          <label class="form-label fw-700">In which class is he or She a Class Teacher</label>
+          <select name="cls_tr_class" class="form-select">
+            <option hidden selected disabled></option>
+            {% for cls in classes %}
+              {% for tc in tought_classes_subjects %}
+                {% if cls.supported_class.key.lower == tc.key %}
+                  <option value="{{ cls.supported_class.key }}">
+                    {{cls.supported_class.key.upper}} — {{ cls.supported_class.name }}
+                  </option>
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+          </select>
+          
         </div>
-        <div>
-          <label class="form-label fw-700 small">Internal HR Notes</label>
-          <textarea name="notes" class="form-control" rows="2"
-            placeholder="Internal HR notes — not visible to the staff member."
-          >{{ post.notes|default:'' }}</textarea>
-        </div>
-      </div>
-    </div>
+      {% endif %}
+
+
+    {% endif %}
+
+    {% endif %}
+
+
+
+
+    {{ tought_classes_subjects }}
+
+    ================================================================================================================
+    {{ request.session.StaffData }}
+
+
+    
+
 
     {# ── SUBMIT ── #}
     <div class="d-flex gap-2 pb-2">
@@ -549,3 +367,35 @@
 </form>
 
 {% endblock %}
+
+
+
+
+
+[
+  {
+  'key': 'p6', 
+  'name': 'Primary Six', 
+  'subjects': [
+  {'name': 'English', 'code': 'ENG'},
+  {'name': 'Luganda', 'code': 'LUG'},
+  {'name': 'Mathematics', 'code': 'MTC'},
+  {'name': 'Science', 'code': 'SCI'},
+  {'name': 'Social Studies', 'code': 'SST'},
+  {'name': 'Christian Religious Education', 'code': 'CRE'},
+  {'name': 'Literacy 1', 'code': 'LIT1'}
+  ]
+  },
+  {
+    'key': 'p7', 
+    'name': 'Primary Seven', 
+    'subjects': [
+    {'name': 'English', 'code': 'ENG'}, 
+    {'name': 'Luganda', 'code': 'LUG'}, 
+    {'name': 'Mathematics', 'code': 'MTC'}, 
+    {'name': 'Science', 'code': 'SCI'},
+    {'name': 'Social Studies', 'code': 'SST'},
+    {'name': 'Christian Religious Education', 'code': 'CRE'}
+    ]
+  }
+]

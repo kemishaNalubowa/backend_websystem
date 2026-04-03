@@ -73,7 +73,7 @@ class Student(TimeStampedModel):
 
     # ── Academic placement ────────────────────────────────────────────────────
     current_class  = models.ForeignKey(
-                         'academics.SchoolClass',
+                         'academics.SchoolSupportedClasses',
                          on_delete=models.SET_NULL,
                          null=True,
                          related_name='students',

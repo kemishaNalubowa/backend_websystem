@@ -391,10 +391,15 @@ class SchoolClass(TimeStampedModel):
 class SchoolSupportedClasses(TimeStampedModel):
     supported_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE, related_name="school_supported_classess")
     def __str__(self):
-        return self.supported_class
+        return self.supported_class.name
     
 
 
+class SchoolClassTeacher(TimeStampedModel):
+    teacher = models.ForeignKey("authentication.CustomUser", on_delete=models.CASCADE, related_name="school_class_teacher")
+    school_class = models.ForeignKey(SchoolSupportedClasses, on_delete=models.CASCADE, related_name="school_class_teacher")
+    def __str__(self):
+        return f"{self.teacher.username} > {self.school_class.supported_class.key.upper()}"
 
 
 
@@ -534,27 +539,31 @@ class TeacherSubject(TimeStampedModel):
     Records which subjects a teacher is qualified / assigned to teach.
     A teacher may teach multiple subjects (common in small primary schools).
     """
-    # teacher    = models.ForeignKey(
-    #                 'accounts.Teacher', on_delete=models.CASCADE,
-    #                 related_name='teacher_subjects'
-    #             )
+    teacher    = models.ForeignKey(
+                    'authentication.CustomUser', on_delete=models.CASCADE,
+                    related_name='teacher_subjects', null=True
+                )
     subject    = models.ForeignKey(
                     Subject, on_delete=models.CASCADE,
                     related_name='subject_teachers'
                 )
-    is_primary = models.BooleanField(default=False,
-                    help_text='Is this the teacher\'s main / specialist subject?')
+    
+
+    school_class = models.ForeignKey(
+                        SchoolSupportedClasses, on_delete=models.CASCADE,
+                        related_name='teacher_subject',null=True
+                    )
+    
+
     notes      = models.CharField(max_length=200, blank=True)
 
     class Meta:
         verbose_name        = 'Teacher Subject'
         verbose_name_plural = 'Teacher Subjects'
         unique_together     = [ 'subject']
-        ordering            = [ '-is_primary']
 
     def __str__(self):
-        flag = ' (Primary)' if self.is_primary else ''
-        return f"{self.teacher.user.get_full_name()} → {self.subject.code}{flag}"
+        return f"{self.teacher} → {self.subject.code}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -564,40 +573,42 @@ class TeacherClass(TimeStampedModel):
     Assignment of a teacher to teach a specific subject in a specific class
     for a given term. This is the timetable-level assignment.
     """
-    # teacher      = models.ForeignKey(
-    #                     'accounts.Teacher', on_delete=models.CASCADE,
-    #                     related_name='teacher_class_assignments'
-    #                 )
+    teacher      = models.ForeignKey(
+                        'authentication.CustomUser', on_delete=models.CASCADE,
+                        related_name='teacher_class_assignments', null=True
+                    )
     school_class = models.ForeignKey(
-                        SchoolClass, on_delete=models.CASCADE,
+                        SchoolSupportedClasses, on_delete=models.CASCADE,
                         related_name='class_teacher_assignments'
                     )
-    subject      = models.ForeignKey(
-                        Subject, on_delete=models.CASCADE,
-                        related_name='teaching_assignments'
-                    )
+    # subject      = models.ForeignKey(
+    #                     Subject, on_delete=models.CASCADE,
+    #                     related_name='teaching_assignments'
+    #                 )
     school_stream = models.ForeignKey(
                         SchoolStream, on_delete=models.CASCADE,
                         related_name='teaching_assessments',
                         null=True, blank=True
                     )
-    term         = models.ForeignKey(
-                        Term, on_delete=models.CASCADE,
-                        related_name='teaching_assignments'
-                    )
-    periods_per_week = models.PositiveIntegerField(default=5,
-                            help_text='Number of teaching periods per week')
+    # term         = models.ForeignKey(
+    #                     Term, on_delete=models.CASCADE,
+    #                     related_name='teaching_assignments'
+    #                 )
+    # periods_per_week = models.PositiveIntegerField(default=5,
+    #                         help_text='Number of teaching periods per week')
     is_active    = models.BooleanField(default=True)
     notes        = models.CharField(max_length=200, blank=True)
 
     class Meta:
         verbose_name        = 'Teacher Class Assignment'
         verbose_name_plural = 'Teacher Class Assignments'
-        unique_together     = [ 'school_class', 'subject', 'term']
-        ordering            = ['term', 'school_class', 'subject']
+        # unique_together     = [ 'school_class']
+        ordering            = ['school_class']
 
     def __str__(self):
         return (
-            f"{self.teacher.user.get_full_name()} | "
-            f"{self.school_class} | {self.subject.code} | {self.term}"
+            f"{self.teacher} | "
+            f"{self.school_class}"
         )
+
+

@@ -17,7 +17,8 @@ from academics.models import SchoolSupportedClasses
 def get_sch_supported_classes():
     return SchoolSupportedClasses.objects.all()
 
-
+# def get_sch_subjects():
+#     return Subje
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  VALIDATION
