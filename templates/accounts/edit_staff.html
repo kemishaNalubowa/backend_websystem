@@ -42,6 +42,8 @@
         {# ════════════════════════════════════════════════════════════════════════
         STAGE 1 — Personal Information
         Shown when NOT yet in teaching-staff session flow
+
+        {{ request.session.StaffData }}
         ════════════════════════════════════════════════════════════════════════ #}
 
       is_a_teaching_staff  {{ request.session.is_a_teaching_staff }}
@@ -408,8 +410,12 @@
             {# ════════════════════════════════════════════════════════════════════════
             STAGE 2 — Teaching Details (classes + is_class_teacher)
             Shown when is_a_teaching_staff is set in session but configure_class_tr is NOT yet set
-            ════════════════════════════════════════════════════════════════════════ #}
 
+            
+            ════════════════════════════════════════════════════════════════════════ #}
+            {{ request.session.configure_class_tr }} 98797776575565656 
+
+            
             {% if not request.session.configure_class_tr %}
                 <div class="card mb-4">
                 <div class="card-header py-3">
