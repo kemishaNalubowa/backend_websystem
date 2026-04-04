@@ -9,7 +9,7 @@
 from django.db import models
 from academics.base import TimeStampedModel
 from authentication.models import CustomUser
-from academics.models import SchoolStream
+from academics.models import SchoolStream, SchoolSupportedClasses
 
 class SchoolFees(TimeStampedModel):
     """
@@ -31,11 +31,6 @@ class SchoolFees(TimeStampedModel):
         ('other',       'Other'),
     ]
 
-    school_class  = models.ForeignKey(
-                        'academics.SchoolSupportedClasses',
-                        on_delete=models.CASCADE,
-                        related_name='fee_structures'
-                    )
 
     term          = models.ForeignKey(
                         'academics.Term',
@@ -50,18 +45,17 @@ class SchoolFees(TimeStampedModel):
     description   = models.TextField(blank=True)
     due_date      = models.DateField(null=True, blank=True,
                         help_text='Payment deadline for this fee')
-    is_compulsory = models.BooleanField(default=True)
+    
     is_active     = models.BooleanField(default=True)
 
     class Meta:
         verbose_name        = 'School Fees Structure'
         verbose_name_plural = 'School Fees Structures'
-        unique_together     = ['school_class', 'term', 'fees_type']
-        ordering            = ['term', 'school_class', 'fees_type']
+        ordering            = ['term', 'fees_type']
 
     def __str__(self):
         return (
-            f"{self.school_class} | {self.get_fees_type_display()} | "
+            f"{self.get_fees_type_display()}| "
             f"{self.term} — UGX {self.amount:,.0f}"
         )
 
@@ -112,6 +106,8 @@ class FeesPayment(TimeStampedModel):
         return (
             f"RCP {self.receipt_number} | {self.student}"
         )
+
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -167,3 +163,19 @@ class AssessmentFees(TimeStampedModel):
     def __str__(self):
         status = 'CLEARED' if self.is_cleared else f'BALANCE UGX {self.balance:,.0f}'
         return f"{self.student} | {self.term} | {status}"
+
+
+
+
+
+class FeesClass(TimeStampedModel):
+    fees=models.ForeignKey(SchoolFees,  models.CASCADE,  related_name='affected_school_class', null=True, blank=True)
+    assessment_fee =  models.ForeignKey(AssessmentFees, models.CASCADE, related_name='assessment_fee_affected_class', null=True, blank=True)
+    school_class =models.ForeignKey(SchoolSupportedClasses, related_name='affected_fees_class', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.fees.fees_type
+
+
+
+

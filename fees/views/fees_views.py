@@ -31,7 +31,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from academics.utils.subject_utils import get_sch_supported_classes
 from academics.models import SchoolSupportedClasses, Term
-from fees.models import SchoolFees
+
+from fees.models import SchoolFees,FeesClass
 from fees.utils.fees_utils import (
     FEES_TYPE_LABELS,
     get_fees_detail_stats,
@@ -65,14 +66,12 @@ def _apply_to_instance(instance: SchoolFees, cleaned: dict) -> None:
     """Write cleaned scalar and FK fields onto a SchoolFees instance."""
     scalar_fields = (
         'fees_type', 'amount', 'description',
-        'due_date', 'is_compulsory', 'is_active',
+        'due_date', 'is_active',
     )
     for f in scalar_fields:
         if f in cleaned:
             setattr(instance, f, cleaned[f])
 
-    if 'school_class_id' in cleaned:
-        instance.school_class_id = cleaned['school_class_id']
     if 'term_id' in cleaned:
         instance.term_id = cleaned['term_id']
 
@@ -239,17 +238,33 @@ def fees_add(request):
             'errors':     errors,
             **lookups,
         })
+    
+    print("DATA:_____________", cleaned)
 
     try:
         with transaction.atomic():
             fee = SchoolFees()
             _apply_to_instance(fee, cleaned)
             fee.save()
+
+            for ac in cleaned["affected_classes"]:
+                class_ =get_sch_supported_classes().filter(supported_class__key=ac.lower()).first()
+
+                if class_:
+                    FeesClass.objects.create(
+                        school_class =class_,
+                        fees=fee
+                    )
+
+            print("DATA:_____________", cleaned)
+
+
     except Exception as exc:
         messages.error(request, f'Could not save fee structure: {exc}')
         return render(request, f'{_T}form.html', {
             'form_title': 'Add Fee Structure',
             'action':     'add',
+            "classes":get_sch_supported_classes(),
             'post':       request.POST,
             'errors':     {},
             **lookups,
@@ -258,7 +273,7 @@ def fees_add(request):
     messages.success(
         request,
         f'Fee structure "{FEES_TYPE_LABELS.get(fee.fees_type, fee.fees_type)}" '
-        f'for {fee.school_class} — {fee.term} has been created successfully.'
+        f'for {fee.term} has been created successfully.'
     )
     return redirect('fees:fees_detail', pk=fee.pk)
 
@@ -408,7 +423,7 @@ def fees_detail(request, pk):
         - Same fee type across other classes in same term (benchmarking)
     """
     fee = get_object_or_404(
-        SchoolFees.objects.select_related('school_class', 'term'),
+        SchoolFees.objects.select_related('term'),
         pk=pk
     )
     stats = get_fees_detail_stats(fee)
@@ -417,7 +432,7 @@ def fees_detail(request, pk):
         'fee':        fee,
         'page_title': (
             f'{FEES_TYPE_LABELS.get(fee.fees_type, fee.fees_type)} '
-            f'— {fee.school_class} | {fee.term}'
+            # f'— {fee.school_class} | {fee.term}'
         ),
         **stats,
     }

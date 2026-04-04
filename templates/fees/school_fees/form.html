@@ -141,12 +141,14 @@
 
           <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
-              Title (Optional)</span>
+              <span>Title (Optional)</span><br>
+              <span class="small">Required if you're choose OTHERS as the Fees Type</span>
+
             </label>
             <div class="input-group {% if errors.amount %}is-invalid{% endif %}">
               <input
                 type="text"
-                name="amount"
+                name="fees_title"
                 class="form-control font-monospace {% if errors.amount %}is-invalid{% endif %}"
                 value=""
      

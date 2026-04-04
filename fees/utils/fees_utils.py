@@ -12,6 +12,7 @@ from decimal import Decimal, InvalidOperation
 from django.db.models import Avg, Count, Max, Min, Q, Sum
 
 from fees.models import SchoolFees
+from academics.utils.subject_utils import get_sch_supported_classes
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -79,14 +80,18 @@ def validate_and_parse_fees(
     cleaned: dict = {}
 
     # ── school_class (required FK) ────────────────────────────────────────────
-    class_id = (post.get('school_class') or '').strip()
-    if not class_id:
-        errors['school_class'] = 'Class is required.'
+    supported_classes = get_sch_supported_classes()
+    affected_classess = []
+    for sc in supported_classes:
+        class_ = (post.get(f'class_{sc.supported_class.key.lower()}') or '').strip()
+        
+        if class_:
+            affected_classess.append(class_)
+    
+    if not affected_classess:
+        errors["class_"] = 'Atleast on Class is Required'
     else:
-        try:
-            cleaned['school_class_id'] = int(class_id)
-        except ValueError:
-            errors['school_class'] = 'Invalid class selected.'
+        cleaned['affected_classes'] = affected_classess
 
     # ── term (required FK) ────────────────────────────────────────────────────
     term_id = (post.get('term') or '').strip()
@@ -106,6 +111,15 @@ def validate_and_parse_fees(
         errors['fees_type'] = 'Invalid fee type selected.'
     else:
         cleaned['fees_type'] = fees_type
+
+    # -- 
+    fees_title = (post.get('fees_title') or '').strip()
+    if cleaned['fees_type'] == 'other':
+        if not fees_title:
+            errors['fees_title'] = 'You choose fees type as Others, Please specify the title'
+        else:
+            cleaned['fees_title'] = fees_title
+    
 
     # ── amount (required, positive decimal, UGX) ──────────────────────────────
     amount_raw = (post.get('amount') or '').strip()
@@ -129,38 +143,11 @@ def validate_and_parse_fees(
     # ── due_date (optional) ───────────────────────────────────────────────────
     cleaned['due_date'] = _parse_date(post.get('due_date'), 'Due date', errors)
 
-    # ── is_compulsory ─────────────────────────────────────────────────────────
-    cleaned['is_compulsory'] = (
-        str(post.get('is_compulsory', '')).strip().lower()
-        in ('1', 'true', 'on', 'yes')
-    )
-
     # ── is_active ─────────────────────────────────────────────────────────────
     cleaned['is_active'] = (
         str(post.get('is_active', '')).strip().lower()
         in ('1', 'true', 'on', 'yes')
     )
-
-    # ── Uniqueness: one fee type per class per term ────────────────────────────
-    if (
-        'school_class_id' in cleaned
-        and 'term_id' in cleaned
-        and 'fees_type' in cleaned
-    ):
-        qs = SchoolFees.objects.filter(
-            school_class_id=cleaned['school_class_id'],
-            term_id=cleaned['term_id'],
-            fees_type=cleaned['fees_type'],
-        )
-        if instance and instance.pk:
-            qs = qs.exclude(pk=instance.pk)
-        if qs.exists():
-            errors['fees_type'] = (
-                f'A "{FEES_TYPE_LABELS.get(cleaned["fees_type"], cleaned["fees_type"])}" '
-                f'fee already exists for this class and term. '
-                f'Edit the existing record instead.'
-            )
-
     return cleaned, errors
 
 
@@ -302,7 +289,7 @@ def get_fees_detail_stats(fee: SchoolFees) -> dict:
     # How much has been collected against this fee structure
     from fees.models import FeesPayment
     payments_qs = FeesPayment.objects.filter(
-        school_fees=fee, status='confirmed'
+        school_fees=fee, #status='confirmed'
     )
     total_collected  = payments_qs.aggregate(s=Sum('amount_paid'))['s'] or Decimal('0')
     payment_count    = payments_qs.count()
@@ -314,7 +301,8 @@ def get_fees_detail_stats(fee: SchoolFees) -> dict:
     # Students in this class (potential payers)
     from students.models import Student
     student_count = Student.objects.filter(
-        current_class=fee.school_class, is_active=True
+       # current_class=fee.school_class, 
+        is_active=True
     ).count()
     expected_total = fee.amount * student_count
 
@@ -325,28 +313,28 @@ def get_fees_detail_stats(fee: SchoolFees) -> dict:
     unpaid_student_count = max(student_count - paid_student_count, 0)
 
     # Payment method breakdown
-    by_method = list(
-        payments_qs.values('payment_method')
-        .annotate(count=Count('id'), total=Sum('amount_paid'))
-        .order_by('-total')
-    )
+    # by_method = list(
+    #     payments_qs.values('payment_method')
+    #     .annotate(count=Count('id'), total=Sum('amount_paid'))
+    #     .order_by('-total')
+    # )
 
     # Recent 10 payments for this fee structure
-    recent_payments = list(
-        FeesPayment.objects.filter(school_fees=fee)
-        .select_related('student', 'received_by')
-        .order_by('-payment_date')[:10]
-    )
+    # recent_payments = list(
+    #     FeesPayment.objects.filter(school_fees=fee)
+    #     .select_related('student', 'received_by')
+    #     .order_by('-payment_date')[:10]
+    # )
 
     # Sibling fee structures — same term, same class, different type
-    siblings = list(
-        SchoolFees.objects.filter(
-            term=fee.term,
-            school_class=fee.school_class,
-        )
-        .exclude(pk=fee.pk)
-        .order_by('fees_type')
-    )
+    # siblings = list(
+    #     SchoolFees.objects.filter(
+    #         term=fee.term,
+    #         school_class=fee.school_class,
+    #     )
+    #     .exclude(pk=fee.pk)
+    #     .order_by('fees_type')
+    # )
 
     # Same fee type across other classes in the same term (for benchmarking)
     same_type_others = list(
@@ -356,8 +344,8 @@ def get_fees_detail_stats(fee: SchoolFees) -> dict:
             is_active=True,
         )
         .exclude(pk=fee.pk)
-        .select_related('school_class')
-        .order_by('school_class__section', 'school_class__level')
+        # .select_related('school_class')
+        # .order_by('school_class__section', 'school_class__level')
     )
 
     return {
@@ -371,9 +359,9 @@ def get_fees_detail_stats(fee: SchoolFees) -> dict:
         'paid_student_count':  paid_student_count,
         'unpaid_student_count': unpaid_student_count,
         'shortfall':           max(fee.amount * student_count - total_collected, Decimal('0')),
-        'by_method':           by_method,
-        'recent_payments':     recent_payments,
-        'siblings':            siblings,
+        # 'by_method':           by_method,
+        # 'recent_payments':     recent_payments,
+        # 'siblings':            siblings,
         'same_type_others':    same_type_others,
         'fees_type_label':     FEES_TYPE_LABELS.get(fee.fees_type, fee.fees_type),
         'today':               today,
