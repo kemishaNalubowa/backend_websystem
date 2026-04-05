@@ -531,10 +531,10 @@ def get_student_list_stats() -> dict:
     by_class = list(
         qs.filter(is_active=True)
         .values(
-            'current_class__section',
+            'current_class__supported_class__section',
         )
         .annotate(count=Count('id'))
-        .order_by('current_class__section')
+        .order_by('current_class__supported_class__section')
     )
 
     special_needs = qs.filter(is_special_needs=True, is_active=True).count()

@@ -107,7 +107,7 @@ def fees_list(request):
     today = date.today()
 
     qs = SchoolFees.objects.select_related(
-        'school_class', 'term'
+        'term'
     )
 
     # ── Filters ───────────────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ def fees_list(request):
         )
 
     qs = qs.order_by(
-        '-term__start_date', 'school_class__supported_class__section', 'fees_type',
+        '-term__start_date', 'fees_type'
     )
 
     # ── Pagination ────────────────────────────────────────────────────────────
@@ -284,24 +284,26 @@ def fees_add(request):
 
 @login_required
 def fees_edit(request, pk):
-    """
-    Edit an existing school fee structure.
-    GET  — form pre-filled with current values.
-    POST — validate; save; re-render with errors on failure.
-    """
-    fee     = get_object_or_404(
-        SchoolFees.objects.select_related('school_class', 'term'), pk=pk
-    )
+    fee     = get_object_or_404(SchoolFees, pk=pk)
     lookups = _get_form_lookups()
 
     if request.method == 'GET':
+        # Keys of classes already linked to this fee — used to pre-check boxes
+        existing_class_keys = list(
+            fee.affected_school_class
+               .select_related('school_class__supported_class')
+               .values_list('school_class__supported_class__key', flat=True)
+        )
+        current_term = Term.objects.filter(is_current=True).first()
         return render(request, f'{_T}form.html', {
-            'fee':        fee,
-            'form_title': f'Edit — {FEES_TYPE_LABELS.get(fee.fees_type, fee.fees_type)} '
-                          f'| {fee.school_class} | {fee.term}',
-            'action':     'edit',
-            'post':       {},
-            'errors':     {},
+            'fee':              fee,
+            'form_title':       f'Edit — {FEES_TYPE_LABELS.get(fee.fees_type, fee.fees_type)} | {fee.term}',
+            'action':           'edit',
+            'post':             {},
+            'errors':           {},
+            'classes':          get_sch_supported_classes(),
+            'existing_class_keys': existing_class_keys,   # for pre-checking boxes in template
+            'current_term':     current_term,
             **lookups,
         })
 
@@ -313,11 +315,11 @@ def fees_edit(request, pk):
             messages.error(request, msg)
         return render(request, f'{_T}form.html', {
             'fee':        fee,
-            'form_title': f'Edit — {FEES_TYPE_LABELS.get(fee.fees_type, fee.fees_type)} '
-                          f'| {fee.school_class} | {fee.term}',
+            'form_title': f'Edit — {FEES_TYPE_LABELS.get(fee.fees_type, fee.fees_type)} | {fee.term}',
             'action':     'edit',
             'post':       request.POST,
             'errors':     errors,
+            'classes':    get_sch_supported_classes(),
             **lookups,
         })
 
@@ -325,6 +327,19 @@ def fees_edit(request, pk):
         with transaction.atomic():
             _apply_to_instance(fee, cleaned)
             fee.save()
+
+            # Wipe old class links and recreate — same pattern as fees_add
+            fee.affected_school_class.all().delete()
+            for ac in cleaned["affected_classes"]:
+                class_ = get_sch_supported_classes().filter(
+                    supported_class__key=ac.lower()
+                ).first()
+                if class_:
+                    FeesClass.objects.create(
+                        school_class=class_,
+                        fees=fee,
+                    )
+
     except Exception as exc:
         messages.error(request, f'Could not update fee structure: {exc}')
         return render(request, f'{_T}form.html', {
@@ -333,6 +348,7 @@ def fees_edit(request, pk):
             'action':     'edit',
             'post':       request.POST,
             'errors':     {},
+            'classes':    get_sch_supported_classes(),
             **lookups,
         })
 
@@ -342,7 +358,6 @@ def fees_edit(request, pk):
         f'has been updated successfully.'
     )
     return redirect('fees:fees_detail', pk=fee.pk)
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  4. DELETE FEES

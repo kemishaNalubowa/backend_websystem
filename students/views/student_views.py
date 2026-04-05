@@ -333,7 +333,7 @@ def student_list(request):
     if special_filter == '1':
         qs = qs.filter(is_special_needs=True)
 
-    qs = qs.order_by('current_class__section',
+    qs = qs.order_by('current_class__supported_class__section',
                      'last_name', 'first_name')
 
     paginator = Paginator(qs, 25)

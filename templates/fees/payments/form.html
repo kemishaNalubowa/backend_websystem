@@ -1,334 +1,202 @@
 {% extends "base.html" %}
 
-{% block title %}{{ form_title }}{% endblock %}
-
-{% block breadcrumb %}
-<li class="breadcrumb-item">
-  <a href="{% url 'fees:payment_list' %}" class="text-secondary">Payments</a>
-</li>
-{% if action == 'edit' %}
-<li class="breadcrumb-item">
-  <a href="{% url 'fees:payment_detail' payment.pk %}" class="text-secondary">
-    {{ payment.receipt_number }}
-  </a>
-</li>
-<li class="breadcrumb-item active" aria-current="page">Edit</li>
-{% else %}
-<li class="breadcrumb-item active" aria-current="page">Record Payment</li>
-{% endif %}
-{% endblock %}
-
 {% block content %}
+<div class="container mt-4">
 
+    <h3 class="mb-3">Add Payment — Step 1</h3>
 
-<div class="d-flex align-items-center justify-content-between mb-4">
-  <div>
-    <h4 class="fw-800 mb-0">{{ form_title }}</h4>
-    <p class="text-muted small mb-0">
-      {% if action == 'edit' %}
-        Receipt number <code>{{ payment.receipt_number }}</code> is permanent and cannot be changed.
-      {% else %}
-        A unique receipt number will be auto-generated on save.
-      {% endif %}
-    </p>
-  </div>
-  {% if action == 'edit' %}
-  <a href="{% url 'fees:payment_detail' payment.pk %}" class="btn btn-outline-secondary btn-sm">
-    <i class="bi bi-arrow-left me-1"></i>Back
-  </a>
-  {% else %}
-  <a href="{% url 'fees:payment_list' %}" class="btn btn-outline-secondary btn-sm">
-    <i class="bi bi-arrow-left me-1"></i>Back
-  </a>
-  {% endif %}
-</div>
+    <!-- ========================================================= -->
+    <!-- STEP 1 — REQUEST STUDENT ID + PAYMENT TYPE -->
+    <!-- ========================================================= -->
 
-<form method="post" novalidate>
-{% csrf_token %}
+    {% if not payment_part1_done %}
 
-<div class="row g-4">
+    <div class="card shadow-sm">
+        <div class="card-body">
 
-  <div class="col-12 col-lg-8">
+            <form method="post" novalidate>
+                {% csrf_token %}
 
-    {# ── Section 1: Student & Scope ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-person me-2 text-primary"></i>Student &amp; Scope
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
+                <div class="row g-3">
 
-          {# Student #}
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">
-              Student <span class="text-danger">*</span>
-            </label>
-            <select name="student"
-              class="form-select {% if errors.student %}is-invalid{% endif %}">
-              <option value="">— Select student —</option>
-              {% for s in all_students %}
-              <option value="{{ s.pk }}"
-                {% if post %}
-                  {% if post.student == s.pk|stringformat:"s" %}selected{% endif %}
-                {% elif action == 'edit' %}
-                  {% if payment.student_id == s.pk %}selected{% endif %}
-                {% endif %}>
-                {{ s.last_name }}, {{ s.first_name }}
-                {% if s.current_class %} — {{ s.current_class.display_name }}{% endif %}
-              </option>
-              {% endfor %}
-            </select>
-            {% if errors.student %}
-            <div class="invalid-feedback">{{ errors.student }}</div>
-            {% endif %}
-          </div>
+                    <!-- STUDENT ID INPUT -->
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            Student ID
+                        </label>
 
-          {# Term #}
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">
-              Term <span class="text-danger">*</span>
-            </label>
-            <select name="term"
-              class="form-select {% if errors.term %}is-invalid{% endif %}">
-              <option value="">— Select term —</option>
-              {% for t in all_terms %}
-              <option value="{{ t.pk }}"
-                {% if post %}
-                  {% if post.term == t.pk|stringformat:"s" %}selected{% endif %}
-                {% elif action == 'edit' %}
-                  {% if payment.term_id == t.pk %}selected{% endif %}
-                {% else %}
-                  {% if current_term and t.pk == current_term.pk %}selected{% endif %}
-                {% endif %}>
-                Term {{ t.name }} — {{ t.academic_year }}
-                {% if t.is_current %} (Current){% endif %}
-              </option>
-              {% endfor %}
-            </select>
-            {% if errors.term %}
-            <div class="invalid-feedback">{{ errors.term }}</div>
-            {% endif %}
-          </div>
+                        <input
+                            type="text"
+                            name="student"
+                            class="form-control {% if errors.student %}is-invalid{% endif %}"
+                            placeholder="Enter Student ID (e.g. STD2025001)"
+                            value="{{ request.POST.student }}"
+                            required
+                        >
 
-          {# Class #}
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">
-              Class <span class="text-danger">*</span>
-            </label>
-            <select name="school_class"
-              class="form-select {% if errors.school_class %}is-invalid{% endif %}">
-              <option value="">— Select class —</option>
-              <optgroup label="Nursery">
-                {% for cls in all_classes %}
-                  {% if cls.section == 'nursery' %}
-                  <option value="{{ cls.pk }}"
-                    {% if post %}
-                      {% if post.school_class == cls.pk|stringformat:"s" %}selected{% endif %}
-                    {% elif action == 'edit' %}
-                      {% if payment.school_class_id == cls.pk %}selected{% endif %}
-                    {% endif %}>
-                    {{ cls.display_name }}
-                  </option>
-                  {% endif %}
-                {% endfor %}
-              </optgroup>
-              <optgroup label="Primary">
-                {% for cls in all_classes %}
-                  {% if cls.section == 'primary' %}
-                  <option value="{{ cls.pk }}"
-                    {% if post %}
-                      {% if post.school_class == cls.pk|stringformat:"s" %}selected{% endif %}
-                    {% elif action == 'edit' %}
-                      {% if payment.school_class_id == cls.pk %}selected{% endif %}
-                    {% endif %}>
-                    {{ cls.display_name }}
-                  </option>
-                  {% endif %}
-                {% endfor %}
-              </optgroup>
-            </select>
-            {% if errors.school_class %}
-            <div class="invalid-feedback">{{ errors.school_class }}</div>
-            {% endif %}
-          </div>
+                        {% if errors.student %}
+                        <div class="invalid-feedback">
+                            {{ errors.student }}
+                        </div>
+                        {% endif %}
 
-          {# Fee Item #}
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">
-              Fee Item <span class="text-danger">*</span>
-            </label>
-            <select name="school_fees"
-              class="form-select {% if errors.school_fees %}is-invalid{% endif %}">
-              <option value="">— Select fee item —</option>
-              {% for f in active_fees %}
-              <option value="{{ f.pk }}"
-                {% if post %}
-                  {% if post.school_fees == f.pk|stringformat:"s" %}selected{% endif %}
-                {% elif action == 'edit' %}
-                  {% if payment.school_fees_id == f.pk %}selected{% endif %}
-                {% endif %}>
-                {{ f.get_fees_type_display }} — {{ f.school_class.display_name }}
-                (Term {{ f.term.name }} {{ f.term.academic_year }})
-                — UGX {{ f.amount|floatformat:0 }}
-              </option>
-              {% endfor %}
-            </select>
-            <div class="form-text">
-              The fee item must belong to the selected class and term.
-            </div>
-            {% if errors.school_fees %}
-            <div class="invalid-feedback">{{ errors.school_fees }}</div>
-            {% endif %}
-          </div>
+                        <div class="form-text">
+                            Enter the student's unique ID.
+                        </div>
+                    </div>
+
+                    <!-- PAYMENT TYPE -->
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            Payment Type
+                        </label>
+
+                        <select
+                            name="payment_type"
+                            class="form-select {% if errors.payment_type %}is-invalid{% endif %}"
+                            required
+                        >
+
+                            <option value="">
+                                Select payment type
+                            </option>
+
+                            {% for value, label in payment_type_choices %}
+                            <option
+                                value="{{ value }}"
+                                {% if request.POST.payment_type == value %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+
+                        </select>
+
+                        {% if errors.payment_type %}
+                        <div class="invalid-feedback">
+                            {{ errors.payment_type }}
+                        </div>
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+                <!-- SUBMIT -->
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        Continue
+                    </button>
+                </div>
+
+            </form>
 
         </div>
-      </div>
     </div>
 
-    {# ── Section 2: Payment Details ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-cash-coin me-2 text-success"></i>Payment Details
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-
-          {# Amount paid #}
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">
-              Amount Paid (UGX) <span class="text-danger">*</span>
-            </label>
-            <div class="input-group">
-              <span class="input-group-text bg-light fw-700">UGX</span>
-              <input type="text" name="amount_paid"
-                class="form-control font-monospace {% if errors.amount_paid %}is-invalid{% endif %}"
-                value="{% if post %}{{ post.amount_paid|default:'' }}{% elif action == 'edit' %}{{ payment.amount_paid|floatformat:0 }}{% endif %}"
-                placeholder="e.g. 250000"/>
-              {% if errors.amount_paid %}
-              <div class="invalid-feedback">{{ errors.amount_paid }}</div>
-              {% endif %}
-            </div>
-            <div class="form-text">Enter the exact amount received. No commas needed.</div>
-          </div>
-
-          {# Payment date #}
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">
-              Payment Date <span class="text-danger">*</span>
-            </label>
-            <input type="date" name="payment_date"
-              class="form-control {% if errors.payment_date %}is-invalid{% endif %}"
-              value="{% if post %}{{ post.payment_date|default:'' }}{% elif action == 'edit' %}{{ payment.payment_date|date:'Y-m-d' }}{% else %}{{ today_str }}{% endif %}"
-              max="{{ today_str }}"/>
-            <div class="form-text">Cannot be a future date.</div>
-            {% if errors.payment_date %}
-            <div class="invalid-feedback">{{ errors.payment_date }}</div>
-            {% endif %}
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    {# ── Submit ── #}
-    <div class="d-flex gap-2 pb-2">
-      <button type="submit" class="btn btn-primary px-4">
-        <i class="bi {% if action == 'edit' %}bi-check-lg{% else %}bi-receipt{% endif %} me-1"></i>
-        {% if action == 'edit' %}Save Changes{% else %}Record Payment{% endif %}
-      </button>
-      {% if action == 'edit' %}
-      <a href="{% url 'fees:payment_detail' payment.pk %}" class="btn btn-outline-secondary">Cancel</a>
-      {% else %}
-      <a href="{% url 'fees:payment_list' %}" class="btn btn-outline-secondary">Cancel</a>
-      {% endif %}
-    </div>
-
-  </div>{# /col-lg-8 #}
-
- 
-  <div class="col-12 col-lg-4">
-
-    {# Edit: current payment snapshot #}
-    {% if action == 'edit' %}
-    <div class="card bg-light border-0 mb-4">
-      <div class="card-body small">
-        <div class="fw-700 text-muted text-uppercase mb-3" style="font-size:.72rem;">
-          Current Payment
-        </div>
-        <dl class="row mb-0">
-          <dt class="col-5 text-muted fw-700">Receipt</dt>
-          <dd class="col-7"><code class="fw-700">{{ payment.receipt_number }}</code></dd>
-          <dt class="col-5 text-muted fw-700">Student</dt>
-          <dd class="col-7 fw-600">{{ payment.student.last_name }}, {{ payment.student.first_name }}</dd>
-          <dt class="col-5 text-muted fw-700">Class</dt>
-          <dd class="col-7">{{ payment.school_class.display_name }}</dd>
-          <dt class="col-5 text-muted fw-700">Term</dt>
-          <dd class="col-7">Term {{ payment.term.name }}</dd>
-          <dt class="col-5 text-muted fw-700">Fee</dt>
-          <dd class="col-7">{{ payment.school_fees.get_fees_type_display|default:"—" }}</dd>
-          <dt class="col-5 text-muted fw-700">Amount</dt>
-          <dd class="col-7 fw-800 font-monospace text-success">{{ payment.amount_paid|floatformat:0 }}</dd>
-          <dt class="col-5 text-muted fw-700">Date</dt>
-          <dd class="col-7">{{ payment.payment_date|date:"d M Y" }}</dd>
-        </dl>
-      </div>
-    </div>
     {% endif %}
 
-    <div class="card border-primary-subtle sticky-top" style="top:76px;">
-      <div class="card-header bg-primary-subtle border-primary-subtle py-3">
-        <h6 class="fw-700 mb-0 text-primary">
-          <i class="bi bi-lightbulb me-2"></i>
-          {% if action == 'edit' %}Edit Notes{% else %}Recording Guide{% endif %}
-        </h6>
-      </div>
-      <div class="card-body small text-secondary">
 
-        {% if action == 'add' %}
-        <dt class="fw-700 text-dark">Receipt Number</dt>
-        <dd class="mb-2">
-          Auto-generated on save in the format <code>RCP{{ today.year }}XXXX</code>.
-          Unique per year, thread-safe. You do not need to enter it.
-        </dd>
+    <!-- ========================================================= -->
+    <!-- STEP 2 PREVIEW — AFTER PART 1 IS COMPLETE -->
+    <!-- ========================================================= -->
 
-        <dt class="fw-700 text-dark">Fee Item</dt>
-        <dd class="mb-2">
-          Select the specific fee category (e.g. Tuition, Lunch, Transport)
-          that this payment covers. The fee item must belong to the same
-          class and term as the student.
-        </dd>
+    {% if payment_part1_done %}
 
-        <dt class="fw-700 text-dark">Amount</dt>
-        <dd class="mb-0">
-          Enter the actual cash or electronic amount received. If it exceeds
-          the fee structure amount you will see a warning — this is a check
-          only, not a block.
-        </dd>
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <strong>Student Information</strong>
+        </div>
 
-        {% else %}
-        <dt class="fw-700 text-dark">What can be changed?</dt>
-        <dd class="mb-2">
-          Amount, date, student, term, class, and fee item are all editable.
-          The receipt number is permanent.
-        </dd>
+        <div class="card-body">
 
-        <dt class="fw-700 text-dark">Assessment sync</dt>
-        <dd class="mb-0">
-          After editing, open the student's fee assessment and use
-          <strong>Recalculate</strong> to sync the total paid figure.
-        </dd>
-        {% endif %}
+            <div class="row">
 
-      </div>
+                <div class="col-md-3">
+                    <strong>Student ID</strong><br>
+                    {{ student_mini.student_id }}
+                </div>
+
+                <div class="col-md-4">
+                    <strong>Name</strong><br>
+                    {{ student_mini.name }}
+                </div>
+
+                <div class="col-md-3">
+                    <strong>Class</strong><br>
+                    {{ student_mini.class }}
+                </div>
+
+                <div class="col-md-2">
+                    <a
+                        href="?reset=1"
+                        class="btn btn-outline-secondary btn-sm"
+                    >
+                        Change
+                    </a>
+                </div>
+
+            </div>
+
+        </div>
     </div>
 
-  </div>
 
-</div>{# /row #}
-</form>
+    <!-- FEES PREVIEW LIST (FROM SESSION) -->
 
+    <div class="card shadow-sm mt-3">
+        <div class="card-header">
+            <strong>Available Fees</strong>
+        </div>
+
+        <div class="card-body">
+
+            {% if fees_list %}
+
+            <table class="table table-sm table-bordered">
+                <thead>
+                    <tr>
+                        <th>Name / Type</th>
+                        <th>Term</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for fee in fees_list %}
+                    <tr>
+                        <td>
+                            {{ fee.name|default:fee.type }}
+                        </td>
+
+                        <td>
+                            {{ fee.term|default:"-" }}
+                        </td>
+
+                        <td>
+                            {{ fee.amount }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+            </table>
+
+            {% else %}
+
+            <div class="alert alert-warning">
+                No fees found for this student's class.
+            </div>
+
+            {% endif %}
+
+        </div>
+    </div>
+
+    {% endif %}
+
+</div>
 {% endblock %}

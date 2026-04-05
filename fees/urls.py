@@ -14,7 +14,7 @@ from fees.views.fees_views import (
     fees_detail, fees_duplicate, fees_toggle_active,
 )
 from fees.views.payment_views import (
-    payment_list, payment_add, payment_edit,
+    payment_list, add_payment, payment_edit,
     payment_delete, payment_detail,
 )
 from fees.views.assessment_fees_views import (
@@ -54,7 +54,7 @@ urlpatterns = [
     #   /fees/payments/<pk>/edit/     → edit payment
     #   /fees/payments/<pk>/delete/   → confirm + delete
     path('payments/',                 payment_list,   name='payment_list'),
-    path('payments/add/',             payment_add,    name='payment_add'),
+    path('payments/add/',             add_payment,    name='add_payment'),
     path('payments/<int:pk>/',        payment_detail, name='payment_detail'),
     path('payments/<int:pk>/edit/',   payment_edit,   name='payment_edit'),
     path('payments/<int:pk>/delete/', payment_delete, name='payment_delete'),

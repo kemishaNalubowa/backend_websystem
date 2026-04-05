@@ -130,16 +130,13 @@
             <label class="form-label fw-700 small">Applying for Class</label>
             <select name="applied_class" class="form-select {% if errors.applied_class %}is-invalid{% endif %}">
               <option value="">— Not specified —</option>
-              <optgroup label="Nursery">
-                {% for cls in all_classes %}{% if cls.section == 'nursery' %}
-                <option value="{{ cls.pk }}" {% if post.applied_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.name }}</option>
-                {% endif %}{% endfor %}
-              </optgroup>
-              <optgroup label="Primary">
-                {% for cls in all_classes %}{% if cls.section == 'primary' %}
-                <option value="{{ cls.pk }}" {% if post.applied_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.name }}</option>
-                {% endif %}{% endfor %}
-              </optgroup>
+              {% for cls in all_classes %}
+                {% if cls.supported_class.section == 'nursery' %}
+                  <option value="{{ cls.pk }}" {% if post.applied_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.supported_class.name }}</option>
+                {% elif cls.supported_class.section == 'primary' %}
+                  <option value="{{ cls.pk }}" {% if post.applied_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.supported_class.name }}</option>
+                {% endif %}
+              {% endfor %}
             </select>
             {% if errors.applied_class %}<div class="invalid-feedback">{{ errors.applied_class }}</div>{% endif %}
           </div>

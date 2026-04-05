@@ -162,18 +162,18 @@ def get_fees_list_stats() -> dict:
     total       = qs.count()
     active      = qs.filter(is_active=True).count()
     inactive    = qs.filter(is_active=False).count()
-    compulsory  = qs.filter(is_compulsory=True, is_active=True).count()
-    optional    = qs.filter(is_compulsory=False, is_active=True).count()
+    # compulsory  = qs.filter(is_compulsory=True, is_active=True).count()
+    # optional    = qs.filter(is_compulsory=False, is_active=True).count()
 
     # Total UGX across all active fee structures
     total_amount = (
         qs.filter(is_active=True).aggregate(s=Sum('amount'))['s']
         or Decimal('0')
     )
-    compulsory_amount = (
-        qs.filter(is_active=True, is_compulsory=True).aggregate(s=Sum('amount'))['s']
-        or Decimal('0')
-    )
+    # compulsory_amount = (
+    #     qs.filter(is_active=True, is_compulsory=True).aggregate(s=Sum('amount'))['s']
+    #     or Decimal('0')
+    # )
 
     # By fee type
     by_type = list(
@@ -196,20 +196,20 @@ def get_fees_list_stats() -> dict:
     # By class section
     by_section = list(
         qs.filter(is_active=True)
-        .values('school_class__supported_class__section')
+        # .values('school_class__supported_class__section')
         .annotate(count=Count('id'), total_amount=Sum('amount'))
-        .order_by('school_class__supported_class__section')
+        # .order_by('school_class__supported_class__section')
     )
 
     # By class level
-    by_class = list(
-        qs.filter(is_active=True)
-        .values(
-            'school_class__supported_class__section',
-        )
-        .annotate(count=Count('id'), total_amount=Sum('amount'))
-        .order_by('school_class__supported_class__section')
-    )
+    # by_class = list(
+    #     qs.filter(is_active=True)
+    #     .values(
+    #         'school_class__supported_class__section',
+    #     )
+    #     .annotate(count=Count('id'), total_amount=Sum('amount'))
+    #     .order_by('school_class__supported_class__section')
+    # )
 
     # Highest and lowest single fee amount
     agg = qs.filter(is_active=True).aggregate(
@@ -227,7 +227,8 @@ def get_fees_list_stats() -> dict:
         current_term_fees = qs.filter(
             term=current_term, is_active=True
         ).select_related('school_class').order_by(
-            'school_class__supported_class__section', 'fees_type'
+            # 'school_class__supported_class__section',
+            'fees_type'
         )
         current_term_total = (
             current_term_fees.aggregate(s=Sum('amount'))['s'] or Decimal('0')
@@ -249,21 +250,21 @@ def get_fees_list_stats() -> dict:
         'total':                total,
         'active':               active,
         'inactive':             inactive,
-        'compulsory':           compulsory,
-        'optional':             optional,
+        # 'compulsory':           compulsory,
+        # 'optional':             optional,
         'total_amount':         total_amount,
-        'compulsory_amount':    compulsory_amount,
-        'optional_amount':      total_amount - compulsory_amount,
+        # 'compulsory_amount':    compulsory_amount,
+        # 'optional_amount':      total_amount - compulsory_amount,
         'by_type':              by_type,
         'by_term':              by_term,
         'by_section':           by_section,
-        'by_class':             by_class,
+        # 'by_class':             by_class,
         'highest_fee':          agg['highest'] or Decimal('0'),
         'lowest_fee':           agg['lowest']  or Decimal('0'),
         'average_fee':          round(agg['average'], 0) if agg['average'] else Decimal('0'),
         'overdue':              overdue,
         'current_term':         current_term,
-        'current_term_fees':    current_term_fees,
+        # 'current_term_fees':    current_term_fees,
         'current_term_total':   current_term_total,
         'terms':                terms,
         'today':                today,

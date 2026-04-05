@@ -265,8 +265,9 @@ def user_login(request):
 
     login(request, user)
     messages.success(request, f"Welcome back, {user.first_name}!")
-    
-    return redirect(reverse("dashboard"))
+
+    next_url = request.POST.get('next') or request.GET.get('next')
+    return redirect(next_url if next_url else reverse("dashboard"))
 
 
 

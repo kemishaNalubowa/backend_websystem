@@ -40,6 +40,10 @@ from django.utils import timezone
 
 from academics.models import SchoolClass, Term
 from students.models import Admission, Student, StudentParentRelationship
+from academics.utils.subject_utils import get_sch_supported_classes
+
+
+
 from students.utils.admission_utils import (
     RELATIONSHIP_CHOICES,
     STATUS_LABELS,
@@ -75,7 +79,7 @@ _CLASS_LEVEL_CHOICES = [
 
 
 def _get_class_lookups():
-    return SchoolClass.objects.order_by('section', 'order')
+    return get_sch_supported_classes().order_by('supported_class__section')
 
 
 def _progress_ctx(current_step: int) -> dict:
@@ -227,7 +231,7 @@ def admission_add_step3(request):
         applied_class = None
         if student_data.get('applied_class_id'):
             try:
-                applied_class = SchoolClass.objects.get(pk=student_data['applied_class_id'])
+                applied_class = get_sch_supported_classes().filter(pk=student_data['applied_class_id']).first()
             except SchoolClass.DoesNotExist:
                 pass
         return render(request, f'{_T}add_step3.html', {
@@ -406,7 +410,7 @@ def admission_list(request):
         'interview_filter':    interview_filter,
         'status_choices':      _STATUS_CHOICES,
         'gender_choices':      _GENDER_CHOICES,
-        'class_level_choices': _CLASS_LEVEL_CHOICES,
+        'class_level_choices': get_sch_supported_classes(),
         'today':               today,
         **stats,
     }

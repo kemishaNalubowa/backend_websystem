@@ -30,7 +30,7 @@ from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 
 from academics.models import SchoolClass, Term
-from fees.models import FeesPayment, SchoolFees
+from fees.models import FeesPayment, SchoolFees,AssessmentFees
 from fees.utils.fees_utils import FEES_TYPE_LABELS
 from fees.utils.payment_utils import (
     generate_receipt_number,
@@ -39,6 +39,19 @@ from fees.utils.payment_utils import (
     validate_and_parse_payment,
 )
 from students.models import Student
+
+
+
+
+# from django.shortcuts import render, redirect
+# from django.contrib import messages
+
+# from students.models import Student
+# from academics.models import SchoolSupportedClasses
+# from fees.models import SchoolFees
+# from assessments.models import AssessmentFees  # adjust if your app name differs
+
+
 
 _T = 'fees/payments/'
 
@@ -215,70 +228,352 @@ def payment_list(request):
 #  2. ADD PAYMENT
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# fees/views/payment_views.py
+
+# ============================================================================
+# ADD PAYMENT — PART 1
+# ----------------------------------------------------------------------------
+# Flow:
+# 1) User selects:
+#       - student_id
+#       - payment_type (assessment | school)
+# 2) System fetches:
+#       - student mini info
+#       - current class
+# 3) Based on payment type:
+#       - Fetch relevant fee structures
+#       - Convert to lightweight list (mini info)
+#       - Store in session
+# 4) Set session flag: payment_part1_done = True
+# 5) Redirect back to same view
+# 6) Template renders next section based on flag
+# ============================================================================
+
+
+PAYMENT_TYPE_CHOICES = [
+    ("assessment", "Assessment Fees Payment"),
+    ("school", "School Fees Payment"),
+]
+
 @login_required
-def payment_add(request):
+def add_payment(request):
     """
-    Record a new fee payment.
+    Multi-step Add Payment View — Part 1 implemented.
 
-    GET  — blank form; payment_date pre-set to today;
-           current term pre-selected if active.
-    POST — validate all fields; auto-generate receipt_number inside
-           transaction.atomic(); save; redirect to payment_detail.
-
-    Receipt number is generated inside the atomic block to prevent
-    race conditions with concurrent payments being recorded simultaneously.
+    Session keys created:
+        payment_part1_done
+        payment_type
+        student_id
+        student_mini
+        class_id
+        fees_list
     """
-    lookups = _get_form_lookups()
 
-    if request.method == 'GET':
-        current_term = Term.objects.filter(is_current=True).first()
-        return render(request, f'{_T}form.html', {
-            'form_title':   'Record Payment',
-            'action':       'add',
-            'post':         {},
-            'errors':       {},
-            'today_str':    date.today().strftime('%Y-%m-%d'),
-            'current_term': current_term,
-            **lookups,
-        })
+    # ------------------------------------------------------------------
+    # Reset flow (optional safety)
+    # ------------------------------------------------------------------
+    if request.GET.get("reset") == "1":
+        for key in [
+            "payment_part1_done",
+            "payment_type",
+            "student_id",
+            "student_mini",
+            "class_id",
+            "fees_list",
+        ]:
+            request.session.pop(key, None)
 
-    # ── POST ──────────────────────────────────────────────────────────────────
-    cleaned, errors = validate_and_parse_payment(request.POST)
+        messages.info(request, "Payment process reset.")
+        return redirect("fees:add_payment")
 
-    if errors:
-        for msg in errors.values():
-            messages.error(request, msg)
-        return render(request, f'{_T}form.html', {
-            'form_title': 'Record Payment',
-            'action':     'add',
-            'post':       request.POST,
-            'errors':     errors,
-            **lookups,
-        })
+    # ------------------------------------------------------------------
+    # POST — PART 1 SUBMISSION
+    # ------------------------------------------------------------------
+    if request.method == "POST" and not request.session.get(
+        "payment_part1_done"
+    ):
 
-    try:
-        with transaction.atomic():
-            payment = FeesPayment()
-            _apply_to_instance(payment, cleaned)
-            payment.receipt_number = generate_receipt_number()
-            payment.save()
-    except Exception as exc:
-        messages.error(request, f'Could not save payment: {exc}')
-        return render(request, f'{_T}form.html', {
-            'form_title': 'Record Payment',
-            'action':     'add',
-            'post':       request.POST,
-            'errors':     {},
-            **lookups,
-        })
+        student_id = request.POST.get("student")
+        payment_type = request.POST.get("payment_type")
 
-    messages.success(
-        request,
-        f'Payment recorded. Receipt number: {payment.receipt_number} — '
-        f'UGX {payment.amount_paid:,.0f} for {payment.student}.'
-    )
-    return redirect('fees:payment_detail', pk=payment.pk)
+        errors = {}
 
+        # ------------------------------
+        # Validate student
+        # ------------------------------
+        if not student_id:
+            errors["student"] = "Student is required."
+        else:
+            try:
+                student = (
+                    Student.objects.select_related("current_class")
+                    .filter(pk=student_id, is_active=True)
+                    .first()
+                )
+
+                if not student:
+                    errors["student"] = "Invalid student selected."
+
+            except Exception:
+                errors["student"] = "Student lookup failed."
+
+        # ------------------------------
+        # Validate payment type
+        # ------------------------------
+        if payment_type not in ["assessment", "school"]:
+            errors["payment_type"] = "Select a valid payment type."
+
+        # ------------------------------
+        # Stop if errors
+        # ------------------------------
+        if errors:
+            context = {
+                "errors": errors,
+                "payment_type_choices": PAYMENT_TYPE_CHOICES,
+                "students": Student.objects.filter(is_active=True),
+            }
+            return render(request, f'{_T}form.html', context)
+
+        # ------------------------------------------------------------------
+        # Fetch student mini info
+        # ------------------------------------------------------------------
+        current_class = student.current_class
+
+        if not current_class:
+            messages.error(request, "Student has no current class assigned.")
+            return redirect("fees:add_payment")
+
+        student_mini = {
+            "id": student.pk,
+            "student_id": student.student_id,
+            "name": student.full_name,
+            "class": current_class.display_name,
+        }
+
+        # ------------------------------------------------------------------
+        # Fetch fees based on payment type
+        # ------------------------------------------------------------------
+        fees_list = []
+
+        # ==============================
+        # ASSESSMENT FEES
+        # ==============================
+        if payment_type == "assessment":
+
+            assessments = (
+                AssessmentFees.objects.filter(
+                    school_class=current_class,
+                    is_active=True,
+                )
+                .order_by("name")
+            )
+
+            fees_list = [
+                {
+                    "id": a.pk,
+                    "name": a.name,
+                    "amount": float(a.amount),
+                }
+                for a in assessments
+            ]
+
+        # ==============================
+        # SCHOOL FEES
+        # ==============================
+        elif payment_type == "school":
+
+            school_fees = (
+                SchoolFees.objects.filter(
+                    school_class=current_class,
+                    is_active=True,
+                )
+                .select_related("term")
+                .order_by("term__start_date")
+            )
+
+            fees_list = [
+                {
+                    "id": f.pk,
+                    "type": f.get_fees_type_display(),
+                    "term": f.term.name,
+                    "amount": float(f.amount),
+                }
+                for f in school_fees
+            ]
+
+        # ------------------------------------------------------------------
+        # Store everything in session
+        # ------------------------------------------------------------------
+        request.session["payment_part1_done"] = True
+        request.session["payment_type"] = payment_type
+        request.session["student_id"] = student.pk
+        request.session["class_id"] = current_class.pk
+        request.session["student_mini"] = student_mini
+        request.session["fees_list"] = fees_list
+
+        request.session.modified = True
+
+        messages.success(request, "Step 1 completed successfully.")
+
+        # Redirect to same page (multi-step pattern)
+        return redirect("fees:add_payment")
+
+    # ------------------------------------------------------------------
+    # GET — Render page based on session flag
+    # ------------------------------------------------------------------
+    context = {
+        "payment_part1_done": request.session.get(
+            "payment_part1_done", False
+        ),
+        "payment_type_choices": PAYMENT_TYPE_CHOICES,
+        "students": Student.objects.filter(is_active=True),
+        "student_mini": request.session.get("student_mini"),
+        "fees_list": request.session.get("fees_list", []),
+        "payment_type": request.session.get("payment_type"),
+    }
+
+    return render(request, f'{_T}form.html', context)
+
+
+
+
+
+
+
+
+
+
+# def payment_add(request):
+#     """
+#     PART 1 ONLY (Wizard Step 1)
+#     - Choose payment type (School Fees / Assessment Fees)
+#     - Enter Student ID
+#     - Validate → load student + current class + available fees
+#     - Store everything in session
+#     """
+#     lookups = _get_form_lookups()
+
+#     if request.method == 'GET':
+#         # Always show clean Part 1 form on GET
+#         # (we keep session data if user already completed Part 1)
+#         context = {
+#             'form_title': 'Record Payment — Step 1 of 2',
+#             'action': 'add',
+#             'step': 1,
+#             'payment_form_data': request.session.get('payment_form_data', {}),
+#             'is_part1_done': request.session.get('is_part1_done', False),
+#             **lookups,
+#         }
+#         return render(request, f'{_T}form.html', context)
+
+#     # ── POST (Part 1) ───────────────────────────────────────────────────────
+#     payment_type = (request.POST.get('payment_type') or '').strip()
+#     student_id_input = (request.POST.get('student_id') or '').strip().upper()
+
+#     errors: dict = {}
+#     post_data = request.POST  # for re-rendering errors
+
+#     # 1. Validate payment type
+#     if payment_type not in ['school_fees', 'assessment_fees']:
+#         errors['payment_type'] = 'Please select School Fees or Assessment Fees.'
+
+#     # 2. Validate student ID
+#     if not student_id_input:
+#         errors['student_id'] = 'Student ID is required.'
+#     else:
+#         try:
+#             student = Student.objects.get(
+#                 student_id=student_id_input,
+#                 is_active=True
+#             )
+#         except Student.DoesNotExist:
+#             errors['student_id'] = f'No active student found with ID "{student_id_input}".'
+#         except Student.MultipleObjectsReturned:
+#             errors['student_id'] = 'Multiple students found with this ID. Please contact admin.'
+
+#     if errors:
+#         for msg in errors.values():
+#             messages.error(request, msg)
+#         return render(request, f'{_T}form.html', {
+#             'form_title': 'Record Payment — Step 1 of 2',
+#             'action': 'add',
+#             'step': 1,
+#             'post': post_data,
+#             'errors': errors,
+#             'payment_form_data': request.session.get('payment_form_data', {}),
+#             'is_part1_done': False,
+#             **lookups,
+#         })
+
+#     # ── Success: build data and save to session ─────────────────────────────
+#     current_class = student.current_class
+#     mini_info = {
+#         'pk': student.pk,
+#         'student_id': student.student_id,
+#         'full_name': student.full_name,
+#         'current_class_pk': current_class.pk if current_class else None,
+#         'current_class_name': current_class.name if current_class else 'No class assigned',
+#     }
+
+#     # Current term (used to filter fees)
+#     current_term = Term.objects.filter(is_current=True).first()
+
+#     # Get available fees based on payment type + class context
+#     if payment_type == 'school_fees':
+#         qs = SchoolFees.objects.filter(is_active=True)
+#         if current_term:
+#             qs = qs.filter(term=current_term)
+#         available_fees = qs.order_by('fees_type', 'title')
+#     else:  # assessment_fees
+#         qs = AssessmentFees.objects.all()
+#         if current_term:
+#             qs = qs.filter(term=current_term)
+#         available_fees = qs.order_by('assessment__title' if hasattr(AssessmentFees, 'assessment') else 'pk')
+
+#     # Prepare serializable list for session
+#     fees_data = []
+#     for fee in available_fees:
+#         if payment_type == 'school_fees':
+#             display = f"{fee.get_fees_type_display()} — {fee.title or ''} (UGX {fee.amount:,.0f})"
+#             amount = float(fee.amount)
+#         else:
+#             display = f"Assessment Fee — {getattr(fee, 'assessment', fee)} (UGX {getattr(fee, 'amount', 0):,.0f})"
+#             amount = float(getattr(fee, 'amount', 0))
+
+#         fees_data.append({
+#             'pk': fee.pk,
+#             'display': display,
+#             'amount': amount,
+#             'fee_type': payment_type,
+#         })
+
+#     # Save to session
+#     request.session['payment_form_data'] = {
+#         'payment_type': payment_type,
+#         'payment_type_label': 'School Fees' if payment_type == 'school_fees' else 'Assessment Fees',
+#         'student': mini_info,
+#         'available_fees': fees_data,
+#         'current_term_pk': current_term.pk if current_term else None,
+#     }
+#     request.session['is_part1_done'] = True
+#     request.session.modified = True
+
+#     messages.success(
+#         request,
+#         f"✅ Student {student.full_name} ({student.student_id}) validated. "
+#         f"Loaded {len(fees_data)} fee item(s)."
+#     )
+
+#     # Re-render same template (now showing Part 1 summary)
+#     context = {
+#         'form_title': 'Record Payment — Step 1 Complete',
+#         'action': 'add',
+#         'step': 1,
+#         'payment_form_data': request.session['payment_form_data'],
+#         'is_part1_done': True,
+#         **lookups,
+#     }
+#     return render(request, f'{_T}form.html', context)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  3. EDIT PAYMENT

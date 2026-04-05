@@ -290,7 +290,7 @@ class Admission(TimeStampedModel):
                            help_text='Intended year of entry e.g. 2026/2027'
                        )
     applied_class    = models.ForeignKey(
-                           'academics.SchoolClass',
+                           'academics.SchoolSupportedClasses',
                            on_delete=models.SET_NULL,
                            null=True,
                            related_name='admission_applications',

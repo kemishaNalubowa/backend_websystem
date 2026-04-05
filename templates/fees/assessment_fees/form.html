@@ -8,8 +8,8 @@
 </li>
 {% if action == 'edit' %}
 <li class="breadcrumb-item">
-  <a href="{% url 'fees:assessment_fees_detail' assessment.pk %}" class="text-secondary">
-    {{ assessment.student.last_name }}, {{ assessment.student.first_name }}
+  <a href="{% url 'fees:assessment_fees_detail' fee.pk %}" class="text-secondary">
+    {{ fee.assessment.title }}
   </a>
 </li>
 <li class="breadcrumb-item active" aria-current="page">Edit</li>
@@ -20,28 +20,19 @@
 
 {% block content %}
 
-{# ══════════════════════════════════════════════════════
-   PAGE HEADER
-   Context: form_title, action ('add'|'edit'),
-            assessment (instance — edit only),
-            post, errors, current_term (add only),
-            all_terms, all_students
-══════════════════════════════════════════════════════ #}
 <div class="d-flex align-items-center justify-content-between mb-4">
   <div>
     <h4 class="fw-800 mb-0">{{ form_title }}</h4>
     <p class="text-muted small mb-0">
       {% if action == 'edit' %}
-        balance and is_cleared are auto-computed on save from
-        total_required − discount_amount − total_paid.
+        Update the details for this fees assessment.
       {% else %}
-        One assessment per student per term is enforced.
-        For a whole class use Bulk Generate on the list page.
+        Create a new fees assessment. Link it to an assessment and a term.
       {% endif %}
     </p>
   </div>
   {% if action == 'edit' %}
-  <a href="{% url 'fees:assessment_fees_detail' assessment.pk %}" class="btn btn-outline-secondary btn-sm">
+  <a href="{% url 'fees:assessment_fees_detail' fee.pk %}" class="btn btn-outline-secondary btn-sm">
     <i class="bi bi-arrow-left me-1"></i>Back
   </a>
   {% else %}
@@ -59,58 +50,44 @@
   {# ════════════════════════ LEFT — fields ════════════════════════ #}
   <div class="col-12 col-lg-8">
 
-    {# ── Section 1: Student & Term ── #}
     <div class="card mb-4">
       <div class="card-header py-3">
         <h6 class="fw-700 mb-0">
-          <i class="bi bi-person me-2 text-primary"></i>Student &amp; Term
+          <i class="bi bi-building me-2 text-primary"></i>Assessment &amp; Term
         </h6>
       </div>
       <div class="card-body">
         <div class="row g-3">
 
-          {# Student #}
+          {# ── Assessment ── #}
           <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
-              Student <span class="text-danger">*</span>
+              Assessment <span class="text-danger">*</span>
             </label>
-            {% if action == 'edit' %}
-            {# Student cannot change on edit — locked #}
-            <input type="hidden" name="student" value="{{ assessment.student.pk }}"/>
-            <div class="form-control bg-light text-muted">
-              {{ assessment.student.last_name }}, {{ assessment.student.first_name }}
-              <span class="ms-2 badge bg-secondary">Locked</span>
-            </div>
-            {% else %}
-            <select name="student"
-              class="form-select {% if errors.student %}is-invalid{% endif %}">
-              <option value="">— Select student —</option>
-              {% for s in all_students %}
-              <option value="{{ s.pk }}"
-                {% if post.student == s.pk|stringformat:"s" %}selected{% endif %}>
-                {{ s.last_name }}, {{ s.first_name }}
-                {% if s.current_class %} — {{ s.current_class.display_name }}{% endif %}
+            <select name="assessment"
+              class="form-select {% if errors.assessment %}is-invalid{% endif %}">
+              <option value="" disabled hidden selected>— Select Assessment —</option>
+              {% for a in assessments %}
+              <option value="{{ a.pk }}"
+                {% if post %}
+                  {% if post.assessment == a.pk|stringformat:"s" %}selected{% endif %}
+                {% elif action == 'edit' %}
+                  {% if fee.assessment_id == a.pk %}selected{% endif %}
+                {% endif %}>
+                {{ a.title }}
               </option>
               {% endfor %}
             </select>
-            {% if errors.student %}
-            <div class="invalid-feedback">{{ errors.student }}</div>
-            {% endif %}
+            {% if errors.assessment %}
+            <div class="invalid-feedback">{{ errors.assessment }}</div>
             {% endif %}
           </div>
 
-          {# Term #}
+          {# ── Term ── #}
           <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
               Term <span class="text-danger">*</span>
             </label>
-            {% if action == 'edit' %}
-            <input type="hidden" name="term" value="{{ assessment.term.pk }}"/>
-            <div class="form-control bg-light text-muted">
-              Term {{ assessment.term.name }} — {{ assessment.term.academic_year }}
-              <span class="ms-2 badge bg-secondary">Locked</span>
-            </div>
-            {% else %}
             <select name="term"
               class="form-select {% if errors.term %}is-invalid{% endif %}">
               <option value="">— Select term —</option>
@@ -118,6 +95,8 @@
               <option value="{{ t.pk }}"
                 {% if post %}
                   {% if post.term == t.pk|stringformat:"s" %}selected{% endif %}
+                {% elif action == 'edit' %}
+                  {% if fee.term_id == t.pk %}selected{% endif %}
                 {% else %}
                   {% if current_term and t.pk == current_term.pk %}selected{% endif %}
                 {% endif %}>
@@ -129,122 +108,45 @@
             {% if errors.term %}
             <div class="invalid-feedback">{{ errors.term }}</div>
             {% endif %}
-            {% endif %}
           </div>
 
-        </div>
-      </div>
-    </div>
-
-    {# ── Section 2: Fee Amounts ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-cash-coin me-2 text-success"></i>Fee Amounts (UGX)
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-
-          {# Total required #}
+          {# ── Amount ── #}
           <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
-              Total Required <span class="text-danger">*</span>
+              Amount (UGX) <span class="text-danger">*</span>
             </label>
-            <div class="input-group">
+            <div class="input-group {% if errors.amount %}is-invalid{% endif %}">
               <span class="input-group-text bg-light fw-700">UGX</span>
-              <input type="text" name="total_required"
-                class="form-control font-monospace {% if errors.total_required %}is-invalid{% endif %}"
-                value="{% if post %}{{ post.total_required|default:'' }}{% elif action == 'edit' %}{{ assessment.total_required|floatformat:0 }}{% endif %}"
-                placeholder="e.g. 750000"/>
-              {% if errors.total_required %}
-              <div class="invalid-feedback">{{ errors.total_required }}</div>
-              {% endif %}
+              <input
+                type="text"
+                name="amount"
+                class="form-control font-monospace {% if errors.amount %}is-invalid{% endif %}"
+                value="{% if post %}{{ post.amount|default:'' }}{% elif action == 'edit' %}{{ fee.amount|floatformat:0 }}{% endif %}"
+                placeholder="e.g. 250000"
+              />
             </div>
-            <div class="form-text">
-              Sum of all compulsory fees for this student's class and term.
-              Use Bulk Generate to compute this automatically.
-            </div>
+            <div class="form-text">Enter amount in Uganda Shillings. No commas needed.</div>
+            {% if errors.amount %}
+            <div class="invalid-feedback d-block">{{ errors.amount }}</div>
+            {% endif %}
           </div>
 
-          {# Total paid #}
+          {# ── Due Date ── #}
           <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Total Paid</label>
-            <div class="input-group">
-              <span class="input-group-text bg-light fw-700">UGX</span>
-              <input type="text" name="total_paid"
-                class="form-control font-monospace {% if errors.total_paid %}is-invalid{% endif %}"
-                value="{% if post %}{{ post.total_paid|default:'0' }}{% elif action == 'edit' %}{{ assessment.total_paid|floatformat:0 }}{% else %}0{% endif %}"
-                placeholder="0"/>
-              {% if errors.total_paid %}
-              <div class="invalid-feedback">{{ errors.total_paid }}</div>
-              {% endif %}
-            </div>
-            <div class="form-text">
-              Normally synced via <strong>Recalculate</strong> from actual payment records.
-              Only edit manually if correcting a discrepancy.
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    {# ── Section 3: Discount ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-tag me-2 text-warning"></i>Discount
-          <span class="text-muted fw-400 small">(optional)</span>
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-
-          <div class="col-12 col-sm-5">
-            <label class="form-label fw-700 small">Discount Amount (UGX)</label>
-            <div class="input-group">
-              <span class="input-group-text bg-light fw-700">UGX</span>
-              <input type="text" name="discount_amount"
-                class="form-control font-monospace {% if errors.discount_amount %}is-invalid{% endif %}"
-                value="{% if post %}{{ post.discount_amount|default:'0' }}{% elif action == 'edit' %}{{ assessment.discount_amount|floatformat:0 }}{% else %}0{% endif %}"
-                placeholder="0"/>
-              {% if errors.discount_amount %}
-              <div class="invalid-feedback">{{ errors.discount_amount }}</div>
-              {% endif %}
-            </div>
-            <div class="form-text">Cannot exceed total required.</div>
-          </div>
-
-          <div class="col-12 col-sm-7">
-            <label class="form-label fw-700 small">Discount Reason
-              <span class="text-danger small">(required if discount &gt; 0)</span>
-            </label>
-            <input type="text" name="discount_reason"
-              class="form-control {% if errors.discount_reason %}is-invalid{% endif %}"
-              value="{% if post %}{{ post.discount_reason|default:'' }}{% elif action == 'edit' %}{{ assessment.discount_reason }}{% endif %}"
-              placeholder="e.g. Staff child bursary, Scholarship, Financial hardship waiver"
-              maxlength="200"/>
-            {% if errors.discount_reason %}
-            <div class="invalid-feedback">{{ errors.discount_reason }}</div>
+            <label class="form-label fw-700 small">Due Date</label>
+            <input
+              type="date"
+              name="due_date"
+              class="form-control {% if errors.due_date %}is-invalid{% endif %}"
+              value="{% if post %}{{ post.due_date|default:'' }}{% elif action == 'edit' and fee.due_date %}{{ fee.due_date|date:'Y-m-d' }}{% endif %}"
+            />
+            <div class="form-text">Payment deadline. Leave blank if no fixed deadline.</div>
+            {% if errors.due_date %}
+            <div class="invalid-feedback">{{ errors.due_date }}</div>
             {% endif %}
           </div>
 
         </div>
-      </div>
-    </div>
-
-    {# ── Section 4: Notes ── #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0">
-          <i class="bi bi-journal-text me-2 text-secondary"></i>Internal Notes
-        </h6>
-      </div>
-      <div class="card-body">
-        <textarea name="notes" class="form-control" rows="3"
-          placeholder="Any internal notes about this assessment (not visible to parents)."
-        >{% if post %}{{ post.notes|default:'' }}{% elif action == 'edit' %}{{ assessment.notes }}{% endif %}</textarea>
       </div>
     </div>
 
@@ -252,10 +154,10 @@
     <div class="d-flex gap-2 pb-2">
       <button type="submit" class="btn btn-primary px-4">
         <i class="bi {% if action == 'edit' %}bi-check-lg{% else %}bi-plus-lg{% endif %} me-1"></i>
-        {% if action == 'edit' %}Save Changes{% else %}Create Assessment{% endif %}
+        {% if action == 'edit' %}Save Changes{% else %}Create Assessment Fee{% endif %}
       </button>
       {% if action == 'edit' %}
-      <a href="{% url 'fees:assessment_fees_detail' assessment.pk %}" class="btn btn-outline-secondary">Cancel</a>
+      <a href="{% url 'fees:assessment_fees_detail' fee.pk %}" class="btn btn-outline-secondary">Cancel</a>
       {% else %}
       <a href="{% url 'fees:assessment_fees_list' %}" class="btn btn-outline-secondary">Cancel</a>
       {% endif %}
@@ -263,77 +165,61 @@
 
   </div>{# /col-lg-8 #}
 
-  {# ════════════════════════ RIGHT — help + snapshot ════════════════════════ #}
+  {# ════════════════════════ RIGHT — snapshot + guide ════════════════════════ #}
   <div class="col-12 col-lg-4">
 
-    {# Edit: current values snapshot #}
+    {# Current values snapshot — edit only #}
     {% if action == 'edit' %}
     <div class="card bg-light border-0 mb-4">
       <div class="card-body small">
         <div class="fw-700 text-muted text-uppercase mb-3" style="font-size:.72rem;">Current Values</div>
         <dl class="row mb-0">
-          <dt class="col-6 text-muted fw-700">Student</dt>
-          <dd class="col-6 fw-700">{{ assessment.student.last_name }}, {{ assessment.student.first_name }}</dd>
-          <dt class="col-6 text-muted fw-700">Term</dt>
-          <dd class="col-6">Term {{ assessment.term.name }} ({{ assessment.term.academic_year }})</dd>
-          <dt class="col-6 text-muted fw-700">Required</dt>
-          <dd class="col-6 font-monospace fw-700">{{ assessment.total_required|floatformat:0 }}</dd>
-          <dt class="col-6 text-muted fw-700">Paid</dt>
-          <dd class="col-6 font-monospace text-success fw-700">{{ assessment.total_paid|floatformat:0 }}</dd>
-          <dt class="col-6 text-muted fw-700">Balance</dt>
-          <dd class="col-6 font-monospace fw-800
-            {% if assessment.balance > 0 %}text-danger{% else %}text-success{% endif %}">
-            {{ assessment.balance|floatformat:0 }}
-          </dd>
-          <dt class="col-6 text-muted fw-700">Discount</dt>
-          <dd class="col-6 font-monospace text-warning">{{ assessment.discount_amount|floatformat:0 }}</dd>
-          <dt class="col-6 text-muted fw-700">Cleared</dt>
-          <dd class="col-6">
-            {% if assessment.is_cleared %}
-            <span class="badge bg-success rounded-pill">Yes</span>
-            {% else %}
-            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">No</span>
-            {% endif %}
-          </dd>
+
+          <dt class="col-5 text-muted fw-700">Assessment</dt>
+          <dd class="col-7 fw-600">{{ fee.assessment.title }}</dd>
+
+          <dt class="col-5 text-muted fw-700">Term</dt>
+          <dd class="col-7">Term {{ fee.term.name }} ({{ fee.term.academic_year }})</dd>
+
+          <dt class="col-5 text-muted fw-700">Amount</dt>
+          <dd class="col-7 fw-800 font-monospace">UGX {{ fee.amount|floatformat:0|default:"—" }}</dd>
+
+          <dt class="col-5 text-muted fw-700">Due</dt>
+          <dd class="col-7">{{ fee.due_date|date:"d M Y"|default:"—" }}</dd>
+
+          <dt class="col-5 text-muted fw-700">Created by</dt>
+          <dd class="col-7">{{ fee.generated_by.get_full_name|default:"—" }}</dd>
+
         </dl>
       </div>
     </div>
     {% endif %}
 
+    {# Field guide #}
     <div class="card border-primary-subtle sticky-top" style="top:76px;">
       <div class="card-header bg-primary-subtle border-primary-subtle py-3">
         <h6 class="fw-700 mb-0 text-primary">
-          <i class="bi bi-calculator me-2"></i>Balance Formula
+          <i class="bi bi-lightbulb me-2"></i>Field Guide
         </h6>
       </div>
       <div class="card-body small text-secondary">
-
-        <div class="bg-dark text-white rounded p-3 mb-3 font-monospace text-center" style="font-size:.85rem;">
-          balance =<br/>
-          total_required<br/>
-          − discount_amount<br/>
-          − total_paid
-        </div>
-
-        <dt class="fw-700 text-dark">is_cleared</dt>
+        <dt class="fw-700 text-dark">Assessment</dt>
         <dd class="mb-2">
-          Automatically set to <strong>True</strong> when
-          <code>balance ≤ 0</code>. Never set manually.
+          Select the exam or assessment this fee is attached to.
+          Only assessments from the current term are listed.
         </dd>
-
-        <dt class="fw-700 text-dark">total_paid</dt>
+        <dt class="fw-700 text-dark">Term</dt>
         <dd class="mb-2">
-          Best practice: leave this as <code>0</code> on creation and use
-          <strong>Recalculate</strong> on the detail page to sync from
-          actual payment records.
+          The term this fee assessment covers. Defaults to the current active term.
         </dd>
-
-        <dt class="fw-700 text-dark">Discount</dt>
+        <dt class="fw-700 text-dark">Amount</dt>
+        <dd class="mb-2">
+          The fee amount in Uganda Shillings (UGX) for this assessment.
+        </dd>
+        <dt class="fw-700 text-dark">Due Date</dt>
         <dd class="mb-0">
-          A discount reduces the effective amount owed. A reason is required
-          for any discount &gt; 0 for audit trail purposes.
+          Optional payment deadline. Leave blank if there is no fixed date.
         </dd>
-
       </div>
     </div>
 

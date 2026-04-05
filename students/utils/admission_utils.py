@@ -57,6 +57,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db.models import Count, Max, Q
+from academics.models import SchoolSupportedClasses
 
 User = get_user_model()
 
@@ -210,6 +211,15 @@ def _parse_date(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def session_set_student_data(request, data: dict) -> None:
+    # class_applied = data.get('applied_class')
+    # if class_applied:
+    #     class_ = SchoolSupportedClasses.objects.filter(pk=class_applied).first()
+    #     if class_:
+    #         data["applied_cls"] = {
+    #             "key":class_.supported_class.key.upper(),
+    #             "name":class_.supported_class.name.capitalize()}
+            
+
     request.session[_SESSION_STUDENT] = data
     request.session.modified = True
 

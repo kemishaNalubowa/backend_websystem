@@ -145,8 +145,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'authentication.CustomUser'
 
+LOGIN_URL = '/auth/login/'
+
 
 ROOT_HOSTCONF = 'backend_websystem.hosts'
 DEFAULT_HOST = 'www' 
+
+
 
 

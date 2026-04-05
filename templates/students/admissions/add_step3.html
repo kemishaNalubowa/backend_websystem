@@ -52,7 +52,7 @@
           <dd class="col-8 fw-700 font-monospace">{{ student_data.academic_year }}</dd>
           {% if applied_class %}
           <dt class="col-4 text-muted fw-700">Applying for</dt>
-          <dd class="col-8">{{ applied_class.display_name }}</dd>
+          <dd class="col-8">{{ applied_class.supported_class.name }} — ({{ applied_class.supported_class.key.upper }})</dd>
           {% endif %}
           {% if student_data.previous_school %}
           <dt class="col-4 text-muted fw-700">Previous School</dt>
