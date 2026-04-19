@@ -8,75 +8,84 @@
 {% block content %}
 <div class="d-flex align-items-center justify-content-between mb-4">
   <div>
-    <h4 class="fw-800 mb-0">Announcements</h4>
-    <p class="text-muted small mb-0">Notices for staff, parents and students</p>
+    <h4 class="fw-800 mb-0 text-dark">Announcements</h4>
+    <p class="text-muted small mb-0">Manage and monitor school notices for all audiences.</p>
   </div>
-  <a href="{% url 'school:announcement_add' %}" class="btn btn-primary">
+  <a href="{% url 'school:announcement_add' %}" class="btn btn-primary rounded-pill px-4">
     <i class="bi bi-plus-lg me-1"></i>New Announcement
   </a>
 </div>
 
-{# ── Stat cards ─────────────────────────────────────────────────
-   Context from get_announcement_list_stats():
-   total, published, draft, active, expired, critical_count, urgent_count
-────────────────────────────────────────────────────────────────── #}
+{# ── Stat Cards ───────────────────────────────────────────────── #}
 <div class="row g-3 mb-4">
-  <div class="col-6 col-sm-4 col-lg-2">
-    <div class="stat-card">
-      <div class="stat-value text-dark">{{ total|default:"0" }}</div>
-      <div class="stat-label">Total</div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center p-3">
+        <div class="text-muted small fw-bold text-uppercase mb-1">Total</div>
+        <div class="h3 fw-800 mb-0 text-dark">{{ total|default:"0" }}</div>
+      </div>
     </div>
   </div>
-  <div class="col-6 col-sm-4 col-lg-2">
-    <div class="stat-card">
-      <div class="stat-value text-success">{{ published|default:"0" }}</div>
-      <div class="stat-label">Published</div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center p-3 border-start border-success border-4 rounded-start">
+        <div class="text-success small fw-bold text-uppercase mb-1">Published</div>
+        <div class="h3 fw-800 mb-0">{{ published|default:"0" }}</div>
+      </div>
     </div>
   </div>
-  <div class="col-6 col-sm-4 col-lg-2">
-    <div class="stat-card">
-      <div class="stat-value text-secondary">{{ draft|default:"0" }}</div>
-      <div class="stat-label">Draft</div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center p-3 border-start border-warning border-4 rounded-start">
+        <div class="text-warning small fw-bold text-uppercase mb-1">Drafts</div>
+        <div class="h3 fw-800 mb-0">{{ draft|default:"0" }}</div>
+      </div>
     </div>
   </div>
-  <div class="col-6 col-sm-4 col-lg-2">
-    <div class="stat-card">
-      <div class="stat-value text-primary">{{ active|default:"0" }}</div>
-      <div class="stat-label">Active</div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center p-3 border-start border-primary border-4 rounded-start">
+        <div class="text-primary small fw-bold text-uppercase mb-1">Active</div>
+        <div class="h3 fw-800 mb-0">{{ active|default:"0" }}</div>
+      </div>
     </div>
   </div>
-  <div class="col-6 col-sm-4 col-lg-2">
-    <div class="stat-card">
-      <div class="stat-value text-muted">{{ expired|default:"0" }}</div>
-      <div class="stat-label">Expired</div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center p-3 border-start border-secondary border-4 rounded-start">
+        <div class="text-secondary small fw-bold text-uppercase mb-1">Expired</div>
+        <div class="h3 fw-800 mb-0">{{ expired|default:"0" }}</div>
+      </div>
     </div>
   </div>
-  <div class="col-6 col-sm-4 col-lg-2">
-    <div class="stat-card">
-      <div class="stat-value text-danger">{{ critical_count|default:"0" }}</div>
-      <div class="stat-label">Critical</div>
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center p-3 border-start border-danger border-4 rounded-start">
+        <div class="text-danger small fw-bold text-uppercase mb-1">Critical</div>
+        <div class="h3 fw-800 mb-0">{{ critical|default:"0" }}</div>
+      </div>
     </div>
   </div>
 </div>
 
 {# ── Filter bar ── #}
-<div class="card mb-4">
+<div class="card border-0 shadow-sm mb-4">
   <div class="card-body py-3">
     <form method="get" class="row g-2 align-items-end">
 
-      <div class="col-12 col-md-4">
-        <label class="form-label fw-700 small mb-1">Search</label>
+      <div class="col-12 col-md-3">
+        <label class="form-label fw-bold small text-muted text-uppercase mb-1">Search</label>
         <div class="input-group input-group-sm">
-          <span class="input-group-text bg-white"><i class="bi bi-search text-secondary"></i></span>
-          <input type="text" name="q" class="form-control" value="{{ search }}"
-                 placeholder="Title or content…"/>
+          <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" class="form-control bg-light border-start-0" value="{{ search }}"
+                 placeholder="Search title or content..."/>
         </div>
       </div>
 
       <div class="col-6 col-md-2">
-        <label class="form-label fw-700 small mb-1">Audience</label>
-        <select name="audience" class="form-select form-select-sm">
-          <option value="">All</option>
+        <label class="form-label fw-bold small text-muted text-uppercase mb-1">Audience</label>
+        <select name="audience" class="form-select form-select-sm bg-light">
+          <option value="">All Audiences</option>
           {% for key, label in audience_choices %}
           <option value="{{ key }}" {% if audience_filter == key %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
@@ -84,9 +93,9 @@
       </div>
 
       <div class="col-6 col-md-2">
-        <label class="form-label fw-700 small mb-1">Priority</label>
-        <select name="priority" class="form-select form-select-sm">
-          <option value="">All</option>
+        <label class="form-label fw-bold small text-muted text-uppercase mb-1">Priority</label>
+        <select name="priority" class="form-select form-select-sm bg-light">
+          <option value="">All Priorities</option>
           {% for key, label in priority_choices %}
           <option value="{{ key }}" {% if priority_filter == key %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
@@ -94,19 +103,21 @@
       </div>
 
       <div class="col-6 col-md-2">
-        <label class="form-label fw-700 small mb-1">Status</label>
-        <select name="status" class="form-select form-select-sm">
-          <option value="">All</option>
+        <label class="form-label fw-bold small text-muted text-uppercase mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm bg-light">
+          <option value="">All Statuses</option>
           <option value="active"   {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+          <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+          <option value="published"{% if status_filter == 'published' %}selected{% endif %}>Published</option>
+          <option value="draft"    {% if status_filter == 'draft' %}selected{% endif %}>Draft / Unpublished</option>
           <option value="expired"  {% if status_filter == 'expired' %}selected{% endif %}>Expired</option>
-          <option value="draft"    {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
         </select>
       </div>
 
       <div class="col-6 col-md-2">
-        <label class="form-label fw-700 small mb-1">Class</label>
-        <select name="class" class="form-select form-select-sm">
-          <option value="">All Classes</option>
+        <label class="form-label fw-bold small text-muted text-uppercase mb-1">Class</label>
+        <select name="class" class="form-select form-select-sm bg-light">
+          <option value="">School-wide</option>
           {% for cls in all_classes %}
           <option value="{{ cls.pk }}" {% if class_filter == cls.pk|stringformat:"s" %}selected{% endif %}>
             {{ cls.display_name }}
@@ -115,11 +126,11 @@
         </select>
       </div>
 
-      <div class="col-12 col-md-2 d-flex gap-2">
-        <button type="submit" class="btn btn-primary btn-sm flex-fill">
-          <i class="bi bi-funnel me-1"></i>Filter
+      <div class="col-12 col-md-1 d-flex gap-2">
+        <button type="submit" class="btn btn-dark btn-sm flex-fill">
+          <i class="bi bi-funnel"></i>
         </button>
-        {% if search or audience_filter or priority_filter or published_filter or status_filter or class_filter %}
+        {% if search or audience_filter or priority_filter or status_filter or class_filter %}
         <a href="{% url 'school:announcement_list' %}" class="btn btn-outline-secondary btn-sm" title="Clear">
           <i class="bi bi-x-lg"></i>
         </a>
@@ -130,103 +141,110 @@
   </div>
 </div>
 
-{# ── Table ── #}
-<div class="card">
-  <div class="card-header d-flex align-items-center justify-content-between py-3">
-    <span class="fw-700">
-      {{ page_obj.paginator.count }} announcement{{ page_obj.paginator.count|pluralize }}
+{# ── Table Card ── #}
+<div class="card border-0 shadow-sm overflow-hidden">
+  <div class="card-header bg-white d-flex align-items-center justify-content-between py-3 border-bottom">
+    <h6 class="fw-bold mb-0">
+      Recent Announcements
       {% if search or audience_filter or priority_filter or status_filter or class_filter %}
-      <span class="text-muted fw-400 small ms-1">(filtered)</span>
+      <span class="badge bg-info-subtle text-info fw-normal ms-2">Filtered Results</span>
       {% endif %}
-    </span>
+    </h6>
+    <span class="text-muted small">Showing {{ announcements|length }} items</span>
   </div>
 
   {% if announcements %}
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0">
-      <thead class="table-light">
-        <tr>
-          <th>Title</th>
+      <thead class="bg-light">
+        <tr class="small text-uppercase fw-bold text-muted">
+          <th class="ps-4">Title & Message</th>
           <th>Audience</th>
           <th>Priority</th>
-          <th>Class</th>
+          <th>Target</th>
           <th>Status</th>
-          <th>Expires</th>
           <th>Posted By</th>
-          <th class="text-end">Actions</th>
+          <th class="text-end pe-4">Actions</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="border-top-0">
         {% for ann in announcements %}
-        <tr class="{% if ann.priority == 'critical' and ann.is_active %}table-danger{% elif ann.priority == 'urgent' and ann.is_active %}table-warning{% endif %}">
-
-          <td>
-            <a href="{% url 'school:announcement_detail' ann.pk %}" class="fw-700 text-dark">
-              {% if ann.priority == 'critical' %}<i class="bi bi-exclamation-octagon-fill text-danger me-1"></i>{% endif %}
-              {% if ann.priority == 'urgent' %}<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>{% endif %}
-              {{ ann.title|truncatechars:60 }}
-            </a>
-            {% if ann.attachment %}<i class="bi bi-paperclip text-muted ms-1 small"></i>{% endif %}
+        <tr>
+          <td class="ps-4" style="min-width: 300px;">
+            <div class="d-flex align-items-center">
+              {% if ann.priority == 'critical' and ann.is_active %}
+                <div class="bg-danger p-1 rounded-circle me-2" style="width: 10px; height: 10px;" title="Critical"></div>
+              {% elif ann.priority == 'urgent' and ann.is_active %}
+                <div class="bg-warning p-1 rounded-circle me-2" style="width: 10px; height: 10px;" title="Urgent"></div>
+              {% endif %}
+              <div>
+                <a href="{% url 'school:announcement_detail' ann.pk %}" class="fw-bold text-dark text-decoration-none">
+                  {{ ann.title|truncatechars:50 }}
+                </a>
+                <div class="text-muted small text-truncate" style="max-width: 250px;">{{ ann.content|truncatechars:100 }}</div>
+              </div>
+            </div>
           </td>
 
           <td>
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+            <span class="badge bg-info-subtle text-info rounded-pill px-3">
               {{ ann.audience_label }}
             </span>
           </td>
 
           <td>
             {% if ann.priority == 'critical' %}
-            <span class="badge bg-danger">Critical</span>
+              <span class="badge bg-danger rounded-pill px-3">Critical</span>
             {% elif ann.priority == 'urgent' %}
-            <span class="badge bg-warning text-dark">Urgent</span>
+              <span class="badge bg-warning text-dark rounded-pill px-3">Urgent</span>
             {% else %}
-            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Normal</span>
+              <span class="badge bg-light text-dark border rounded-pill px-3">Normal</span>
             {% endif %}
           </td>
 
-          <td class="text-muted small">
-            {{ ann.school_class.display_name|default:"School-wide" }}
+          <td class="small">
+            {% if ann.school_class %}
+              <span class="text-dark">{{ ann.school_class.display_name }}</span>
+            {% else %}
+              <span class="text-muted">Everyone</span>
+            {% endif %}
           </td>
 
           <td>
             {% if not ann.is_published %}
-            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Draft</span>
+              <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3 small">Draft</span>
             {% elif ann.is_expired %}
-            <span class="badge bg-dark">Expired</span>
+              <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-3 small">Expired</span>
             {% else %}
-            <span class="badge bg-success rounded-pill">Active</span>
+              <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 small">Active</span>
             {% endif %}
           </td>
 
-          <td class="text-muted small text-nowrap">
-            {% if ann.expires_at %}{{ ann.expires_at|date:"d M Y" }}{% else %}—{% endif %}
+          <td class="small">
+            <div class="fw-bold">{{ ann.posted_by.get_full_name|default:ann.posted_by.username }}</div>
+            <div class="text-muted" style="font-size: 0.75rem;">{{ ann.published_at|date:"d M Y, H:i"|default:ann.created_at|date:"d M Y" }}</div>
           </td>
 
-          <td class="text-muted small">{{ ann.posted_by.get_full_name|default:"—" }}</td>
-
-          <td class="text-end">
-            <div class="d-flex gap-1 justify-content-end">
-              <a href="{% url 'school:announcement_detail' ann.pk %}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-eye"></i>
+          <td class="text-end pe-4">
+            <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+              <a href="{% url 'school:announcement_detail' ann.pk %}" class="btn btn-white btn-sm px-3" title="View">
+                <i class="bi bi-eye text-primary"></i>
               </a>
-              <a href="{% url 'school:announcement_edit' ann.pk %}" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-pencil"></i>
+              <a href="{% url 'school:announcement_edit' ann.pk %}" class="btn btn-white btn-sm px-3" title="Edit">
+                <i class="bi bi-pencil text-info"></i>
               </a>
-              <form method="post" action="{% url 'school:announcement_toggle_published' ann.pk %}">
+              <form method="post" action="{% url 'school:announcement_toggle_published' ann.pk %}" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ request.get_full_path }}"/>
-                <button type="submit"
-                  class="btn btn-sm {% if ann.is_published %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
-                  <i class="bi {% if ann.is_published %}bi-eye-slash{% else %}bi-check-circle{% endif %}"></i>
+                <button type="submit" class="btn btn-white btn-sm px-3" title="{% if ann.is_published %}Unpublish{% else %}Publish{% endif %}">
+                  <i class="bi {% if ann.is_published %}bi-eye-slash text-warning{% else %}bi-check-circle text-success{% endif %}"></i>
                 </button>
               </form>
-              <a href="{% url 'school:announcement_delete' ann.pk %}" class="btn btn-sm btn-outline-danger">
-                <i class="bi bi-trash"></i>
+              <a href="{% url 'school:announcement_delete' ann.pk %}" class="btn btn-white btn-sm px-3" title="Delete">
+                <i class="bi bi-trash text-danger"></i>
               </a>
             </div>
           </td>
-
         </tr>
         {% endfor %}
       </tbody>
@@ -234,34 +252,44 @@
   </div>
 
   {% if page_obj.has_other_pages %}
-  <div class="card-footer bg-transparent d-flex align-items-center justify-content-between py-3">
-    <small class="text-muted">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</small>
-    <nav><ul class="pagination pagination-sm mb-0">
-      {% if page_obj.has_previous %}
-      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&audience={{ audience_filter }}&priority={{ priority_filter }}&status={{ status_filter }}&class={{ class_filter }}"><i class="bi bi-chevron-left"></i></a></li>
-      {% else %}<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>{% endif %}
-      {% for num in page_obj.paginator.page_range %}
-        {% if page_obj.number == num %}<li class="page-item active"><span class="page-link">{{ num }}</span></li>
-        {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
-        <li class="page-item"><a class="page-link" href="?page={{ num }}&q={{ search }}&audience={{ audience_filter }}&priority={{ priority_filter }}&status={{ status_filter }}&class={{ class_filter }}">{{ num }}</a></li>
+  <div class="card-footer bg-white d-flex align-items-center justify-content-between py-3 border-top">
+    <small class="text-muted">Showing <strong>{{ page_obj.start_index }}</strong> to <strong>{{ page_obj.end_index }}</strong> of <strong>{{ page_obj.paginator.count }}</strong></small>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link shadow-none border-0 bg-light rounded-pill me-2 px-3" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&audience={{ audience_filter }}&priority={{ priority_filter }}&status={{ status_filter }}&class={{ class_filter }}">
+            <i class="bi bi-chevron-left me-1"></i> Prev
+          </a>
+        </li>
         {% endif %}
-      {% endfor %}
-      {% if page_obj.has_next %}
-      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&audience={{ audience_filter }}&priority={{ priority_filter }}&status={{ status_filter }}&class={{ class_filter }}"><i class="bi bi-chevron-right"></i></a></li>
-      {% else %}<li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>{% endif %}
-    </ul></nav>
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link shadow-none border-0 bg-light rounded-pill px-3" href="?page={{ page_obj.next_page_number }}&q={{ search }}&audience={{ audience_filter }}&priority={{ priority_filter }}&status={{ status_filter }}&class={{ class_filter }}">
+            Next <i class="bi bi-chevron-right ms-1"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
   </div>
   {% endif %}
 
   {% else %}
-  <div class="text-center py-5 text-muted">
-    <i class="bi bi-megaphone fs-1 d-block mb-2 opacity-25"></i>
-    <div class="fw-700 mb-1">No announcements found</div>
+  <div class="text-center py-5">
+    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+      <i class="bi bi-megaphone fs-1 text-muted opacity-50"></i>
+    </div>
+    <h5 class="fw-bold text-dark">No Announcements Found</h5>
+    <p class="text-muted small mx-auto" style="max-width: 300px;">
+      We couldn't find any announcements matching your current filters. Try adjusting them or clear all.
+    </p>
     {% if search or audience_filter or priority_filter or status_filter or class_filter %}
-    <a href="{% url 'school:announcement_list' %}" class="btn btn-sm btn-outline-secondary mt-2">Clear Filters</a>
+    <a href="{% url 'school:announcement_list' %}" class="btn btn-outline-dark btn-sm rounded-pill px-4 mt-2">Clear All Filters</a>
     {% else %}
-    <a href="{% url 'school:announcement_add' %}" class="btn btn-sm btn-primary mt-2">
-      <i class="bi bi-plus-lg me-1"></i>New Announcement
+    <a href="{% url 'school:announcement_add' %}" class="btn btn-primary btn-sm rounded-pill px-4 mt-2">
+      <i class="bi bi-plus-lg me-1"></i>Create First Announcement
     </a>
     {% endif %}
   </div>

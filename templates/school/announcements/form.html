@@ -7,57 +7,94 @@
 <li class="breadcrumb-item"><a href="{% url 'school:announcement_detail' announcement.pk %}" class="text-secondary">{{ announcement.title|truncatechars:30 }}</a></li>
 <li class="breadcrumb-item active">Edit</li>
 {% else %}
-<li class="breadcrumb-item active">New</li>
+<li class="breadcrumb-item active">New Announcement</li>
 {% endif %}
 {% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center justify-content-between mb-4">
-  <div>
-    <h4 class="fw-800 mb-0">{{ form_title }}</h4>
-    <p class="text-muted small mb-0">
-      {% if action == 'edit' %}Update the announcement. Auto-sets published_at on first publish.
-      {% else %}Fill in the details below. A published_at timestamp is auto-set when you publish.{% endif %}
-    </p>
+<div class="row mb-4">
+  <div class="col-12 d-flex align-items-center justify-content-between">
+    <div>
+      <h4 class="fw-800 mb-1 text-dark">{{ form_title }}</h4>
+      <p class="text-muted small mb-0">
+        {% if action == 'edit' %}
+        Update the announcement details and visibility settings.
+        {% else %}
+        Create a new announcement for staff, parents, or students.
+        {% endif %}
+      </p>
+    </div>
+    <div>
+      {% if action == 'edit' %}
+      <a href="{% url 'school:announcement_detail' announcement.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+        <i class="bi bi-x-circle me-1"></i>Cancel
+      </a>
+      {% else %}
+      <a href="{% url 'school:announcement_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+        <i class="bi bi-x-circle me-1"></i>Cancel
+      </a>
+      {% endif %}
+    </div>
   </div>
-  {% if action == 'edit' %}
-  <a href="{% url 'school:announcement_detail' announcement.pk %}" class="btn btn-outline-secondary btn-sm">
-    <i class="bi bi-arrow-left me-1"></i>Back
-  </a>
-  {% else %}
-  <a href="{% url 'school:announcement_list' %}" class="btn btn-outline-secondary btn-sm">
-    <i class="bi bi-arrow-left me-1"></i>Back
-  </a>
-  {% endif %}
 </div>
 
 <form method="post" enctype="multipart/form-data" novalidate>
 {% csrf_token %}
 <div class="row g-4">
 
-  {# ── LEFT ── #}
+  {# ── LEFT COLUMN: FORM FIELDS ── #}
   <div class="col-12 col-lg-8">
-
-    {# Core #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0"><i class="bi bi-megaphone me-2 text-primary"></i>Content</h6>
+    
+    {# 1. Content Section #}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white py-3 border-bottom-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-primary-subtle p-2 rounded-3 me-3">
+            <i class="bi bi-megaphone text-primary fs-5"></i>
+          </div>
+          <h6 class="fw-bold mb-0">Announcement Content</h6>
+        </div>
       </div>
-      <div class="card-body">
+      <div class="card-body pt-0">
         <div class="row g-3">
-
           <div class="col-12">
-            <label class="form-label fw-700 small">Title <span class="text-danger">*</span></label>
+            <label class="form-label fw-bold small text-uppercase text-muted">Title <span class="text-danger">*</span></label>
             <input type="text" name="title"
-              class="form-control {% if errors.title %}is-invalid{% endif %}"
+              class="form-control form-control-lg {% if errors.title %}is-invalid{% endif %}"
               value="{% if post %}{{ post.title|default:'' }}{% elif action == 'edit' %}{{ announcement.title }}{% endif %}"
-              placeholder="e.g. School Closure — Public Holiday" maxlength="200"/>
+              placeholder="e.g. End of Term Circular — 2026" maxlength="200" required/>
             {% if errors.title %}<div class="invalid-feedback">{{ errors.title }}</div>{% endif %}
           </div>
 
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Audience <span class="text-danger">*</span></label>
-            <select name="audience" class="form-select {% if errors.audience %}is-invalid{% endif %}">
+          <div class="col-12">
+            <label class="form-label fw-bold small text-uppercase text-muted">Message / Body <span class="text-danger">*</span></label>
+            <textarea name="content"
+              class="form-control {% if errors.content %}is-invalid{% endif %}"
+              rows="8" style="min-height: 200px;"
+              placeholder="Write the full announcement message here..." required
+            >{% if post %}{{ post.content|default:'' }}{% elif action == 'edit' %}{{ announcement.content }}{% endif %}</textarea>
+            {% if errors.content %}<div class="invalid-feedback">{{ errors.content }}</div>{% endif %}
+            <div class="form-text small">Plain text only. Use clear, concise language.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# 2. Targeting & Priority #}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white py-3 border-bottom-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-info-subtle p-2 rounded-3 me-3">
+            <i class="bi bi-people text-info fs-5"></i>
+          </div>
+          <h6 class="fw-bold mb-0">Audience & Priority</h6>
+        </div>
+      </div>
+      <div class="card-body pt-0">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold small text-uppercase text-muted">Target Audience <span class="text-danger">*</span></label>
+            <select name="audience" class="form-select {% if errors.audience %}is-invalid{% endif %}" required>
               {% for key, label in audience_choices %}
               <option value="{{ key }}"
                 {% if post %}{% if post.audience == key %}selected{% endif %}
@@ -70,9 +107,9 @@
             {% if errors.audience %}<div class="invalid-feedback">{{ errors.audience }}</div>{% endif %}
           </div>
 
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Priority <span class="text-danger">*</span></label>
-            <select name="priority" class="form-select {% if errors.priority %}is-invalid{% endif %}">
+          <div class="col-md-6">
+            <label class="form-label fw-bold small text-uppercase text-muted">Priority Level <span class="text-danger">*</span></label>
+            <select name="priority" class="form-select {% if errors.priority %}is-invalid{% endif %}" required>
               {% for key, label in priority_choices %}
               <option value="{{ key }}"
                 {% if post %}{% if post.priority == key %}selected{% endif %}
@@ -85,163 +122,193 @@
             {% if errors.priority %}<div class="invalid-feedback">{{ errors.priority }}</div>{% endif %}
           </div>
 
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Target Class <span class="text-muted fw-400">(optional)</span></label>
+          <div class="col-12">
+            <label class="form-label fw-bold small text-uppercase text-muted">Target Class <span class="text-muted fw-normal font-monospace">(Optional)</span></label>
             <select name="school_class" class="form-select">
-              <option value="">School-wide (all classes)</option>
+              <option value="">School-wide (All Classes)</option>
               {% for cls in all_classes %}
               <option value="{{ cls.pk }}"
                 {% if post %}{% if post.school_class == cls.pk|stringformat:"s" %}selected{% endif %}
                 {% elif action == 'edit' %}{% if announcement.school_class_id == cls.pk %}selected{% endif %}{% endif %}>
-                {{ cls.display_name }}
+                {{ cls.display_name|default:cls.supported_class.name }}
               </option>
               {% endfor %}
             </select>
+            <div class="form-text small">Selecting a class limits visibility to that class only.</div>
           </div>
-
-          <div class="col-12">
-            <label class="form-label fw-700 small">Message <span class="text-danger">*</span></label>
-            <textarea name="content"
-              class="form-control {% if errors.content %}is-invalid{% endif %}"
-              rows="8"
-              placeholder="Write the full announcement text here…"
-            >{% if post %}{{ post.content|default:'' }}{% elif action == 'edit' %}{{ announcement.content }}{% endif %}</textarea>
-            {% if errors.content %}<div class="invalid-feedback">{{ errors.content }}</div>{% endif %}
-          </div>
-
         </div>
       </div>
     </div>
 
-    {# Dates #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0"><i class="bi bi-calendar3 me-2 text-warning"></i>Dates</h6>
+    {# 3. Dates & Timing #}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white py-3 border-bottom-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-warning-subtle p-2 rounded-3 me-3">
+            <i class="bi bi-calendar3 text-warning fs-5"></i>
+          </div>
+          <h6 class="fw-bold mb-0">Scheduling</h6>
+        </div>
       </div>
-      <div class="card-body">
+      <div class="card-body pt-0">
         <div class="row g-3">
-
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Published At</label>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small text-uppercase text-muted">Publish At</label>
             <input type="datetime-local" name="published_at"
               class="form-control {% if errors.published_at %}is-invalid{% endif %}"
               value="{% if post %}{{ post.published_at|default:'' }}{% elif action == 'edit' and announcement.published_at %}{{ announcement.published_at|date:'Y-m-d' }}T{{ announcement.published_at|time:'H:i' }}{% else %}{{ now_str }}{% endif %}"/>
-            <div class="form-text">Leave blank to auto-set when you publish.</div>
+            <div class="form-text small">Leave blank to publish immediately upon saving.</div>
             {% if errors.published_at %}<div class="invalid-feedback">{{ errors.published_at }}</div>{% endif %}
           </div>
 
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-700 small">Expires At <span class="text-muted fw-400">(optional)</span></label>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small text-uppercase text-muted">Expire At <span class="text-muted fw-normal font-monospace">(Optional)</span></label>
             <input type="datetime-local" name="expires_at"
               class="form-control {% if errors.expires_at %}is-invalid{% endif %}"
               value="{% if post %}{{ post.expires_at|default:'' }}{% elif action == 'edit' and announcement.expires_at %}{{ announcement.expires_at|date:'Y-m-d' }}T{{ announcement.expires_at|time:'H:i' }}{% endif %}"/>
-            <div class="form-text">The announcement hides automatically after this date/time.</div>
+            <div class="form-text small">Automatically hide after this date.</div>
             {% if errors.expires_at %}<div class="invalid-feedback">{{ errors.expires_at }}</div>{% endif %}
           </div>
-
         </div>
       </div>
     </div>
 
-    {# Attachment #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0"><i class="bi bi-paperclip me-2 text-secondary"></i>Attachment <span class="text-muted fw-400 small">(optional)</span></h6>
+    {# 4. Attachment #}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white py-3 border-bottom-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-secondary-subtle p-2 rounded-3 me-3">
+            <i class="bi bi-paperclip text-secondary fs-5"></i>
+          </div>
+          <h6 class="fw-bold mb-0">Attachment</h6>
+        </div>
       </div>
-      <div class="card-body">
+      <div class="card-body pt-0">
         {% if action == 'edit' and announcement.attachment %}
-        <div class="d-flex align-items-center gap-3 mb-3 p-2 bg-light rounded border">
-          <i class="bi bi-file-earmark text-secondary fs-5"></i>
+        <div class="d-flex align-items-center gap-3 mb-3 p-3 bg-light rounded-3 border border-dashed">
+          <div class="bg-white p-2 rounded shadow-sm">
+            <i class="bi bi-file-earmark-text text-primary fs-4"></i>
+          </div>
           <div class="flex-fill">
-            <div class="fw-700 small">Current file</div>
-            <a href="{{ announcement.attachment.url }}" target="_blank" class="small text-primary">
-              Download
+            <div class="fw-bold small text-dark mb-0">Currently Attached</div>
+            <a href="{{ announcement.attachment.url }}" target="_blank" class="text-decoration-none small fw-bold">
+              View File <i class="bi bi-box-arrow-up-right ms-1"></i>
             </a>
           </div>
-          <div class="form-check mb-0">
-            <input class="form-check-input" type="checkbox" name="clear_attachment"
-                   id="clear_attachment" value="1"/>
-            <label class="form-check-label small fw-600 text-danger" for="clear_attachment">
-              Remove file
-            </label>
+          <div class="form-check form-check-inline mb-0">
+            <input class="form-check-input border-danger" type="checkbox" name="clear_attachment" id="clear_attachment" value="1"/>
+            <label class="form-check-label small fw-bold text-danger" for="clear_attachment">Remove</label>
           </div>
         </div>
         {% endif %}
-        <input type="file" name="attachment" class="form-control"
-               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"/>
-        <div class="form-text">PDF, DOCX, or image. Upload replaces the existing file.</div>
+        
+        <label class="form-label fw-bold small text-uppercase text-muted">
+          {% if action == 'edit' and announcement.attachment %}Replace Attachment{% else %}Upload File{% endif %}
+        </label>
+        <input type="file" name="attachment" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"/>
+        <div class="form-text small">Allowed: PDF, DOCX, JPG, PNG. Max size: 5MB.</div>
+        {% if errors.attachment %}<div class="text-danger small mt-1">{{ errors.attachment }}</div>{% endif %}
       </div>
     </div>
 
-    {# Publish toggle #}
-    <div class="card mb-4">
-      <div class="card-header py-3">
-        <h6 class="fw-700 mb-0"><i class="bi bi-toggle-on me-2 text-success"></i>Visibility</h6>
-      </div>
-      <div class="card-body">
-        <div class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" role="switch"
-            id="is_published" name="is_published" value="1"
-            {% if post %}{% if post.is_published %}checked{% endif %}
-            {% elif action == 'edit' %}{% if announcement.is_published %}checked{% endif %}{% endif %}/>
-          <label class="form-check-label fw-700" for="is_published">Publish immediately</label>
-        </div>
-        <div class="form-text ms-5">
-          Published announcements are visible to the selected audience.
-          Drafts are only visible to staff.
+    {# Submission Buttons #}
+    <div class="card border-0 shadow-sm mb-5 bg-transparent">
+      <div class="card-body p-0">
+        <div class="d-flex gap-3">
+          <button type="submit" class="btn btn-primary btn-lg px-5 rounded-pill shadow-sm">
+            <i class="bi {% if action == 'edit' %}bi-save{% else %}bi-send{% endif %} me-2"></i>
+            {% if action == 'edit' %}Update Announcement{% else %}Post Announcement{% endif %}
+          </button>
+          {% if action == 'edit' %}
+          <a href="{% url 'school:announcement_detail' announcement.pk %}" class="btn btn-light btn-lg px-4 rounded-pill">Cancel</a>
+          {% else %}
+          <a href="{% url 'school:announcement_list' %}" class="btn btn-light btn-lg px-4 rounded-pill">Cancel</a>
+          {% endif %}
         </div>
       </div>
-    </div>
-
-    <div class="d-flex gap-2 pb-2">
-      <button type="submit" class="btn btn-primary px-4">
-        <i class="bi {% if action == 'edit' %}bi-check-lg{% else %}bi-send{% endif %} me-1"></i>
-        {% if action == 'edit' %}Save Changes{% else %}Post Announcement{% endif %}
-      </button>
-      {% if action == 'edit' %}
-      <a href="{% url 'school:announcement_detail' announcement.pk %}" class="btn btn-outline-secondary">Cancel</a>
-      {% else %}
-      <a href="{% url 'school:announcement_list' %}" class="btn btn-outline-secondary">Cancel</a>
-      {% endif %}
     </div>
 
   </div>
 
-  {# ── RIGHT ── #}
+  {# ── RIGHT COLUMN: SETTINGS & GUIDE ── #}
   <div class="col-12 col-lg-4">
+    
+    {# Visibility Card #}
+    <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+      <div class="card-header bg-success text-white py-3 border-bottom-0">
+        <h6 class="fw-bold mb-0">Visibility Status</h6>
+      </div>
+      <div class="card-body bg-success-subtle">
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input bg-success border-success" type="checkbox" role="switch"
+            id="is_published" name="is_published" value="1"
+            {% if post %}{% if post.is_published %}checked{% endif %}
+            {% elif action == 'edit' %}{% if announcement.is_published %}checked{% endif %}
+            {% else %}checked{% endif %}/>
+          <label class="form-check-label fw-bold text-success-emphasis" for="is_published">Publish Immediately</label>
+        </div>
+        <p class="text-dark-emphasis small mb-0">
+          <i class="bi bi-info-circle me-1"></i>
+          If unchecked, this will be saved as a <strong>Draft</strong> and won't be visible to the audience.
+        </p>
+      </div>
+    </div>
+
     {% if action == 'edit' %}
-    <div class="card bg-light border-0 mb-4">
-      <div class="card-body small">
-        <div class="fw-700 text-muted text-uppercase mb-3" style="font-size:.72rem;">Current Values</div>
-        <dl class="row mb-0">
-          <dt class="col-5 text-muted fw-700">Audience</dt>
-          <dd class="col-7">{{ announcement.get_audience_display }}</dd>
-          <dt class="col-5 text-muted fw-700">Priority</dt>
-          <dd class="col-7">{{ announcement.get_priority_display }}</dd>
-          <dt class="col-5 text-muted fw-700">Published</dt>
-          <dd class="col-7">{% if announcement.is_published %}<span class="badge bg-success rounded-pill">Yes</span>{% else %}<span class="badge bg-secondary rounded-pill">Draft</span>{% endif %}</dd>
-          {% if announcement.expires_at %}
-          <dt class="col-5 text-muted fw-700">Expires</dt>
-          <dd class="col-7">{{ announcement.expires_at|date:"d M Y, H:i" }}</dd>
-          {% endif %}
-        </dl>
+    {# Meta Info Card #}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <h6 class="fw-bold text-uppercase small text-muted mb-3">Current Details</h6>
+        <div class="d-flex flex-column gap-3">
+          <div class="d-flex justify-content-between">
+            <span class="text-muted small">Posted By:</span>
+            <span class="small fw-bold">{{ announcement.posted_by.get_full_name|default:announcement.posted_by.username }}</span>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted small">Status:</span>
+            {% if announcement.is_published %}
+              <span class="badge bg-success rounded-pill">Published</span>
+            {% else %}
+              <span class="badge bg-secondary rounded-pill">Draft</span>
+            {% endif %}
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted small">Created:</span>
+            <span class="small fw-bold">{{ announcement.created_at|date:"d M Y" }}</span>
+          </div>
+        </div>
       </div>
     </div>
     {% endif %}
 
-    <div class="card border-primary-subtle sticky-top" style="top:76px;">
-      <div class="card-header bg-primary-subtle py-3">
-        <h6 class="fw-700 mb-0 text-primary"><i class="bi bi-lightbulb me-2"></i>Guide</h6>
+    {# Helpful Guide #}
+    <div class="card border-0 shadow-sm sticky-top" style="top: 2rem;">
+      <div class="card-header bg-white py-3 border-bottom">
+        <h6 class="fw-bold mb-0 text-dark">Quick Tips</h6>
       </div>
-      <div class="card-body small text-secondary">
-        <dt class="fw-700 text-dark">Priority</dt>
-        <dd class="mb-2"><strong>Critical</strong> announcements appear at the very top with a red highlight. <strong>Urgent</strong> get a yellow highlight. Use sparingly.</dd>
-        <dt class="fw-700 text-dark">Audience</dt>
-        <dd class="mb-2">Choose who sees this announcement on the portal. <strong>Everyone</strong> is the default.</dd>
-        <dt class="fw-700 text-dark">Expiry</dt>
-        <dd class="mb-0">Set an expiry date/time so announcements auto-hide when no longer relevant (e.g. a one-day event).</dd>
+      <div class="card-body">
+        <div class="mb-4">
+          <h6 class="small fw-bold text-primary text-uppercase mb-2">Priority levels</h6>
+          <p class="text-muted small mb-0">
+            <span class="text-danger fw-bold">Critical:</span> For emergencies, school closures, or immediate actions. Shows at the very top.<br>
+            <span class="text-warning fw-bold">Urgent:</span> For important notices like fee deadlines or meeting changes.
+          </p>
+        </div>
+        <div class="mb-4">
+          <h6 class="small fw-bold text-primary text-uppercase mb-2">Targeting</h6>
+          <p class="text-muted small mb-0">
+            Use <strong>Everyone</strong> for general school news. Use specific <strong>Audience</strong> or <strong>Class</strong> filters to keep messages relevant to recipients.
+          </p>
+        </div>
+        <div>
+          <h6 class="small fw-bold text-primary text-uppercase mb-2">Attachments</h6>
+          <p class="text-muted small mb-0">
+            Perfect for sharing circulars, timetables, or permission slips. Keep file names simple and descriptive.
+          </p>
+        </div>
       </div>
     </div>
+
   </div>
 
 </div>

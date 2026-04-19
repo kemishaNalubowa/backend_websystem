@@ -28,7 +28,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from academics.models import SchoolClass
+from academics.models import SchoolClass, SchoolSupportedClasses
 from school.models import SchoolAnnouncement
 from school.utils.announcement_utils import (
     AUDIENCE_LABELS,
@@ -49,10 +49,12 @@ _PRIORITY_CHOICES  = list(PRIORITY_LABELS.items())
 
 def _get_form_lookups() -> dict:
     """Querysets every form template needs."""
+    supported_classes = SchoolSupportedClasses.objects.select_related('supported_class').all().order_by('supported_class__order')
+    for sc in supported_classes:
+        sc.display_name = sc.supported_class.name
+
     return {
-        'all_classes':      SchoolClass.objects.filter(
-                                is_active=True
-                            ).order_by('section', 'level', 'stream'),
+        'all_classes':      supported_classes,
         'audience_choices': _AUDIENCE_CHOICES,
         'priority_choices': _PRIORITY_CHOICES,
     }
@@ -128,8 +130,16 @@ def announcement_list(request):
         qs = qs.filter(is_published=True).filter(
             Q(expires_at__isnull=True) | Q(expires_at__gt=now)
         )
+    elif status_filter == 'inactive':
+        # Inactive = Either Expired or Draft
+        qs = qs.filter(
+            Q(is_published=False) | 
+            Q(is_published=True, expires_at__lt=now)
+        )
     elif status_filter == 'expired':
         qs = qs.filter(is_published=True, expires_at__lt=now)
+    elif status_filter == 'published':
+        qs = qs.filter(is_published=True)
     elif status_filter == 'draft':
         qs = qs.filter(is_published=False)
 
@@ -159,6 +169,10 @@ def announcement_list(request):
 
     stats = get_announcement_list_stats()
 
+    supported_classes = SchoolSupportedClasses.objects.select_related('supported_class').all().order_by('supported_class__order')
+    for sc in supported_classes:
+        sc.display_name = sc.supported_class.name
+
     context = {
         'announcements':    items,
         'page_obj':         page_obj,
@@ -172,9 +186,7 @@ def announcement_list(request):
         # choice lists for filter controls
         'audience_choices': _AUDIENCE_CHOICES,
         'priority_choices': _PRIORITY_CHOICES,
-        'all_classes':      SchoolClass.objects.filter(
-                                is_active=True
-                            ).order_by('section', 'level', 'stream'),
+        'all_classes':      supported_classes,
         'now':              now,
         **stats,
     }
@@ -182,107 +194,39 @@ def announcement_list(request):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  2. ADD ANNOUNCEMENT
+#  2. ANNOUNCEMENT FORM (ADD & EDIT)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
-def announcement_add(request):
+def announcement_form(request, pk=None):
     """
-    Add a new announcement.
-    GET  — blank form; published_at pre-set to now for convenience.
-    POST — validate; save on success; re-render with per-field errors on failure.
+    Unified view to Add or Edit an announcement.
     """
+    if pk:
+        ann = get_object_or_404(SchoolAnnouncement, pk=pk)
+        action = 'edit'
+        form_title = f'Edit — {ann.title}'
+    else:
+        ann = SchoolAnnouncement()
+        action = 'add'
+        form_title = 'New Announcement'
+
     lookups = _get_form_lookups()
 
     if request.method == 'GET':
         return render(request, f'{_T}form.html', {
-            'form_title': 'New Announcement',
-            'action':     'add',
-            'post':       {},
-            'errors':     {},
+            'announcement': ann,
+            'form_title':   form_title,
+            'action':       action,
+            'post':         {},
+            'errors':       {},
             'now_str':    timezone.now().strftime('%Y-%m-%dT%H:%M'),
             **lookups,
         })
 
     # ── POST ──────────────────────────────────────────────────────────────────
-    cleaned, errors = validate_and_parse_announcement(request.POST, request.FILES)
-
-    if errors:
-        for msg in errors.values():
-            messages.error(request, msg)
-        return render(request, f'{_T}form.html', {
-            'form_title': 'New Announcement',
-            'action':     'add',
-            'post':       request.POST,
-            'errors':     errors,
-            **lookups,
-        })
-
-    try:
-        with transaction.atomic():
-            ann = SchoolAnnouncement()
-            _apply_to_instance(ann, cleaned)
-            ann.posted_by = request.user
-
-            # Auto-set published_at to now if being published without a set date
-            if ann.is_published and not ann.published_at:
-                ann.published_at = timezone.now()
-
-            # Handle attachment upload
-            if not cleaned.get('clear_attachment') and request.FILES.get('attachment'):
-                ann.attachment = request.FILES['attachment']
-
-            ann.save()
-    except Exception as exc:
-        messages.error(request, f'Could not save announcement: {exc}')
-        return render(request, f'{_T}form.html', {
-            'form_title': 'New Announcement',
-            'action':     'add',
-            'post':       request.POST,
-            'errors':     {},
-            **lookups,
-        })
-
-    messages.success(
-        request,
-        f'Announcement "{ann.title}" has been '
-        f'{"published" if ann.is_published else "saved as draft"} successfully.'
-    )
-    return redirect('school:announcement_detail', pk=ann.pk)
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  3. EDIT ANNOUNCEMENT
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@login_required
-def announcement_edit(request, pk):
-    """
-    Edit an existing announcement.
-    GET  — form pre-filled with current values.
-    POST — validate; save; re-render with errors on failure.
-
-    Attachment handling:
-        - 'clear_attachment' checkbox in POST removes the existing file.
-        - Uploading a new file replaces the existing one.
-        - Submitting without touching the file field leaves it unchanged.
-    """
-    ann     = get_object_or_404(SchoolAnnouncement, pk=pk)
-    lookups = _get_form_lookups()
-
-    if request.method == 'GET':
-        return render(request, f'{_T}form.html', {
-            'announcement': ann,
-            'form_title':   f'Edit — {ann.title}',
-            'action':       'edit',
-            'post':         {},
-            'errors':       {},
-            **lookups,
-        })
-
-    # ── POST ──────────────────────────────────────────────────────────────────
     cleaned, errors = validate_and_parse_announcement(
-        request.POST, request.FILES, instance=ann
+        request.POST, request.FILES, instance=(ann if pk else None)
     )
 
     if errors:
@@ -290,8 +234,8 @@ def announcement_edit(request, pk):
             messages.error(request, msg)
         return render(request, f'{_T}form.html', {
             'announcement': ann,
-            'form_title':   f'Edit — {ann.title}',
-            'action':       'edit',
+            'form_title':   form_title,
+            'action':       action,
             'post':         request.POST,
             'errors':       errors,
             **lookups,
@@ -299,8 +243,11 @@ def announcement_edit(request, pk):
 
     try:
         with transaction.atomic():
-            was_draft = not ann.is_published
+            was_draft = not ann.is_published if pk else True
             _apply_to_instance(ann, cleaned)
+            
+            if not pk:
+                ann.posted_by = request.user
 
             # Auto-set published_at when transitioning from draft → published
             if ann.is_published and was_draft and not ann.published_at:
@@ -318,17 +265,24 @@ def announcement_edit(request, pk):
 
             ann.save()
     except Exception as exc:
-        messages.error(request, f'Could not update announcement: {exc}')
+        messages.error(request, f'Could not save announcement: {exc}')
         return render(request, f'{_T}form.html', {
             'announcement': ann,
-            'form_title':   f'Edit — {ann.title}',
-            'action':       'edit',
+            'form_title':   form_title,
+            'action':       action,
             'post':         request.POST,
             'errors':       {},
             **lookups,
         })
 
-    messages.success(request, f'Announcement "{ann.title}" has been updated.')
+    if pk:
+        messages.success(request, f'Announcement "{ann.title}" has been updated.')
+    else:
+        messages.success(
+            request,
+            f'Announcement "{ann.title}" has been '
+            f'{"published" if ann.is_published else "saved as draft"} successfully.'
+        )
     return redirect('school:announcement_detail', pk=ann.pk)
 
 
