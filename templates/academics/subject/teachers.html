@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Teachers — {{ subject.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academics:subject_list' %}" class="text-secondary">Subjects</a></li>
+<li class="breadcrumb-item"><a href="{% url 'academics:subject_detail_info' subject.pk %}" class="text-secondary">{{ subject.code }}</a></li>
+<li class="breadcrumb-item active">Teachers</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div class="rounded bg-primary text-white d-flex align-items-center justify-content-center fw-bold fs-5"
+       style="width:56px;height:56px;">
+    {{ subject.code|slice:":3" }}
+  </div>
+  <div>
+    <h4 class="fw-bold mb-0">{{ subject.name }}</h4>
+    <div class="text-muted small">Assigned Teachers</div>
+  </div>
+</div>
+
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item"><a class="nav-link fw-semibold text-secondary" href="{% url 'academics:subject_detail_info' subject.pk %}">Info</a></li>
+  <li class="nav-item"><a class="nav-link active fw-semibold" href="{% url 'academics:subject_detail_teachers' subject.pk %}">Teachers</a></li>
+  <li class="nav-item"><a class="nav-link fw-semibold text-secondary" href="{% url 'academics:subject_detail_classes' subject.pk %}">Classes</a></li>
+</ul>
+
+<div class="card">
+  <div class="card-header py-3 fw-semibold">
+    {{ page_obj.paginator.count|default:0 }} Teacher{{ page_obj.paginator.count|pluralize }}
+  </div>
+
+  {% if teacher_subjects %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Teacher</th>
+          <th>Employee ID</th>
+          <th>Class</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ts in teacher_subjects %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center fw-bold"
+                   style="width:38px;height:38px;font-size:0.9rem;">
+                {{ ts.teacher.first_name|first }}{{ ts.teacher.last_name|first }}
+              </div>
+              <div>
+                <div class="fw-semibold">{{ ts.teacher.get_full_name }}</div>
+              </div>
+            </div>
+          </td>
+          <td><code class="fw-medium">{{ ts.teacher.username }}</code></td>
+          <td>{{ ts.school_class.supported_class.key.upper }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+    <small class="text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</small>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+        {% endif %}
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-person-x fs-1 mb-3 opacity-50"></i>
+    <p class="fw-semibold">No teachers assigned to this subject yet.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

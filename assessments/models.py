@@ -374,3 +374,62 @@ class AssessmentPerformance(TimeStampedModel):
 
 # class LowerClassesAssessmentPerfomanceEntryType(TimeStampedModel):
 #     assessment = models.ForeignKey(Assessment, related_name='lower_class_assessment_perfomance_entry_type', on_delete=models.CASCADE)
+
+
+
+
+
+class AssessmentModification(TimeStampedModel):
+    """
+    Controls which steps of an assessment are open for adding or editing.
+
+    Normal flow (edit_once=False):
+        Assessment created  → modify_class=True, all others False
+        After class saved   → modify_class=False, modify_subject=True
+        After subject saved → modify_subject=False, modify_total_mark=True
+        After total saved   → modify_total_mark=False, modify_teacher=True
+        After teacher saved → modify_teacher=False  (flow complete)
+
+    Edit-once flow (edit_once=True):
+        Admin manually turns on any combination of flags.
+        Each step, after saving, turns itself OFF.
+        When the last enabled step among (class/subject/total_mark/teacher)
+        is saved, edit_once itself is also turned OFF.
+        No chaining to next step — always redirects to assessment detail.
+    """
+    assessment        = models.OneToOneField(
+                            Assessment,
+                            on_delete=models.CASCADE,
+                            related_name='modification'
+                        )
+    modify_class      = models.BooleanField(default=True)
+    modify_subject    = models.BooleanField(default=False)
+    modify_total_mark = models.BooleanField(default=False)
+    modify_teacher    = models.BooleanField(default=False)
+    modify_performance = models.BooleanField(default=False)
+    edit_once         = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name        = 'Assessment Modification'
+        verbose_name_plural = 'Assessment Modifications'
+
+    def __str__(self):
+        return f"Modification — {self.assessment.title}"
+
+    def remaining_edit_once_steps(self):
+        """Count of still-enabled steps when in edit_once mode."""
+        return sum([
+            self.modify_class,
+            self.modify_subject,
+            self.modify_total_mark,
+            self.modify_teacher,
+        ])
+
+    def close_edit_once_if_done(self):
+        """
+        Call after turning off a step.
+        Closes edit_once if no steps remain enabled.
+        Does NOT call save() — caller must do that.
+        """
+        if self.edit_once and self.remaining_edit_once_steps() == 0:
+            self.edit_once = False

@@ -13,24 +13,28 @@ from school.views.setting_views import (
     school_profile, school_profile_edit,
     school_profile_mini, school_settings,
 )
-from school.views.requirement_views import (
-    requirement_list, requirement_add, requirement_edit,
-    requirement_delete, requirement_duplicate, requirement_toggle_published,
-)
+# from school.views.requirement_views import (
+#     requirement_list, requirement_add, requirement_edit,
+#     requirement_delete, requirement_duplicate, requirement_toggle_published,
+# )
 from school.views.announcement_views import (
-    announcement_list, announcement_edit,
+    announcement_list, announcement_edit,announcement_add,
     announcement_delete, announcement_detail, announcement_toggle_published,
 )
-from .views import announcement_add
+# from .views import announcement_add
+
+
+
+
 from school.views.event_views import (
     event_list, event_add, event_edit,
     event_delete, event_detail, event_toggle_published,
 )
-from school.views.calendar_views import (
-    calendar_list, calendar_add, calendar_edit,
-    calendar_delete, calendar_detail,
-    calendar_toggle_published, calendar_toggle_active,
-)
+# from school.views.calendar_views import (
+#     calendar_list, calendar_add, calendar_edit,
+#     calendar_delete, calendar_detail,
+#     calendar_toggle_published, calendar_toggle_active,
+# )
 
 app_name = 'school'
 
@@ -45,12 +49,12 @@ urlpatterns = [
     path('settings/',       school_settings,     name='school_settings'),
 
     # ── Requirements ─────────────────────────────────────────────────────────
-    path('requirements/',                           requirement_list,             name='requirement_list'),
-    path('requirements/add/',                       requirement_add,              name='requirement_add'),
-    path('requirements/<int:pk>/edit/',             requirement_edit,             name='requirement_edit'),
-    path('requirements/<int:pk>/delete/',           requirement_delete,           name='requirement_delete'),
-    path('requirements/<int:pk>/duplicate/',        requirement_duplicate,        name='requirement_duplicate'),
-    path('requirements/<int:pk>/toggle-published/', requirement_toggle_published, name='requirement_toggle_published'),
+    # path('requirements/',                           requirement_list,             name='requirement_list'),
+    # path('requirements/add/',                       requirement_add,              name='requirement_add'),
+    # path('requirements/<int:pk>/edit/',             requirement_edit,             name='requirement_edit'),
+    # path('requirements/<int:pk>/delete/',           requirement_delete,           name='requirement_delete'),
+    # path('requirements/<int:pk>/duplicate/',        requirement_duplicate,        name='requirement_duplicate'),
+    # path('requirements/<int:pk>/toggle-published/', requirement_toggle_published, name='requirement_toggle_published'),
 
     # ── Announcements ─────────────────────────────────────────────────────────
     path('announcements/',                           announcement_list,             name='announcement_list'),
@@ -76,11 +80,11 @@ urlpatterns = [
     #   /school/calendars/<pk>/delete/            → confirm + delete
     #   /school/calendars/<pk>/toggle-published/  → POST publish/draft
     #   /school/calendars/<pk>/toggle-active/     → POST activate/deactivate
-    path('calendars/',                           calendar_list,             name='calendar_list'),
-    path('calendars/add/',                       calendar_add,              name='calendar_add'),
-    path('calendars/<int:pk>/',                  calendar_detail,           name='calendar_detail'),
-    path('calendars/<int:pk>/edit/',             calendar_edit,             name='calendar_edit'),
-    path('calendars/<int:pk>/delete/',           calendar_delete,           name='calendar_delete'),
-    path('calendars/<int:pk>/toggle-published/', calendar_toggle_published, name='calendar_toggle_published'),
-    path('calendars/<int:pk>/toggle-active/',    calendar_toggle_active,    name='calendar_toggle_active'),
+    # path('calendars/',                           calendar_list,             name='calendar_list'),
+    # path('calendars/add/',                       calendar_add,              name='calendar_add'),
+    # path('calendars/<int:pk>/',                  calendar_detail,           name='calendar_detail'),
+    # path('calendars/<int:pk>/edit/',             calendar_edit,             name='calendar_edit'),
+    # path('calendars/<int:pk>/delete/',           calendar_delete,           name='calendar_delete'),
+    # path('calendars/<int:pk>/toggle-published/', calendar_toggle_published, name='calendar_toggle_published'),
+    # path('calendars/<int:pk>/toggle-active/',    calendar_toggle_active,    name='calendar_toggle_active'),
 ]

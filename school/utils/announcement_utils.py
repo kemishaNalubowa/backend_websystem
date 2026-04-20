@@ -1,9 +1,12 @@
+
+
 # school/utils/announcement_utils.py
 # ─────────────────────────────────────────────────────────────────────────────
-# Helpers for SchoolAnnouncement views:
-#   - Manual field validation
-#   - POST data parsing
-#   - List-level and detail statistics
+# Helpers for SchoolAnnouncement views (refactored for production).
+#
+# Fixes:
+#   • _parse_datetime now uses field_key for errors dict → matches template checks (published_at / expires_at)
+#   • All other logic unchanged and fully compatible with SchoolAnnouncement model
 # ─────────────────────────────────────────────────────────────────────────────
 
 from datetime import datetime
@@ -39,12 +42,13 @@ PRIORITY_ORDER = {'critical': 0, 'urgent': 1, 'normal': 2}
 #  DATE PARSING
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _parse_datetime(value: str, field_label: str, errors: dict):
+def _parse_datetime(value: str, field_key: str, errors: dict):
     """
     Parse a datetime string from POST data.
     Accepts: 'YYYY-MM-DDTHH:MM' (HTML datetime-local input format)
     or       'YYYY-MM-DD HH:MM'
     Returns a timezone-naive datetime or None.
+    Error key matches the field name used in templates (published_at / expires_at).
     """
     value = (value or '').strip()
     if not value:
@@ -54,7 +58,7 @@ def _parse_datetime(value: str, field_label: str, errors: dict):
             return datetime.strptime(value, fmt)
         except ValueError:
             continue
-    errors[field_label] = f'{field_label} is not a valid date/time (use YYYY-MM-DD HH:MM).'
+    errors[field_key] = f'{field_key.replace("_", " ").title()} is not a valid date/time (use YYYY-MM-DD HH:MM).'
     return None
 
 
@@ -131,11 +135,11 @@ def validate_and_parse_announcement(
     )
 
     # ── published_at ──────────────────────────────────────────────────────────
-    published_at = _parse_datetime(post.get('published_at'), 'Publish date/time', errors)
+    published_at = _parse_datetime(post.get('published_at'), 'published_at', errors)
     cleaned['published_at'] = published_at
 
     # ── expires_at ────────────────────────────────────────────────────────────
-    expires_at = _parse_datetime(post.get('expires_at'), 'Expiry date/time', errors)
+    expires_at = _parse_datetime(post.get('expires_at'), 'expires_at', errors)
     cleaned['expires_at'] = expires_at
 
     # Cross-field: expiry must be after published_at if both set
@@ -295,3 +299,4 @@ def get_announcement_detail_stats(announcement: SchoolAnnouncement) -> dict:
         'priority_label':     PRIORITY_LABELS.get(announcement.priority, announcement.priority),
         'priority_order':     PRIORITY_ORDER.get(announcement.priority, 99),
     }
+

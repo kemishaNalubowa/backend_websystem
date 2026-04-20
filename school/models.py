@@ -92,64 +92,6 @@ class SchoolSetting(models.Model):
 
 # ─────────────────────────────────────────────────────────────────────────────
 
-class SchoolRequirement(TimeStampedModel):
-    """
-    Items required of students for a given term/class.
-    E.g. scholastic materials, uniform items, stationery lists.
-    Published to parents at the start of each term.
-    """
-    CATEGORY_CHOICES = [
-        ('stationery',  'Stationery'),
-        ('uniform',     'School Uniform'),
-        ('scholastic',  'Scholastic Materials / Books'),
-        ('sports',      'Sports / P.E. Kit'),
-        ('equipment',   'Equipment / Tools'),
-        ('other',       'Other'),
-    ]
-
-    title         = models.CharField(max_length=200)
-    description   = models.TextField()
-    category      = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
-    school_class  = models.ForeignKey(
-                        'academics.SchoolClass',
-                        on_delete=models.CASCADE,
-                        null=True, blank=True,
-                        related_name='requirements',
-                        help_text='Leave blank if this requirement applies to all classes'
-                    )
-    school_stream = models.ForeignKey(
-                        SchoolStream, on_delete=models.CASCADE,
-                        related_name='requirements',
-                        null=True, blank=True
-                    )
-    
-    term          = models.ForeignKey(
-                        'academics.Term',
-                        on_delete=models.SET_NULL,
-                        null=True, blank=True,
-                        related_name='requirements'
-                    )
-    estimated_cost = models.DecimalField(max_digits=10, decimal_places=2,
-                         null=True, blank=True,
-                         help_text='Estimated cost in UGX (optional)')
-    is_compulsory  = models.BooleanField(default=True)
-    is_published   = models.BooleanField(default=False)
-    created_by     = models.ForeignKey(
-                         CustomUser,
-                         on_delete=models.SET_NULL,
-                         null=True,
-                         related_name='requirements_created'
-                     )
-
-    class Meta:
-        verbose_name        = 'School Requirement'
-        verbose_name_plural = 'School Requirements'
-        ordering            = ['term', 'school_class', 'category']
-
-    def __str__(self):
-        target = str(self.school_class) if self.school_class else 'All Classes'
-        return f"{self.title} | {target} | {self.get_category_display()}"
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -238,18 +180,12 @@ class SchoolEvent(TimeStampedModel):
     is_whole_school = models.BooleanField(default=True,
                           help_text='Does this event involve the whole school?')
     school_classes  = models.ManyToManyField(
-                          'academics.SchoolClass',
+                          SchoolSupportedClasses,
                           blank=True,
                           related_name='events',
                           help_text='Specific classes involved (if not whole-school)'
                       )
-    
-    school_stream = models.ForeignKey(
-                        SchoolStream, on_delete=models.CASCADE,
-                        related_name='events',
-                        null=True, blank=True
-                    )
-    
+
 
     is_published    = models.BooleanField(default=False)
     attachment      = models.FileField(upload_to='events/', blank=True, null=True,
@@ -269,41 +205,3 @@ class SchoolEvent(TimeStampedModel):
     def __str__(self):
         return f"{self.title} | {self.start_date} — {self.get_event_type_display()}"
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-
-class SchoolCalendar(TimeStampedModel):
-    """
-    Published academic calendar for a given term / academic year.
-    Typically a school issues a calendar at the start of each term
-    outlining term dates, exams, events, and holidays.
-    """
-    title         = models.CharField(max_length=200,
-                        help_text='E.g. "Term 1 2026 Academic Calendar"')
-    academic_year = models.CharField(max_length=9, help_text='E.g. 2025/2026')
-    term          = models.ForeignKey(
-                        'academics.Term',
-                        on_delete=models.CASCADE,
-                        related_name='calendar_entries'
-                    )
-    description   = models.TextField(blank=True)
-    document      = models.FileField(upload_to='calendars/', blank=True, null=True,
-                        help_text='Upload a PDF or image of the printed school calendar')
-    is_active     = models.BooleanField(default=True)
-    is_published  = models.BooleanField(default=False,
-                        help_text='Visible to parents and staff on the portal')
-    published_at  = models.DateTimeField(null=True, blank=True)
-    created_by    = models.ForeignKey(
-                        CustomUser,
-                        on_delete=models.SET_NULL,
-                        null=True,
-                        related_name='calendars_created'
-                    )
-
-    class Meta:
-        verbose_name        = 'School Calendar'
-        verbose_name_plural = 'School Calendars'
-        ordering            = ['-academic_year', 'term__name']
-
-    def __str__(self):
-        return f"{self.title} ({self.academic_year})"

@@ -19,7 +19,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from academics.models import base
-from academics.models import Subject,ClassSubject
+from academics.models import Subject,ClassSubject,TeacherSubject
 from academics.utils.subject_utils import (
     get_subject_classes_stats,
     get_subject_info_stats,
@@ -30,7 +30,7 @@ from academics.utils.subject_utils import (
     # LEVEL_DISPLAY,
 )
 
-_T = 'academics/subjects/'
+_T = 'academics/subject/'
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -337,153 +337,81 @@ def subject_toggle_active(request, pk):
 #  6. SUBJECT INFO PAGE
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# from django.shortcuts import render, get_object_or_404
+# from django.contrib.auth.decorators import login_required
+# from django.core.paginator import Paginator
+# from django.db.models import Q
+
+# Assuming these are your models
+# from .models import Subject, TeacherSubject, ClassSubject
+
+
+
 @login_required
 def subject_detail_info(request, pk):
-    """
-    Standalone subject info page.
-    Shows all core fields, current term teaching status,
-    class + teacher counts, and primary teacher.
-    Links out to the teachers and classes pages.
-    """
     subject = get_object_or_404(Subject, pk=pk)
-    # stats   = get_subject_info_stats(subject)
+
+    teacher_count = subject.subject_teachers.count()
+    class_count = subject.class_subjects.count()
 
     context = {
-        'subject':       subject,
-        # 'level_display': LEVEL_DISPLAY.get(subject.level, subject.level),
-        'page_title':    f'{subject.name} ({subject.code})',
-        # **stats,
+        'subject': subject,
+        'teacher_count': teacher_count,
+        'class_count': class_count,
     }
     return render(request, f'{_T}info.html', context)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  7. SUBJECT TEACHERS PAGE
-# ═══════════════════════════════════════════════════════════════════════════════
-
 @login_required
 def subject_detail_teachers(request, pk):
-    """
-    Standalone page — all teachers assigned to this subject.
-    Shows TeacherSubject records, current term active assignments,
-    historical class/term counts, and qualification breakdown.
-
-    Filters:
-      ?primary=1     — primary/specialist teachers only
-      ?active_only=1 — only those with a current-term assignment
-      ?q=search      — search by teacher name or employee ID
-    """
     subject = get_object_or_404(Subject, pk=pk)
-    stats   = get_subject_teachers_stats(subject)
 
-    # ── Filters ───────────────────────────────────────────────────────────────
-    primary_filter      = request.GET.get('primary', '').strip()
-    active_only_filter  = request.GET.get('active_only', '').strip()
-    search              = request.GET.get('q', '').strip()
+    teacher_subjects = TeacherSubject.objects.filter(subject=subject)
 
-    teacher_subjects = stats['teacher_subjects']
+    
 
-    if primary_filter == '1':
-        teacher_subjects = teacher_subjects.filter(is_primary=True)
-
-    if active_only_filter == '1' and stats['current_term']:
-        from academics.models import TeacherClass
-        active_teacher_ids = TeacherClass.objects.filter(
-            subject=subject,
-            term=stats['current_term'],
-            is_active=True,
-        ).values_list('teacher_id', flat=True)
-        teacher_subjects = teacher_subjects.filter(teacher_id__in=active_teacher_ids)
-
+    # Simple search only (removed complex filters as per your request)
+    search = request.GET.get('q', '').strip()
     if search:
         teacher_subjects = teacher_subjects.filter(
             Q(teacher__user__first_name__icontains=search) |
-            Q(teacher__user__last_name__icontains=search)  |
+            Q(teacher__user__last_name__icontains=search) |
             Q(teacher__employee_id__icontains=search)
         )
 
     paginator = Paginator(teacher_subjects, 20)
-    page_obj  = paginator.get_page(request.GET.get('page', 1))
+    page_obj = paginator.get_page(request.GET.get('page', 1))
 
     context = {
-        'subject':            subject,
-        'level_display':      LEVEL_DISPLAY.get(subject.level, subject.level),
-        'page_title':         f'Teachers — {subject.name} ({subject.code})',
-        **stats,
-        'teacher_subjects':   page_obj.object_list,
-        'page_obj':           page_obj,
-        'primary_filter':     primary_filter,
-        'active_only_filter': active_only_filter,
-        'search':             search,
+        'subject': subject,
+        'teacher_subjects': page_obj.object_list,
+        'page_obj': page_obj,
+        'search': search,
     }
     return render(request, f'{_T}teachers.html', context)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  8. SUBJECT CLASSES PAGE
-# ═══════════════════════════════════════════════════════════════════════════════
-
 @login_required
 def subject_detail_classes(request, pk):
-    """
-    Standalone page — all classes assigned to this subject.
-    Shows ClassSubject records, current term assignments with teacher names,
-    section/level breakdown, and EOT average marks per class.
-
-    Filters:
-      ?section=nursery|primary
-      ?level=p1|p2|...
-      ?active=1|0
-      ?q=search
-    """
     subject = get_object_or_404(Subject, pk=pk)
-    stats   = get_subject_classes_stats(subject)
 
-    # ── Filters ───────────────────────────────────────────────────────────────
-    section_filter = request.GET.get('section', '').strip()
-    level_filter   = request.GET.get('level', '').strip()
-    active_filter  = request.GET.get('active', '').strip()
-    search         = request.GET.get('q', '').strip()
+    class_subjects = subject.class_subjects.select_related('school_class__supported_class')
 
-    class_subjects = stats['class_subjects']
-
-    if section_filter:
-        class_subjects = class_subjects.filter(school_class__section=section_filter)
-
-    if level_filter:
-        class_subjects = class_subjects.filter(school_class__level=level_filter)
-
-    if active_filter == '1':
-        class_subjects = class_subjects.filter(is_active=True)
-    elif active_filter == '0':
-        class_subjects = class_subjects.filter(is_active=False)
-
+    # Simple search only
+    search = request.GET.get('q', '').strip()
     if search:
         class_subjects = class_subjects.filter(
-            Q(school_class__level__icontains=search) |
-            Q(school_class__stream__icontains=search)
+            Q(school_class__supported_class__name__icontains=search) |
+            Q(school_class__supported_class__key__icontains=search)
         )
 
     paginator = Paginator(class_subjects, 20)
-    page_obj  = paginator.get_page(request.GET.get('page', 1))
-
-    CLASS_LEVEL_CHOICES = [
-        ('baby', 'Baby Class'), ('middle', 'Middle Class'), ('top', 'Top Class'),
-        ('p1', 'P1'), ('p2', 'P2'), ('p3', 'P3'), ('p4', 'P4'),
-        ('p5', 'P5'), ('p6', 'P6'), ('p7', 'P7'),
-    ]
+    page_obj = paginator.get_page(request.GET.get('page', 1))
 
     context = {
-        'subject':        subject,
-        # 'level_display':  LEVEL_DISPLAY.get(subject.level, subject.level),
-        'page_title':     f'Classes — {subject.name} ({subject.code})',
-        **stats,
+        'subject': subject,
         'class_subjects': page_obj.object_list,
-        'page_obj':       page_obj,
-        'section_filter': section_filter,
-        'level_filter':   level_filter,
-        'active_filter':  active_filter,
-        'search':         search,
-        'level_choices':  CLASS_LEVEL_CHOICES,
+        'page_obj': page_obj,
+        'search': search,
     }
     return render(request, f'{_T}classes.html', context)

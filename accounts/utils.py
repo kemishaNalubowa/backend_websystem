@@ -380,11 +380,16 @@ from academics.models import ClassSubject
 
 def get_selected_clases_subjects(subjects):
     classes_subjects = []
+
+    print ("SUBJECTS: ",subjects)
     for s in subjects:
         for k,v in s.items():
             cls_subjects = ClassSubject.objects.filter(
-                school_class__supported_class__key = v
+                school_class__supported_class__key = str(v).strip().lower()
             )
+
+            print("CLASS SUBJECTS", )
+
 
             if cls_subjects:
                 class_s = []
