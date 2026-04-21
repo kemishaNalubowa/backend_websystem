@@ -106,6 +106,10 @@
             </strong>
         </div>
         <div class="card-body">
+
+            {{ fees_list }}
+
+
             {% if fees_list %}
             <form method="post">
                 {% csrf_token %}

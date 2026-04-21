@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ requirement.item_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 760px;">
+
+  <div class="d-flex align-items-center mb-4">
+    <a href="{% url 'fees:scholastic_requirements_list' %}" class="btn btn-outline-secondary btn-sm me-3">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h4 class="mb-0 fw-semibold">{{ requirement.item_name }}</h4>
+    <span class="ms-3 badge {% if requirement.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+      {% if requirement.is_active %}Active{% else %}Inactive{% endif %}
+    </span>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+
+      <div class="row g-3">
+        <div class="col-sm-6">
+          <p class="text-muted small mb-1">Term</p>
+          <p class="fw-semibold mb-0">{{ requirement.term }}</p>
+        </div>
+        <div class="col-sm-6">
+          <p class="text-muted small mb-1">Quantity Required</p>
+          <p class="fw-semibold mb-0">{{ requirement.quantity }} {{ requirement.get_unit_display }}</p>
+        </div>
+        <div class="col-sm-6">
+          <p class="text-muted small mb-1">Cash Equivalent (UGX)</p>
+          <p class="fw-semibold mb-0">{{ requirement.monetary_value|floatformat:0 }}</p>
+        </div>
+        <div class="col-sm-6">
+          <p class="text-muted small mb-1">Unit Price (UGX)</p>
+          <p class="fw-semibold mb-0">{{ requirement.unit_price|floatformat:0 }}</p>
+        </div>
+        {% if requirement.description %}
+        <div class="col-12">
+          <p class="text-muted small mb-1">Instructions</p>
+          <p class="mb-0">{{ requirement.description }}</p>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+ 
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-bottom py-3">
+      <h6 class="mb-0 fw-semibold">Assigned Classes</h6>
+    </div>
+    <div class="card-body p-4">
+      {% if assigned_classes %}
+        <div class="d-flex flex-wrap gap-2">
+          {% for bridge in assigned_classes %}
+            <span class="badge bg-secondary fs-6 px-3 py-2">{{ bridge.school_class }}</span>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted mb-0">No classes assigned yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+
+  <div class="d-flex gap-2 flex-wrap">
+
+    <a href="{% url 'fees:edit_scholastic_requirements' requirement.pk %}"
+       class="btn btn-primary btn-sm">
+      <i class="bi bi-pencil me-1"></i> Edit
+    </a>
+
+  
+    <form method="post" action="{% url 'fees:toggle_scholastic_requirement' requirement.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-secondary btn-sm">
+        {% if requirement.is_active %}
+          <i class="bi bi-pause-circle me-1"></i> Deactivate
+        {% else %}
+          <i class="bi bi-play-circle me-1"></i> Activate
+        {% endif %}
+      </button>
+    </form>
+
+   
+    <a href="{% url 'fees:delete_scholastic_requirement' requirement.pk %}"
+       class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-trash me-1"></i> Delete
+    </a>
+
+  </div>
+
+</div>
+{% endblock %}

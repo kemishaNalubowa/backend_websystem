@@ -190,6 +190,18 @@ def add_assessment(request):
             assessment.created_by = request.user
             assessment.save()
 
+
+            # ← Create modification record with only class step open
+            AssessmentModification.objects.create(
+                assessment        = assessment,
+                modify_class      = True,   # first step open
+                modify_subject    = False,
+                modify_total_mark = False,
+                modify_teacher    = False,
+                modify_performance = False,
+                edit_once         = False,
+            )
+
             request.session.pop('add_assessment_data', None)
             messages.success(request, f'Assessment "{assessment.title}" created successfully.')
             return redirect('assessments:detail', pk=assessment.pk)

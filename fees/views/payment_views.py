@@ -265,7 +265,7 @@ from django.shortcuts import redirect, render
 from fees.models import (
     AssessmentFees, FeesClass, FeesPayment, SchoolFees,
     SchoolScholasticRequirements, ScholasticRequirementClass,
-    StudentFeesPaymentsStatus, StudentScholasticRequirementStatus,
+    StudentFeesPaymentsStatus, StudentScholasticRequirementStatus,ScholasticRequirementPayment
 )
 from fees.utils.payment_utils import generate_receipt_number
 from students.models import Student
@@ -291,6 +291,106 @@ def _clear_session(request):
     for key in _ALL_KEYS:
         request.session.pop(key, None)
     request.session.modified = True
+
+
+
+def _get_old_payments_details(student, payment_type, payment_type_obj):
+    """
+    payment_type_obj is:
+      - a FeesClass instance           (for 'school' and 'assessment')
+      - a ScholasticRequirementClass   (for 'scholastic')
+    """
+
+    payments_list  = []
+    payment_status = {}
+
+    # ── School fees ───────────────────────────────────────────────────────
+    if payment_type == "school":
+        fee_obj = payment_type_obj.fees   # FeesClass → SchoolFees
+
+        status = (
+            StudentFeesPaymentsStatus.objects
+            .filter(student=student, school_fees=fee_obj, fully_paid=False)
+            .first()
+        )
+        payments = FeesPayment.objects.filter(student=student, school_fees=fee_obj)
+
+        if status:
+            payment_status = {
+                "amount_paid":    float(status.amount_paid) or "0.00",
+                "amount_balance": float(status.amount_balance) or "0.00",
+            }
+        for p in payments:
+            payments_list.append({
+                "id":     p.receipt_number,
+                "date":   f'{p.payment_date}',
+                "amount": float(p.amount) or "0.00",
+            })
+
+    # ── Assessment fees ───────────────────────────────────────────────────
+    elif payment_type == "assessment":
+        fee_obj = payment_type_obj.assessment_fee   # FeesClass → AssessmentFees
+
+        status = (
+            StudentFeesPaymentsStatus.objects
+            .filter(student=student, assessment_fees=fee_obj, fully_paid=False)
+            .first()
+        )
+        payments = FeesPayment.objects.filter(student=student, assessment_fees=fee_obj)
+
+        if status:
+            payment_status = {
+                "amount_paid":    float(status.amount_paid) or '0.00',
+                "amount_balance": float(status.amount_balance) or '0.00',
+            }
+        for p in payments:
+            payments_list.append({
+                "id":     p.receipt_number,
+                "date":   f'{p.payment_date}',
+                "amount": float(p.amount) or '0.00'
+            })
+
+    # ── Scholastic requirements ───────────────────────────────────────────
+    elif payment_type == "scholastic":
+        req_obj = payment_type_obj.requirement   # ScholasticRequirementClass → SchoolScholasticRequirements
+
+        status = (
+            StudentScholasticRequirementStatus.objects
+            .filter(student=student, requirement=req_obj, fully_met=False)
+            .first()
+        )
+        payments = ScholasticRequirementPayment.objects.filter(
+            student=student, requirement=req_obj
+        )
+
+        if status:
+            payment_status = {
+                "quantity_brought":   status.quantity_brought,
+                "amount_paid_ugx":    float(status.amount_paid_ugx) or '0.00',
+                "amount_balance_ugx": float(status.amount_balance_ugx) or '0.00',
+                "last_brought_on":    f'{status.last_brought_on}',
+                "last_paid_on":       f'{status.last_paid_on}',
+            }
+        for p in payments:
+            payments_list.append({
+                "receipt_number":  p.receipt_number,
+                "date":            f'{p.payment_date}',
+                "brought_item":    p.brought_item,
+                "items_brought":   p.items_brought,
+                "brought_cash":    p.brought_cash,
+                "amount_paid_ugx": float(p.amount_paid_ugx) or '0.00',
+            })
+
+    return {
+        "status":   payment_status,
+        "payments": payments_list,
+    }
+
+
+
+
+
+
 
 
 @login_required
@@ -365,45 +465,71 @@ def add_payment(request):
                     if fc.fees.fees_type != "other"
                     else (fc.fees.title or fc.fees.get_fees_type_display())
                 )
+
+                payment_ = _get_old_payments_details(
+                    student=student,
+                    payment_type=payment_type,
+                    payment_type_obj=fc
+                )
+
                 fees_list.append({
                     "id":     fc.fees.pk,
                     "type":   fee_type,
                     "term":   fc.fees.term.name,
                     "amount": float(fc.fees.amount),
+                    **payment_
                 })
+
+
+
+                
+
 
         elif payment_type == "assessment":
             qs = FeesClass.objects.filter(
                 school_class=current_class,
                 assessment_fee__isnull=False,
             ).select_related("assessment_fee", "assessment_fee__assessment", "assessment_fee__term")
-            fees_list = [
-                {
-                    "id":     fc.assessment_fee.pk,
-                    "name":   fc.assessment_fee.assessment.title,
-                    "term":   fc.assessment_fee.term.name,
-                    "amount": float(fc.assessment_fee.amount),
-                }
-                for fc in qs if fc.assessment_fee.amount is not None
-            ]
+            for fc in qs:
+                if fc.assessment_fee.amount is not None:
+                    payment_ = _get_old_payments_details(
+                        student=student,
+                        payment_type=payment_type,
+                        payment_type_obj=fc
+                    )
+                    fees_list.append(
+                        {
+                            "id":     fc.assessment_fee.pk,
+                            "name":   fc.assessment_fee.assessment.title,
+                            "term":   fc.assessment_fee.term.name,
+                            "amount": float(fc.assessment_fee.amount),
+                            **payment_
+                        }
+                        
+                    )
 
         elif payment_type == "scholastic":
             qs = ScholasticRequirementClass.objects.filter(
                 school_class=current_class,
                 requirement__is_active=True,
             ).select_related("requirement", "requirement__term")
-            fees_list = [
-                {
-                    "id":              rc.requirement.pk,
-                    "name":            rc.requirement.item_name,
-                    "term":            rc.requirement.term.name,
-                    "quantity_needed": rc.requirement.quantity,
-                    "unit":            rc.requirement.get_unit_display(),
-                    "monetary_value":  float(rc.requirement.monetary_value),
-                    "unit_price":      float(rc.requirement.unit_price),
-                }
-                for rc in qs
-            ]
+
+            for rc in qs:
+                payment_= _get_old_payments_details(
+                    student=student,
+                    payment_type=payment_type,
+                    payment_type_obj=rc
+                )
+                fees_list.append({
+                        "id":              rc.requirement.pk,
+                        "name":            rc.requirement.item_name,
+                        "term":            rc.requirement.term.name,
+                        "quantity_needed": rc.requirement.quantity,
+                        "unit":            rc.requirement.get_unit_display(),
+                        "monetary_value":  float(rc.requirement.monetary_value),
+                        "unit_price":      float(rc.requirement.unit_price),
+                        **payment_
+                    })
 
         request.session["payment_part1_done"] = True
         request.session["payment_type"]       = payment_type

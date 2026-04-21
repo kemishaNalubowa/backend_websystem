@@ -35,6 +35,16 @@ from fees.views.payment_add_views import (
 
 
 
+from fees.views.scholastic_requirements_views import (
+    scholastic_requirements_list,
+    add_scholastic_requirements,
+    scholastic_requirements_detail,
+    delete_scholastic_requirement,
+    toggle_scholastic_requirement,
+) 
+
+
+
 app_name = 'fees'
 
 urlpatterns = [
@@ -90,5 +100,13 @@ urlpatterns = [
     path('payments/add/step2/', payment_add_step2, name='payment_add_step2'),
     path('payments/add/step3/', payment_add_step3, name='payment_add_step3'),
     path('payments/add/step4/', payment_add_step4, name='payment_add_step4'),
+
+
+    path('scholastic-requirements/',                              scholastic_requirements_list,      name='scholastic_requirements_list'),
+    path('scholastic-requirements/add/',                          add_scholastic_requirements,       name='add_scholastic_requirements'),
+    path('scholastic-requirements/<int:pk>/edit/',                add_scholastic_requirements,       name='edit_scholastic_requirements'),
+    path('scholastic-requirements/<int:pk>/',                     scholastic_requirements_detail,    name='scholastic_requirements_detail'),
+    path('scholastic-requirements/<int:pk>/delete/',              delete_scholastic_requirement,     name='delete_scholastic_requirement'),
+    path('scholastic-requirements/<int:pk>/toggle/',              toggle_scholastic_requirement,     name='toggle_scholastic_requirement'),
 
 ]

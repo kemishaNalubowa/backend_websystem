@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Delete {{ requirement.item_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 520px;">
+
+  <div class="card border-danger border-0 shadow-sm">
+    <div class="card-body p-4 text-center">
+
+      <i class="bi bi-exclamation-triangle-fill text-danger fs-1 mb-3 d-block"></i>
+      <h5 class="fw-semibold mb-1">Delete Scholastic Requirement?</h5>
+      <p class="text-muted mb-1">
+        You are about to permanently delete
+        <strong>{{ requirement.item_name }}</strong>
+        ({{ requirement.term }}).
+      </p>
+      <p class="text-danger small mb-4">
+        This will also remove all class assignments and any student status records linked to it.
+      </p>
+
+      <div class="d-flex gap-2 justify-content-center">
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Yes, Delete</button>
+        </form>
+        <a href="{% url 'fees:scholastic_requirements_detail' requirement.pk %}"
+           class="btn btn-outline-secondary">Cancel</a>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}{% if requirement %}Edit{% else %}Add{% endif %} Scholastic Requirement{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 760px;">
+
+  <div class="d-flex align-items-center mb-4">
+    <a href="{% url 'fees:scholastic_requirements_list' %}" class="btn btn-outline-secondary btn-sm me-3">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h4 class="mb-0 fw-semibold">
+      {% if requirement %}Edit Requirement{% else %}Add Scholastic Requirement{% endif %}
+    </h4>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+
+      <form method="post">
+        {% csrf_token %}
+
+       
+        <div class="mb-3">
+          <label for="id_term" class="form-label fw-semibold">Term <span class="text-danger">*</span></label>
+          <select name="term" id="id_term"
+                  class="form-select {% if errors.term %}is-invalid{% endif %}">
+            <option value="">— Select Term —</option>
+            {% for term in terms %}
+              <option value="{{ term.pk }}"
+                {% if post.term == term.pk|stringformat:"s" %}selected
+                {% elif not post and requirement and requirement.term_id == term.pk %}selected
+                {% endif %}>
+                {{ term }}
+              </option>
+            {% endfor %}
+          </select>
+          {% if errors.term %}
+            <div class="invalid-feedback">{{ errors.term }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label for="id_item_name" class="form-label fw-semibold">Item Name <span class="text-danger">*</span></label>
+          <input type="text" name="item_name" id="id_item_name" maxlength="150"
+                 class="form-control {% if errors.item_name %}is-invalid{% endif %}"
+                 value="{% if post %}{{ post.item_name }}{% elif requirement %}{{ requirement.item_name }}{% endif %}"
+                 placeholder="e.g. Broom, A4 Ream, Graph book">
+          {% if errors.item_name %}
+            <div class="invalid-feedback">{{ errors.item_name }}</div>
+          {% endif %}
+        </div>
+
+       
+        <div class="row g-3 mb-3">
+          <div class="col-sm-4">
+            <label for="id_quantity" class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
+            <input type="number" name="quantity" id="id_quantity" min="1"
+                   class="form-control {% if errors.quantity %}is-invalid{% endif %}"
+                   value="{% if post %}{{ post.quantity }}{% elif requirement %}{{ requirement.quantity }}{% endif %}"
+                   placeholder="e.g. 2">
+            {% if errors.quantity %}
+              <div class="invalid-feedback">{{ errors.quantity }}</div>
+            {% endif %}
+          </div>
+          <div class="col-sm-8">
+            <label for="id_unit" class="form-label fw-semibold">Unit <span class="text-danger">*</span></label>
+            <select name="unit" id="id_unit"
+                    class="form-select {% if errors.unit %}is-invalid{% endif %}">
+              <option value="">— Select Unit —</option>
+              {% for val, label in unit_choices %}
+                <option value="{{ val }}"
+                  {% if post.unit == val %}selected
+                  {% elif not post and requirement and requirement.unit == val %}selected
+                  {% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+            {% if errors.unit %}
+              <div class="invalid-feedback">{{ errors.unit }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        
+        <div class="mb-3">
+          <label for="id_monetary_value" class="form-label fw-semibold">
+            Cash Equivalent (UGX) <span class="text-danger">*</span>
+          </label>
+          <div class="input-group">
+            <span class="input-group-text">UGX</span>
+            <input type="number" name="monetary_value" id="id_monetary_value" min="0" step="any"
+                   class="form-control {% if errors.monetary_value %}is-invalid{% endif %}"
+                   value="{% if post %}{{ post.monetary_value }}{% elif requirement %}{{ requirement.monetary_value }}{% endif %}"
+                   placeholder="e.g. 3000">
+            {% if errors.monetary_value %}
+              <div class="invalid-feedback">{{ errors.monetary_value }}</div>
+            {% endif %}
+          </div>
+          <div class="form-text">Full cash amount a student can pay instead of bringing the items.</div>
+        </div>
+
+     
+        <div class="mb-4">
+          <label for="id_description" class="form-label fw-semibold">Description / Instructions</label>
+          <textarea name="description" id="id_description" rows="2"
+                    class="form-control"
+                    placeholder="e.g. Short-handle brooms only">{% if post %}{{ post.description }}{% elif requirement %}{{ requirement.description }}{% endif %}</textarea>
+        </div>
+
+        
+        <div class="mb-4">
+          <label class="form-label fw-semibold">
+            Applicable Classes <span class="text-danger">*</span>
+          </label>
+          {% if errors.classes %}
+            <div class="text-danger small mb-2">{{ errors.classes }}</div>
+          {% endif %}
+          <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-2">
+            {% for cls in supported_classes %}
+              <div class="col border-0 ">
+                <div class="form-check  border rounded p-2">
+                  <input class="form-check-input ms-1 " type="checkbox"
+                         name="class_{{ cls.supported_class.key|lower }}"
+                         id="cls_{{ cls.pk }}"
+                         value="1"
+                         {% if cls.pk in checked_pks %}checked{% endif %}>
+                  <label class="form-check-label ms-2" for="cls_{{ cls.pk }}">
+                    {{ cls }}
+                  </label>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            {% if requirement %}Save Changes{% else %}Add Requirement{% endif %}
+          </button>
+          <a href="{% url 'fees:scholastic_requirements_list' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Scholastic Requirements{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <h4 class="mb-0 fw-semibold">Scholastic Requirements</h4>
+    <a href="{% url 'fees:add_scholastic_requirements' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i> Add Requirement
+    </a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+
+  <form method="get" class="row g-2 align-items-end mb-4">
+    <div class="col-auto">
+      <label for="termFilter" class="form-label mb-1 small text-muted">Filter by Term</label>
+      <select name="term" id="termFilter" class="form-select form-select-sm" style="min-width:200px;">
+        <option value="">All Terms</option>
+        {% for term in terms %}
+          <option value="{{ term.pk }}" {% if term_id == term.pk|stringformat:"s" %}selected{% endif %}>
+            {{ term }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-outline-secondary btn-sm">Filter</button>
+      {% if term_id %}
+        <a href="{% url 'fees:scholastic_requirements_list' %}" class="btn btn-link btn-sm">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if requirements %}
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Item</th>
+            <th>Term</th>
+            <th>Quantity / Unit</th>
+            <th>Cash Value (UGX)</th>
+            <th>Classes</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in requirements %}
+          <tr>
+            <td class="text-muted small">{{ forloop.counter }}</td>
+            <td class="fw-semibold">{{ req.item_name }}</td>
+            <td>{{ req.term }}</td>
+            <td>{{ req.quantity }} {{ req.get_unit_display }}</td>
+            <td>{{ req.monetary_value|floatformat:0 }}</td>
+            <td>
+              {% for bridge in req.assigned_classes.all %}
+                <span class="badge bg-secondary me-1">{{ bridge.school_class }}</span>
+              {% empty %}
+                <span class="text-muted small">—</span>
+              {% endfor %}
+            </td>
+            <td>
+              {% if req.is_active %}
+                <span class="badge bg-success">Active</span>
+              {% else %}
+                <span class="badge bg-secondary">Inactive</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'fees:scholastic_requirements_detail' req.pk %}"
+                 class="btn btn-outline-primary btn-sm">View</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+      No scholastic requirements found.
+      {% if not term_id %}
+        <div class="mt-2">
+          <a href="{% url 'fees:add_scholastic_requirements' %}">Add the first one</a>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

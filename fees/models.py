@@ -247,7 +247,7 @@ class FeesPayment(TimeStampedModel):
 
     Exactly one of school_fees / assessment_fees must be non-null.
     Enforced in clean().
-    """
+    """ 
 
     receipt_number  = models.CharField(
                           max_length=30, unique=True,
@@ -590,6 +590,134 @@ class ScholasticRequirementClass(TimeStampedModel):
         return f"{self.requirement.item_name} → {self.school_class}"
 
 
+
+
+
+class ScholasticRequirementPayment(TimeStampedModel):
+    """
+    One transaction event toward a scholastic requirement.
+    A single event can be:
+        (A) Physical only  — student brings items, no cash
+        (B) Cash only      — student pays cash, no items
+        (C) Mixed          — student brings some items AND pays some cash
+
+    At least one of brought_item / brought_cash must be True (enforced in clean()).
+
+    After saving, the view/util MUST recompute StudentScholasticRequirementStatus
+    for the same (student, requirement):
+
+        status.quantity_brought   += items_brought
+        status.amount_paid_ugx    += amount_paid_ugx (or 0 if cash not involved)
+        physical_credit            = status.quantity_brought * requirement.unit_price
+        balance                    = max(0,
+                                         requirement.monetary_value
+                                         - physical_credit
+                                         - status.amount_paid_ugx)
+        status.amount_balance_ugx  = balance
+        status.fully_met           = balance == 0
+        if status.fully_met and not status.fully_met_on:
+            status.fully_met_on    = payment_date
+        status.last_brought_on     = payment_date  (if brought_item)
+        status.last_paid_on        = payment_date  (if brought_cash)
+        status.save()
+    """
+
+    receipt_number  = models.CharField(
+                          max_length=30, unique=True,
+                          help_text='Auto-generated e.g. SRP2025001'
+                      )
+    student         = models.ForeignKey(
+                          'students.Student',
+                          on_delete=models.CASCADE,
+                          related_name='scholastic_payment_records'
+                      )
+    requirement     = models.ForeignKey(
+                          SchoolScholasticRequirements,
+                          on_delete=models.CASCADE,
+                          related_name='payment_records'
+                      )
+    school_class    = models.ForeignKey(
+                          SchoolSupportedClasses,
+                          on_delete=models.CASCADE,
+                          related_name='scholastic_payment_records',
+                          help_text="Student's class AT THE TIME of this transaction"
+                      )
+
+    # ── Physical side ─────────────────────────────────────────────────────────
+    brought_item    = models.BooleanField(
+                          default=False,
+                          help_text='True if physical items were received in this transaction'
+                      )
+    items_brought   = models.PositiveIntegerField(
+                          default=0,
+                          help_text='Number of physical units received in this transaction'
+                      )
+
+    # ── Cash side ─────────────────────────────────────────────────────────────
+    brought_cash    = models.BooleanField(
+                          default=False,
+                          help_text='True if a cash payment was received in this transaction'
+                      )
+    amount_paid_ugx = models.DecimalField(
+                          max_digits=10, decimal_places=2,
+                          default=0,
+                          help_text='Cash paid in this transaction (UGX). 0 when no cash involved.'
+                      )
+
+    # ── Settlement flag ───────────────────────────────────────────────────────
+    paid_fully      = models.BooleanField(
+                          default=False,
+                          help_text='True if this transaction fully settled the requirement for this student'
+                      )
+
+    # ── Shared ────────────────────────────────────────────────────────────────
+    payment_date    = models.DateField()
+    handled_by      = models.ForeignKey(
+                          CustomUser,
+                          on_delete=models.SET_NULL,
+                          null=True, blank=True,
+                          related_name='scholastic_payments_handled'
+                      )
+    notes           = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name        = 'Scholastic Requirement Payment'
+        verbose_name_plural = 'Scholastic Requirement Payments'
+        ordering            = ['-payment_date', '-created_at']
+
+    def clean(self):
+        if not self.brought_item and not self.brought_cash:
+            raise ValidationError(
+                'A transaction must involve physical items, cash, or both.'
+            )
+        if self.brought_item and self.items_brought < 1:
+            raise ValidationError(
+                {'items_brought': 'Enter the number of items received (must be at least 1).'}
+            )
+        if self.brought_cash and self.amount_paid_ugx <= 0:
+            raise ValidationError(
+                {'amount_paid_ugx': 'Enter the cash amount received (must be greater than 0).'}
+            )
+        if not self.brought_item and self.items_brought > 0:
+            raise ValidationError(
+                {'items_brought': 'Tick "Brought item" when recording physical units.'}
+            )
+        if not self.brought_cash and self.amount_paid_ugx > 0:
+            raise ValidationError(
+                {'amount_paid_ugx': 'Tick "Brought cash" when recording a cash payment.'}
+            )
+
+    def __str__(self):
+        parts = []
+        if self.brought_item:
+            parts.append(f"{self.items_brought} item(s)")
+        if self.brought_cash:
+            parts.append(f"UGX {self.amount_paid_ugx:,.0f}")
+        detail = ' + '.join(parts)
+        return (
+            f"SRP {self.receipt_number} | {self.student} | "
+            f"{self.requirement.item_name} | {detail}"
+        )
 # =============================================================================
 # 9. STUDENT SCHOLASTIC REQUIREMENT STATUS
 # =============================================================================
