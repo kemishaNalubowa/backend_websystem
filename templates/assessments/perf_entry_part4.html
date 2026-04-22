@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Enter Performance — Step 4 | {{ assessment.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'assessments:list' %}">Assessments</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'assessments:detail' assessment.pk %}">{{ assessment.title }}</a></li>
+      <li class="breadcrumb-item active">Step 4 — Confirm</li>
+    </ol>
+  </nav>
+
+  <div class="d-flex gap-2 mb-4 align-items-center flex-wrap">
+    <span class="badge bg-success fs-6 px-3 py-2">✔ Step 1</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-success fs-6 px-3 py-2">✔ Step 2</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-success fs-6 px-3 py-2">✔ Step 3</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-primary fs-6 px-3 py-2">Step 4 — Confirm &amp; Save</span>
+  </div>
+
+  <h4 class="mb-1">{{ assessment.title }} — Preview</h4>
+  <p class="text-muted mb-4">
+    Review the marks below.
+    <strong><i class="bi bi-check-circle-fill text-success"></i></strong> means the mark was already in the system (not changed).
+    Plain numbers are new entries from Step 3.
+    Enter your password at the bottom to save.
+  </p>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags|default:'danger' }} alert-dismissible fade show">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% for ac_pk, cls_data in preview_by_class.items %}
+    <div class="card mb-5">
+      <div class="card-header bg-light fw-semibold fs-5">{{ cls_data.class_name }}</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover mb-0 align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th>Student ID</th>
+                <th>Full Name</th>
+                {% for hdr in cls_data.subject_headers %}
+                  <th class="text-center" colspan="2">
+                    {{ hdr.subject_name }}
+                    {% if hdr.passmark %}
+                      <br><small class="fw-normal">Pass: {{ hdr.passmark }}</small>
+                    {% endif %}
+                  </th>
+                {% endfor %}
+              </tr>
+              <tr class="table-secondary small">
+                <th></th>
+                <th></th>
+                {% for hdr in cls_data.subject_headers %}
+                  <th class="text-center">Marks</th>
+                  <th class="text-center">Status</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for sid, row in cls_data.rows.items %}
+                <tr>
+                  <td class="font-monospace text-muted small">{{ sid }}</td>
+                  <td>{{ row.full_name }}</td>
+                  {% for hdr in cls_data.subject_headers %}
+                    {% with cell=row.cells|default_if_none:"" %}
+                      {% for as_pk, entry in row.cells.items %}
+                        {% if as_pk == hdr.as_subj_pk %}
+                          <td class="text-center">
+                            {% if entry.from_db %}
+                              <i class="bi bi-check-circle-fill text-success fs-5" title="Already recorded"></i>
+                            {% else %}
+                              <strong>{{ entry.marks_obtained }}</strong>
+                              {% if entry.total_mark %}
+                                <small class="text-muted">/ {{ entry.total_mark }}</small>
+                              {% endif %}
+                            {% endif %}
+                          </td>
+                          <td class="text-center">
+                            {% if entry.passed == "Pass" %}
+                              <span class="badge bg-success">Pass</span>
+                            {% elif entry.passed == "Tried" %}
+                              <span class="badge bg-warning text-dark">Tried</span>
+                            {% else %}
+                              <span class="text-muted small">—</span>
+                            {% endif %}
+                          </td>
+                        {% endif %}
+                      {% endfor %}
+                    {% endwith %}
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="alert alert-warning">No preview data. Please go back to Step 1.</div>
+  {% endfor %}
+
+  {# Password confirm #}
+  <div class="card mb-4" style="max-width:480px">
+    <div class="card-header fw-semibold">Confirm &amp; Save</div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <label class="form-label" for="confirm_password">
+          Enter your account password to save all the records above:
+        </label>
+        <input
+          type="password"
+          name="confirm_password"
+          id="confirm_password"
+          class="form-control {% if errors.confirm_password %}is-invalid{% endif %}"
+          autocomplete="current-password"
+          required
+        >
+        {% if errors.confirm_password %}
+          <div class="invalid-feedback">{{ errors.confirm_password }}</div>
+        {% endif %}
+        <div class="d-flex gap-2 mt-3">
+          <a href="{% url 'assessments:perf_entry_part3' assessment.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back
+          </a>
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-save me-1"></i> Save Performance Records
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

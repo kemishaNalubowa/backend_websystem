@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 
+from . import performance_views as pv
+
 app_name = 'assessments'
 
 urlpatterns = [
@@ -81,4 +83,58 @@ urlpatterns = [
     #     views.delete_student_performance,
     #     name='delete_performance'
     # ),
+
+
+
+
+    # ── ADD FLOW ──────────────────────────────────────────────────────────────
+    path(
+        '<int:pk>/performance/entry/step1/',
+        pv.perf_entry_part1,
+        name='perf_entry_part1',
+    ),
+    path(
+        '<int:pk>/performance/entry/step2/',
+        pv.perf_entry_part2,
+        name='perf_entry_part2',
+    ),
+    path(
+        '<int:pk>/performance/entry/step3/',
+        pv.perf_entry_part3,
+        name='perf_entry_part3',
+    ),
+    path(
+        '<int:pk>/performance/entry/step4/',
+        pv.perf_entry_part4,
+        name='perf_entry_part4',
+    ),
+ 
+    # ── ENABLE EDIT ───────────────────────────────────────────────────────────
+    path(
+        '<int:pk>/performance/enable-edit/',
+        pv.enable_edit_part1,
+        name='enable_edit',
+    ),
+ 
+    # ── EDIT FLOW ─────────────────────────────────────────────────────────────
+    path(
+        '<int:pk>/performance/edit/step1/',
+        pv.perf_edit_part1,
+        name='perf_edit_part1',
+    ),
+    path(
+        '<int:pk>/performance/edit/step2/',
+        pv.perf_edit_part2,
+        name='perf_edit_part2',
+    ),
+    path(
+        '<int:pk>/performance/edit/step3/',
+        pv.perf_edit_part3,
+        name='perf_edit_part3',
+    ),
+    path(
+        '<int:pk>/performance/edit/step4/',
+        pv.perf_edit_part4,
+        name='perf_edit_part4',
+    ),
 ]

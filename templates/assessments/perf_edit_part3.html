@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Edit Performance — Step 3 | {{ assessment.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'assessments:list' %}">Assessments</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'assessments:detail' assessment.pk %}">{{ assessment.title }}</a></li>
+      <li class="breadcrumb-item active">Edit Step 3 — Marks</li>
+    </ol>
+  </nav>
+
+  <div class="d-flex gap-2 mb-4 align-items-center flex-wrap">
+    <span class="badge bg-success fs-6 px-3 py-2">✔ Step 1</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-success fs-6 px-3 py-2">✔ Step 2</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-warning text-dark fs-6 px-3 py-2">Step 3 — Enter Updated Marks</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-secondary fs-6 px-3 py-2">Step 4 — Confirm</span>
+  </div>
+
+  <h4 class="mb-1">{{ assessment.title }} — Edit Mode</h4>
+  <p class="text-muted mb-3">
+    Existing marks are pre-filled in each field. Update any value and proceed.
+  </p>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags|default:'danger' }} alert-dismissible fade show">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+
+    {% for ac_pk, cls_data in class_student_map.items %}
+      <div class="card mb-5">
+        <div class="card-header bg-light fw-semibold fs-5">{{ cls_data.class_name }}</div>
+        <div class="card-body p-0">
+          {% if cls_data.students %}
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover mb-0 align-middle">
+                <thead class="table-dark">
+                  <tr>
+                    <th>Student ID</th>
+                    <th>Full Name</th>
+                    {% for hdr in cls_data.subject_headers %}
+                      <th class="text-center">
+                        {{ hdr.subject_name }}
+                        {% for k, v in total_marks_map.items %}
+                          {% if k == hdr.as_subj_pk|stringformat:"s" %}
+                            <br><small class="fw-normal">/ {{ v }}</small>
+                          {% endif %}
+                        {% endfor %}
+                      </th>
+                    {% endfor %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for student in cls_data.students %}
+                    <tr>
+                      <td class="font-monospace text-muted small">{{ student.student_id }}</td>
+                      <td>{{ student.full_name }}</td>
+                      {% for hdr in cls_data.subject_headers %}
+                        {% for ss in student.subject_status %}
+                          {% if ss.as_subj_pk == hdr.as_subj_pk %}
+                            <td class="text-center">
+                              {% with field_key="mark_"|add:student.student_id|add:"_"|add:hdr.as_subj_pk|stringformat:"s" %}
+                                <input
+                                  type="number"
+                                  name="{{ field_key }}"
+                                  step="0.01"
+                                  min="0"
+                                  class="form-control form-control-sm text-center {% if errors and field_key in errors %}is-invalid{% endif %}"
+                                  style="max-width:90px;margin:auto"
+                                  value="{{ ss.marks_obtained|default:'' }}"
+                                >
+                                {% if errors %}
+                                  {% for ek, ev in errors.items %}
+                                    {% if ek == field_key %}
+                                      <div class="text-danger" style="font-size:.7rem">{{ ev }}</div>
+                                    {% endif %}
+                                  {% endfor %}
+                                {% endif %}
+                              {% endwith %}
+                            </td>
+                          {% endif %}
+                        {% endfor %}
+                      {% endfor %}
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-muted p-3 mb-0">No students found.</p>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+
+    <div class="d-flex gap-2 mt-2">
+      <a href="{% url 'assessments:perf_edit_part2' assessment.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back
+      </a>
+      <button type="submit" class="btn btn-warning">
+        <i class="bi bi-arrow-right-circle me-1"></i> Continue to Step 4 — Preview
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

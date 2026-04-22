@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Enter Performance — Step 2 | {{ assessment.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'assessments:list' %}">Assessments</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'assessments:detail' assessment.pk %}">{{ assessment.title }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'assessments:perf_entry_part1' assessment.pk %}">Step 1</a></li>
+      <li class="breadcrumb-item active">Step 2</li>
+    </ol>
+  </nav>
+
+  <div class="d-flex gap-2 mb-4 align-items-center flex-wrap">
+    <span class="badge bg-success fs-6 px-3 py-2">✔ Step 1 — Done</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-primary fs-6 px-3 py-2">Step 2 — Select Subjects</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-secondary fs-6 px-3 py-2">Step 3 — Enter Marks</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-secondary fs-6 px-3 py-2">Step 4 — Confirm</span>
+  </div>
+
+  <h4 class="mb-1">{{ assessment.title }}</h4>
+  <p class="text-muted mb-4">Choose which subjects to enter marks for in each class.</p>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+
+    {% for cls_info in chosen_classes %}
+      {% with ac_pk=cls_info.ac_pk class_name=cls_info.class_name %}
+        {% with subjects=class_subjects|default_if_none:"" %}
+          <div class="card mb-4">
+            <div class="card-header fw-semibold">
+              {{ class_name }}
+              {% if errors|default:None %}
+                {% with err_key="subjects_"|add:ac_pk|stringformat:"s" %}
+                  {% if errors|default_if_none:"" %}
+                    <span class="text-danger ms-2 small">Please select at least one subject.</span>
+                  {% endif %}
+                {% endwith %}
+              {% endif %}
+            </div>
+            <div class="card-body">
+              <div class="row g-2">
+                {# We iterate class_subjects dict via a custom tag workaround #}
+                {% for ac_key, subj_list in class_subjects.items %}
+                  {% if ac_key == ac_pk|stringformat:"s" %}
+                    {% for subj in subj_list %}
+                      <div class="col-6 col-md-4 col-lg-3">
+                        <div class="form-check border rounded p-3">
+                          <input
+                            class="form-check-input"
+                            type="checkbox"
+                            name="subjects_{{ ac_pk }}"
+                            value="{{ subj.as_subj_pk }}"
+                            id="subj_{{ ac_pk }}_{{ subj.as_subj_pk }}"
+                            checked
+                          >
+                          <label class="form-check-label" for="subj_{{ ac_pk }}_{{ subj.as_subj_pk }}">
+                            <span class="fw-semibold">{{ subj.subject_name }}</span>
+                            <br>
+                            <small class="text-muted">{{ subj.subject_code }}</small>
+                            {% if subj.passmark %}
+                              <br><small class="text-info">Pass: {{ subj.passmark }}</small>
+                            {% endif %}
+                          </label>
+                        </div>
+                      </div>
+                    {% empty %}
+                      <p class="text-muted">No subjects available for this class (all may be marked done).</p>
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+              </div>
+              {% if errors %}
+                {% for key, val in errors.items %}
+                  {% if key == "subjects_"|add:ac_pk|stringformat:"s" %}
+                    <div class="text-danger small mt-2">{{ val }}</div>
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+            </div>
+          </div>
+        {% endwith %}
+      {% endwith %}
+    {% endfor %}
+
+    <div class="d-flex gap-2">
+      <a href="{% url 'assessments:perf_entry_part1' assessment.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back
+      </a>
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-arrow-right-circle me-1"></i> Continue to Step 3
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

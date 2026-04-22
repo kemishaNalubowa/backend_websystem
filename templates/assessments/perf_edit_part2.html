@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Edit Performance — Step 2 | {{ assessment.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'assessments:list' %}">Assessments</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'assessments:detail' assessment.pk %}">{{ assessment.title }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'assessments:perf_edit_part1' assessment.pk %}">Edit Step 1</a></li>
+      <li class="breadcrumb-item active">Step 2</li>
+    </ol>
+  </nav>
+
+  <div class="d-flex gap-2 mb-4 align-items-center flex-wrap">
+    <span class="badge bg-success fs-6 px-3 py-2">✔ Edit Step 1</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-warning text-dark fs-6 px-3 py-2">Step 2 — Select Subjects</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-secondary fs-6 px-3 py-2">Step 3 — Marks</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-secondary fs-6 px-3 py-2">Step 4 — Confirm</span>
+  </div>
+
+  <h4 class="mb-1">{{ assessment.title }} — Edit Mode</h4>
+  <p class="text-muted mb-3">Select which subjects to update for each class.</p>
+
+  {% if not_found_ids %}
+    <div class="alert alert-warning">
+      <strong>Students not found or have no performance record to edit:</strong>
+      <ul class="mb-0 mt-1">
+        {% for item in not_found_ids %}
+          <li><code>{{ item.id }}</code> — {{ item.reason }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+
+    {% for cls_info in chosen_classes %}
+      <div class="card mb-4">
+        <div class="card-header fw-semibold">{{ cls_info.class_name }}</div>
+        <div class="card-body">
+          <div class="row g-2">
+            {% for ac_key, subj_list in class_subjects.items %}
+              {% if ac_key == cls_info.ac_pk|stringformat:"s" %}
+                {% for subj in subj_list %}
+                  <div class="col-6 col-md-4 col-lg-3">
+                    <div class="form-check border border-warning rounded p-3">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        name="subjects_{{ cls_info.ac_pk }}"
+                        value="{{ subj.as_subj_pk }}"
+                        id="subj_{{ cls_info.ac_pk }}_{{ subj.as_subj_pk }}"
+                        checked
+                      >
+                      <label class="form-check-label" for="subj_{{ cls_info.ac_pk }}_{{ subj.as_subj_pk }}">
+                        <span class="fw-semibold">{{ subj.subject_name }}</span>
+                        <br><small class="text-muted">{{ subj.subject_code }}</small>
+                        {% if subj.passmark %}
+                          <br><small class="text-info">Pass: {{ subj.passmark }}</small>
+                        {% endif %}
+                      </label>
+                    </div>
+                  </div>
+                {% empty %}
+                  <p class="text-muted">No editable subjects for this class.</p>
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% if errors %}
+            {% for k, v in errors.items %}
+              {% if k == "subjects_"|add:cls_info.ac_pk|stringformat:"s" %}
+                <div class="text-danger small mt-2">{{ v }}</div>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+
+    <div class="d-flex gap-2">
+      <a href="{% url 'assessments:perf_edit_part1' assessment.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back
+      </a>
+      <button type="submit" class="btn btn-warning">
+        <i class="bi bi-arrow-right-circle me-1"></i> Continue
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

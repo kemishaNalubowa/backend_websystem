@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Enable Performance Edit | {{ assessment.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'assessments:list' %}">Assessments</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'assessments:detail' assessment.pk %}">{{ assessment.title }}</a></li>
+      <li class="breadcrumb-item active">Enable Performance Edit</li>
+    </ol>
+  </nav>
+
+  <h4 class="mb-1">Enable Performance Editing</h4>
+  <p class="text-muted mb-4">
+    Select the subjects (per class) you want to re-open for editing, then confirm with your password.
+    Only subjects marked <span class="badge bg-success">Done</span> can be unlocked.
+  </p>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+
+    {% if errors.selection %}
+      <div class="alert alert-danger">{{ errors.selection }}</div>
+    {% endif %}
+
+    {% for cls_data in class_subject_status %}
+      <div class="card mb-4">
+        <div class="card-header fw-semibold">
+          {{ cls_data.ac.school_class.supported_class.name }}
+        </div>
+        <div class="card-body">
+
+          {% if cls_data.done %}
+            <p class="text-muted small mb-2">
+              Tick to unlock for editing (currently marked <span class="badge bg-success">Done</span>):
+            </p>
+            <div class="row g-2 mb-3">
+              {% for item in cls_data.done %}
+                <div class="col-6 col-md-4 col-lg-3">
+                  <div class="form-check border border-success rounded p-3">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      name="enable_{{ cls_data.ac.pk }}_{{ item.as_subj.pk }}"
+                      id="en_{{ cls_data.ac.pk }}_{{ item.as_subj.pk }}"
+                    >
+                    <label class="form-check-label" for="en_{{ cls_data.ac.pk }}_{{ item.as_subj.pk }}">
+                      <span class="fw-semibold">{{ item.as_subj.subject.name }}</span>
+                      <br>
+                      <span class="badge bg-success mt-1">Done</span>
+                      {% if item.status %}
+                        <br><small class="text-muted">{{ item.status.students_entered }}/{{ item.status.students_attended }} entered</small>
+                      {% endif %}
+                    </label>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted small mb-3">No completed subjects for this class yet.</p>
+          {% endif %}
+
+          {% if cls_data.not_done %}
+            <p class="text-muted small mb-1">Still in progress (cannot unlock):</p>
+            <div class="d-flex flex-wrap gap-2">
+              {% for item in cls_data.not_done %}
+                <span class="badge bg-warning text-dark fs-6 px-3 py-2">
+                  {{ item.as_subj.subject.name }}
+                  {% if item.status %}— {{ item.status.students_entered }}/{{ item.status.students_attended }}{% endif %}
+                </span>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+        </div>
+      </div>
+    {% empty %}
+      <div class="alert alert-info">No subjects have been configured for this assessment.</div>
+    {% endfor %}
+
+    {# Password #}
+    <div class="card mb-4" style="max-width:460px">
+      <div class="card-header fw-semibold">Confirm</div>
+      <div class="card-body">
+        <label class="form-label" for="confirm_password">Your account password:</label>
+        <input
+          type="password"
+          name="confirm_password"
+          id="confirm_password"
+          class="form-control {% if errors.confirm_password %}is-invalid{% endif %}"
+          required
+        >
+        {% if errors.confirm_password %}
+          <div class="invalid-feedback">{{ errors.confirm_password }}</div>
+        {% endif %}
+        <div class="d-flex gap-2 mt-3">
+          <a href="{% url 'assessments:detail' assessment.pk %}" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-warning">
+            <i class="bi bi-unlock me-1"></i> Unlock Selected Subjects
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

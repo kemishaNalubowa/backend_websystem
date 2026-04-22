@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Enter Performance — Step 1 | {{ assessment.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  {# Breadcrumb #}
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'assessments:list' %}">Assessments</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'assessments:detail' assessment.pk %}">{{ assessment.title }}</a></li>
+      <li class="breadcrumb-item active">Enter Performance</li>
+    </ol>
+  </nav>
+
+  {# Step indicator #}
+  <div class="d-flex gap-2 mb-4 align-items-center flex-wrap">
+    <span class="badge bg-primary fs-6 px-3 py-2">Step 1 — Select Class &amp; Students</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-secondary fs-6 px-3 py-2">Step 2 — Select Subjects</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-secondary fs-6 px-3 py-2">Step 3 — Enter Marks</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-secondary fs-6 px-3 py-2">Step 4 — Confirm</span>
+  </div>
+
+  <h4 class="mb-1">{{ assessment.title }}</h4>
+  <p class="text-muted mb-4">Select the class(es) and provide the student IDs whose marks you want to enter.</p>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show" role="alert">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+
+    {# Class selection #}
+    <div class="card mb-4">
+      <div class="card-header fw-semibold">
+        Select Class(es)
+        {% if errors.classes %}
+          <span class="text-danger ms-2 small">{{ errors.classes }}</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        {% if assessment_classes %}
+          <div class="row g-2">
+            {% for ac in assessment_classes %}
+              <div class="col-6 col-md-4 col-lg-3">
+                <div class="form-check border rounded p-3">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    name="classes"
+                    value="{{ ac.pk }}"
+                    id="class_{{ ac.pk }}"
+                    {% if post and ac.pk|stringformat:"s" in post.getlist.classes %}checked{% endif %}
+                  >
+                  <label class="form-check-label fw-semibold" for="class_{{ ac.pk }}">
+                    {{ ac.school_class.supported_class.name }}
+                    <br>
+                    <small class="text-muted fw-normal">{{ ac.students_attended }} enrolled</small>
+                  </label>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted mb-0">No classes are attached to this assessment.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Student IDs #}
+    <div class="card mb-4">
+      <div class="card-header fw-semibold">
+        Student IDs
+        {% if errors.student_ids %}
+          <span class="text-danger ms-2 small">{{ errors.student_ids }}</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <label class="form-label text-muted small">
+          Enter one or more Student IDs separated by commas or new lines.<br>
+          IDs are case-insensitive (e.g. std20260001 and STD20260001 both work).
+        </label>
+        <textarea
+          name="student_ids"
+          class="form-control font-monospace {% if errors.student_ids %}is-invalid{% endif %}"
+          rows="5"
+          placeholder="STD20260001, STD20260002&#10;STD20260003"
+        >{{ post.student_ids }}</textarea>
+        {% if errors.student_ids %}
+          <div class="invalid-feedback">{{ errors.student_ids }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-arrow-right-circle me-1"></i> Continue to Step 2
+      </button>
+      <a href="{% url 'assessments:detail' assessment.pk %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

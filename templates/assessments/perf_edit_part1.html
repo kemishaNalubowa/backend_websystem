@@ -1,0 +1,106 @@
+{% comment %}
+FILE: templates/assessments/perf_edit_part1.html
+{% endcomment %}
+{% extends "base.html" %}
+{% block title %}Edit Performance — Step 1 | {{ assessment.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'assessments:list' %}">Assessments</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'assessments:detail' assessment.pk %}">{{ assessment.title }}</a></li>
+      <li class="breadcrumb-item active">Edit Performance — Step 1</li>
+    </ol>
+  </nav>
+
+  <div class="d-flex gap-2 mb-4 align-items-center flex-wrap">
+    <span class="badge bg-warning text-dark fs-6 px-3 py-2">Edit — Step 1</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-secondary fs-6 px-3 py-2">Step 2 — Subjects</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-secondary fs-6 px-3 py-2">Step 3 — Marks</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-secondary fs-6 px-3 py-2">Step 4 — Confirm</span>
+  </div>
+
+  <h4 class="mb-1">{{ assessment.title }} — Edit Mode</h4>
+  <p class="text-muted mb-4">
+    Only classes and subjects that have been unlocked for editing are shown below.
+    Enter the student IDs you want to update.
+  </p>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="card mb-4">
+      <div class="card-header fw-semibold">
+        Select Class(es) to Edit
+        {% if errors.classes %}
+          <span class="text-danger ms-2 small">{{ errors.classes }}</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <div class="row g-2">
+          {% for ac in editable_acs %}
+            <div class="col-6 col-md-4 col-lg-3">
+              <div class="form-check border border-warning rounded p-3">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  name="classes"
+                  value="{{ ac.pk }}"
+                  id="class_{{ ac.pk }}"
+                >
+                <label class="form-check-label fw-semibold" for="class_{{ ac.pk }}">
+                  {{ ac.school_class.supported_class.name }}
+                  <br><span class="badge bg-warning text-dark mt-1">Edit Enabled</span>
+                </label>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header fw-semibold">
+        Student IDs
+        {% if errors.student_ids %}
+          <span class="text-danger ms-2 small">{{ errors.student_ids }}</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <label class="form-label text-muted small">
+          Enter student IDs (comma or newline separated). Case-insensitive.
+        </label>
+        <textarea
+          name="student_ids"
+          class="form-control font-monospace {% if errors.student_ids %}is-invalid{% endif %}"
+          rows="5"
+          placeholder="STD20260001, STD20260002"
+        >{{ post.student_ids }}</textarea>
+        {% if errors.student_ids %}
+          <div class="invalid-feedback">{{ errors.student_ids }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a href="{% url 'assessments:detail' assessment.pk %}" class="btn btn-outline-secondary">Cancel</a>
+      <button type="submit" class="btn btn-warning">
+        <i class="bi bi-arrow-right-circle me-1"></i> Continue
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

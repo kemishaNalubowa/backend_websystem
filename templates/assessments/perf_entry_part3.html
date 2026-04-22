@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Enter Performance — Step 3 | {{ assessment.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'assessments:list' %}">Assessments</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'assessments:detail' assessment.pk %}">{{ assessment.title }}</a></li>
+      <li class="breadcrumb-item active">Step 3 — Enter Marks</li>
+    </ol>
+  </nav>
+
+  <div class="d-flex gap-2 mb-4 align-items-center flex-wrap">
+    <span class="badge bg-success fs-6 px-3 py-2">✔ Step 1</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-success fs-6 px-3 py-2">✔ Step 2</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-primary fs-6 px-3 py-2">Step 3 — Enter Marks</span>
+    <span class="text-muted">→</span>
+    <span class="badge bg-secondary fs-6 px-3 py-2">Step 4 — Confirm</span>
+  </div>
+
+  <h4 class="mb-1">{{ assessment.title }}</h4>
+  <p class="text-muted mb-3">
+    Fill in marks for students who don't have them yet.
+    Cells showing existing marks are read-only — they will be carried forward as-is.
+  </p>
+
+  {# Skipped / not-found students notice #}
+  {% if not_found_ids %}
+    <div class="alert alert-warning">
+      <strong>The following student IDs could not be matched to the selected classes:</strong>
+      <ul class="mb-0 mt-1">
+        {% for item in not_found_ids %}
+          <li><code>{{ item.id }}</code> — {{ item.reason }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags|default:'danger' }} alert-dismissible fade show">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+
+    {% for ac_pk, cls_data in class_student_map.items %}
+      <div class="card mb-5">
+        <div class="card-header bg-light fw-semibold fs-5">
+          {{ cls_data.class_name }}
+        </div>
+        <div class="card-body p-0">
+          {% if cls_data.students %}
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover mb-0 align-middle">
+                <thead class="table-dark">
+                  <tr>
+                    <th style="min-width:110px">Student ID</th>
+                    <th style="min-width:180px">Full Name</th>
+                    {% for hdr in cls_data.subject_headers %}
+                      <th class="text-center" style="min-width:130px">
+                        {{ hdr.subject_name }}
+                        {% with tm=total_marks_map|default_if_none:"" %}
+                          {% for k, v in total_marks_map.items %}
+                            {% if k == hdr.as_subj_pk|stringformat:"s" %}
+                              <br><small class="fw-normal">/ {{ v }}</small>
+                            {% endif %}
+                          {% endfor %}
+                        {% endwith %}
+                      </th>
+                    {% endfor %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for student in cls_data.students %}
+                    <tr>
+                      <td class="font-monospace text-muted small">{{ student.student_id }}</td>
+                      <td>{{ student.full_name }}</td>
+                      {% for hdr in cls_data.subject_headers %}
+                        {% with as_pk=hdr.as_subj_pk %}
+                          {# Find this student's subject_status entry for this subject #}
+                          {% for ss in student.subject_status %}
+                            {% if ss.as_subj_pk == as_pk %}
+                              <td class="text-center">
+                                {% if ss.marks_obtained %}
+                                  {# Already entered — read-only display #}
+                                  <span class="badge bg-secondary fs-6">{{ ss.marks_obtained }}</span>
+                                  <small class="d-block text-muted" style="font-size:.7rem">existing</small>
+                                {% else %}
+                                  {# Need to enter #}
+                                  {% with field_key="mark_"|add:student.student_id|add:"_"|add:as_pk|stringformat:"s" %}
+                                    <input
+                                      type="number"
+                                      name="{{ field_key }}"
+                                      step="0.01"
+                                      min="0"
+                                      class="form-control form-control-sm text-center {% if errors and field_key in errors %}is-invalid{% endif %}"
+                                      style="max-width:90px;margin:auto"
+                                      value="{% if post %}{{ post|default_if_none:""|dictsort:field_key }}{% endif %}"
+                                      placeholder="0"
+                                    >
+                                    {% if errors %}
+                                      {% for ek, ev in errors.items %}
+                                        {% if ek == field_key %}
+                                          <div class="text-danger" style="font-size:.7rem">{{ ev }}</div>
+                                        {% endif %}
+                                      {% endfor %}
+                                    {% endif %}
+                                  {% endwith %}
+                                {% endif %}
+                              </td>
+                            {% endif %}
+                          {% endfor %}
+                        {% endwith %}
+                      {% endfor %}
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-muted p-3 mb-0">No students to display for this class.</p>
+          {% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <div class="alert alert-warning">No class data found. Please go back to Step 1.</div>
+    {% endfor %}
+
+    <div class="d-flex gap-2 mt-2">
+      <a href="{% url 'assessments:perf_entry_part2' assessment.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back
+      </a>
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-arrow-right-circle me-1"></i> Continue to Step 4 — Preview
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

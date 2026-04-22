@@ -433,3 +433,88 @@ class AssessmentModification(TimeStampedModel):
         """
         if self.edit_once and self.remaining_edit_once_steps() == 0:
             self.edit_once = False
+
+
+
+
+
+
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ADD THIS MODEL to your assessments/models.py
+# It tracks per-class, per-subject entry progress for each assessment.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class AssessmentPerformanceEntryStatus(models.Model):
+    """
+    Tracks how many students have had their performance entered for a given
+    (assessment × class × subject) combination.
+
+    Created automatically when the first performance-entry batch is submitted
+    for a class/subject pair.  Updated each time more entries are saved.
+    """
+
+    assessment      = models.ForeignKey(
+                          'Assessment',
+                          on_delete=models.CASCADE,
+                          related_name='entry_statuses',
+                      )
+    school_class    = models.ForeignKey(
+                          'AssessmentClass',        # bridge model
+                          on_delete=models.CASCADE,
+                          related_name='entry_statuses',
+                      )
+    subject         = models.ForeignKey(
+                          'AssessmentSubject',       # bridge model (per class)
+                          on_delete=models.CASCADE,
+                          related_name='entry_statuses',
+                      )
+
+    # ── Counters ──────────────────────────────────────────────────────────────
+    students_attended = models.PositiveIntegerField(
+                            default=0,
+                            help_text='Total students enrolled in this class (from AssessmentClass).'
+                        )
+    students_entered  = models.PositiveIntegerField(
+                            default=0,
+                            help_text='Students whose mark for this subject has been saved so far.'
+                        )
+    students_left     = models.PositiveIntegerField(
+                            default=0,
+                            help_text='students_attended − students_entered.'
+                        )
+    students_passed   = models.PositiveIntegerField(default=0)
+    students_tried    = models.PositiveIntegerField(
+                            default=0,
+                            help_text='Attempted but did not reach the pass mark.'
+                        )
+
+    # ── Status flags ─────────────────────────────────────────────────────────
+    attendance_entry_met = models.BooleanField(
+                               default=False,
+                               help_text='True when students_entered >= students_attended.'
+                           )
+    is_edit_allowed      = models.BooleanField(
+                               default=False,
+                               help_text='Set to True via the enable-edit workflow.'
+                           )
+    is_done              = models.BooleanField(
+                               default=False,
+                               help_text='True when entry is complete and locked.'
+                           )
+
+    class Meta:
+        verbose_name        = 'Performance Entry Status'
+        verbose_name_plural = 'Performance Entry Statuses'
+        unique_together     = [('assessment', 'school_class', 'subject')]
+        ordering            = ['school_class', 'subject']
+
+    def __str__(self):
+        return (
+            f"{self.assessment} | "
+            f"{self.school_class.school_class.supported_class.name} | "
+            f"{self.subject.subject.name} — "
+            f"{self.students_entered}/{self.students_attended}"
+        )
