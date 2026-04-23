@@ -45,6 +45,28 @@ def generate_receipt_number() -> str:
     return f'{prefix}{seq:04d}'    # e.g. RCP20250001
 
 
+
+from fees.models import ScholasticRequirementPayment
+
+def generate_receipt_number_scholastic() -> str:
+    year   = date.today().year
+    prefix = f'SRR{year}'
+
+    last = (
+        ScholasticRequirementPayment.objects  # ← correct model
+        .filter(receipt_number__startswith=prefix)
+        .aggregate(m=Max('receipt_number'))['m']
+    )
+
+    if last:
+        try:
+            seq = int(last.replace(prefix, '')) + 1
+        except ValueError:
+            seq = 1
+    else:
+        seq = 1
+
+    return f'{prefix}{seq:04d}'
 # ═══════════════════════════════════════════════════════════════════════════════
 #  DATE PARSING
 # ═══════════════════════════════════════════════════════════════════════════════

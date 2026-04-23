@@ -249,3 +249,260 @@ def toggle_scholastic_requirement(request, pk):
         messages.success(request, f'"{requirement.item_name}" has been {state}.')
 
     return redirect('fees:scholastic_requirements_detail', pk=pk)
+
+
+
+
+# fees/views/scholastic_payment_views.py
+# ─────────────────────────────────────────────────────────────────────────────
+# Views for ScholasticRequirementPayment transactions.
+#
+# Views:
+#   scholastic_payment_list   — paginated list with filters + stats
+#   scholastic_payment_detail — full single-transaction receipt page
+#   scholastic_payment_delete — confirm + perform deletion
+#
+# Rules (same as all fees views):
+#   - Function-based views only
+#   - No Django Forms / forms.py
+#   - No Class-based Views
+#   - No JSON responses
+#   - django.contrib.messages for all feedback
+#   - login_required on every view
+#   - transaction.atomic() on all saves
+# ─────────────────────────────────────────────────────────────────────────────
+
+from datetime import date
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Q, Sum
+from django.shortcuts import get_object_or_404, redirect, render
+
+from academics.models import Term
+from fees.models import (
+    ScholasticRequirementPayment,
+    SchoolScholasticRequirements,
+    StudentScholasticRequirementStatus,
+)
+from students.models import Student
+
+
+_T = 'fees/scholastic_payments/'
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  1. LIST
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+def scholastic_payment_list(request):
+    """
+    All ScholasticRequirementPayment records with filters and stats.
+
+    Filters (GET — all stackable):
+        ?q=           receipt number / student name / student ID
+        ?term=<id>    filter by requirement term FK
+        ?student=<id> filter by student PK
+        ?date_from=   YYYY-MM-DD
+        ?date_to=     YYYY-MM-DD
+        ?type=        items | cash | mixed
+    """
+    today = date.today()
+
+    qs = ScholasticRequirementPayment.objects.select_related(
+        'student', 'requirement', 'requirement__term', 'school_class',
+        'school_class__supported_class',
+    ).order_by('-payment_date', '-created_at')
+
+    # ── Filters ──────────────────────────────────────────────────────────────
+    search        = request.GET.get('q', '').strip()
+    term_filter   = request.GET.get('term', '').strip()
+    student_filter= request.GET.get('student', '').strip()
+    date_from_raw = request.GET.get('date_from', '').strip()
+    date_to_raw   = request.GET.get('date_to', '').strip()
+    type_filter   = request.GET.get('type', '').strip()   # items | cash | mixed
+
+    if search:
+        qs = qs.filter(
+            Q(receipt_number__icontains=search)      |
+            Q(student__first_name__icontains=search) |
+            Q(student__last_name__icontains=search)  |
+            Q(student__student_id__icontains=search) |
+            Q(requirement__item_name__icontains=search)
+        )
+
+    if term_filter:
+        qs = qs.filter(requirement__term__pk=term_filter)
+
+    if student_filter:
+        qs = qs.filter(student__pk=student_filter)
+
+    if date_from_raw:
+        try:
+            from datetime import datetime as _dt
+            qs = qs.filter(payment_date__gte=_dt.strptime(date_from_raw, '%Y-%m-%d').date())
+        except ValueError:
+            messages.warning(request, 'Invalid "from" date — filter ignored.')
+
+    if date_to_raw:
+        try:
+            from datetime import datetime as _dt
+            qs = qs.filter(payment_date__lte=_dt.strptime(date_to_raw, '%Y-%m-%d').date())
+        except ValueError:
+            messages.warning(request, 'Invalid "to" date — filter ignored.')
+
+    if type_filter == 'items':
+        qs = qs.filter(brought_item=True, brought_cash=False)
+    elif type_filter == 'cash':
+        qs = qs.filter(brought_cash=True, brought_item=False)
+    elif type_filter == 'mixed':
+        qs = qs.filter(brought_item=True, brought_cash=True)
+
+    # ── Stats (over full unfiltered set) ─────────────────────────────────────
+    all_qs          = ScholasticRequirementPayment.objects.all()
+    total           = all_qs.count()
+    total_cash      = all_qs.aggregate(s=Sum('amount_paid_ugx'))['s'] or 0
+    today_qs        = all_qs.filter(payment_date=today)
+    today_count     = today_qs.count()
+    today_cash      = today_qs.aggregate(s=Sum('amount_paid_ugx'))['s'] or 0
+
+    # ── Pagination ────────────────────────────────────────────────────────────
+    paginator = Paginator(qs, 25)
+    page_obj  = paginator.get_page(request.GET.get('page', 1))
+
+    context = {
+        'payments':       page_obj.object_list,
+        'page_obj':       page_obj,
+        # stats
+        'total':          total,
+        'total_cash':     total_cash,
+        'today_count':    today_count,
+        'today_cash':     today_cash,
+        'today':          today,
+        # active filters
+        'search':         search,
+        'term_filter':    term_filter,
+        'student_filter': student_filter,
+        'date_from_raw':  date_from_raw,
+        'date_to_raw':    date_to_raw,
+        'type_filter':    type_filter,
+        # dropdowns
+        'terms':          Term.objects.all().order_by('-name'),
+    }
+    return render(request, f'{_T}list.html', context)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  2. DETAIL
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+def scholastic_payment_detail(request, pk):
+    """
+    Full receipt detail for a single ScholasticRequirementPayment.
+    Shows:
+      - transaction breakdown (items + cash)
+      - student's running status for this requirement
+      - all other transactions for this student × requirement
+      - prev / next navigation
+    """
+    payment = get_object_or_404(
+        ScholasticRequirementPayment.objects.select_related(
+            'student',
+            'requirement',
+            'requirement__term',
+            'school_class',
+            'school_class__supported_class',
+            'handled_by',
+        ),
+        pk=pk,
+    )
+
+    req = payment.requirement
+
+    # ── Student's running status for this requirement ─────────────────────────
+    status = StudentScholasticRequirementStatus.objects.filter(
+        student=payment.student,
+        requirement=req,
+    ).first()
+
+    # ── Physical credit for this specific transaction ─────────────────────────
+    physical_credit_this = float(payment.items_brought) * float(req.unit_price)
+
+    # ── All other transactions for this student × requirement ─────────────────
+    other_payments = ScholasticRequirementPayment.objects.filter(
+        student=payment.student,
+        requirement=req,
+    ).exclude(pk=payment.pk).order_by('payment_date', 'created_at')
+
+    # ── Prev / Next navigation ────────────────────────────────────────────────
+    prev_payment = ScholasticRequirementPayment.objects.filter(
+        Q(payment_date__lt=payment.payment_date) |
+        Q(payment_date=payment.payment_date, pk__lt=payment.pk)
+    ).only('pk', 'receipt_number').order_by('payment_date', 'pk').last()
+
+    next_payment = ScholasticRequirementPayment.objects.filter(
+        Q(payment_date__gt=payment.payment_date) |
+        Q(payment_date=payment.payment_date, pk__gt=payment.pk)
+    ).only('pk', 'receipt_number').order_by('payment_date', 'pk').first()
+
+    context = {
+        'payment':              payment,
+        'req':                  req,
+        'status':               status,
+        'physical_credit_this': physical_credit_this,
+        'other_payments':       other_payments,
+        'prev_payment':         prev_payment,
+        'next_payment':         next_payment,
+        'page_title':           f'Receipt — {payment.receipt_number}',
+    }
+    return render(request, f'{_T}detail.html', context)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  3. DELETE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+def scholastic_payment_delete(request, pk):
+    """
+    Delete a ScholasticRequirementPayment record.
+
+    GET  — confirmation page with full transaction summary.
+    POST — delete the record; does NOT auto-recalculate the status row
+           (warn the user to manually review the student's requirement status).
+    """
+    payment = get_object_or_404(
+        ScholasticRequirementPayment.objects.select_related(
+            'student', 'requirement', 'requirement__term',
+            'school_class', 'school_class__supported_class',
+        ),
+        pk=pk,
+    )
+
+    if request.method == 'GET':
+        return render(request, f'{_T}delete_confirm.html', {
+            'payment': payment,
+        })
+
+    # ── POST ──────────────────────────────────────────────────────────────────
+    receipt  = payment.receipt_number
+    student  = str(payment.student)
+    req_name = payment.requirement.item_name
+
+    try:
+        with transaction.atomic():
+            payment.delete()
+        messages.success(
+            request,
+            f'Transaction {receipt} ({student} — {req_name}) permanently deleted. '
+            f'Review the student\'s requirement status to verify the balance.'
+        )
+    except Exception as exc:
+        messages.error(request, f'Could not delete transaction: {exc}')
+        return redirect('fees:scholastic_payment_detail', pk=pk)
+
+    return redirect('fees:scholastic_payment_list')

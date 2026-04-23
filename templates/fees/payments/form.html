@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load custom_filters %}
+{% load fees_extras %}
 
 {% block content %}
 <div class="container mt-4">
@@ -107,7 +108,7 @@
         </div>
         <div class="card-body">
 
-            {{ fees_list }}
+            {{ fees_list }}0000000000000000000000000000000000000000000000000000000000
 
 
             {% if fees_list %}
@@ -115,40 +116,113 @@
                 {% csrf_token %}
                 <input type="hidden" name="step" value="part2">
 
+                {{ fee.status }} >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
                 <table class="table table-sm table-bordered">
+                    
                     <thead>
-                        <tr>
-                            <th>Select</th>
-                            <th>Name / Type</th>
-                            <th>Term</th>
-                            {% if payment_type == "scholastic" %}
-                            <th>Required</th>
-                            <th>Cash Value (UGX)</th>
-                            {% else %}
-                            <th>Amount (UGX)</th>
-                            {% endif %}
-                        </tr>
+                        {% if payment_type == "scholastic" %}
+                            <tr>
+                                <th>Select</th>
+                                <th>Name / Type</th>
+                                <th>Term</th> 
+                                <th>Qty.</th>
+                                <th>Cash Value</th>
+                                <th>Unit Cost</th>
+                                {% for fee in fees_list %}
+                                    {% if fee.status %}
+                                        {% if fee.status.quantity_brought %}
+                                            <th>Qty Paid</th>
+                                            <th>Qty Left</th>
+                                        {% endif %}
+                                        {% if fee.status.amount_paid_ugx > 1 and fee.status.amount_balance_ugx > 1 %}
+                                            <th>In Am Paid</th>
+                                            <th>In Am Left</th>
+                                        {% endif %}
+                                        <th>Date</th>
+                                    {% endif %}
+                                {% endfor %}
+                                <th></th>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <th>Select</th>
+                                <th>Name / Type</th>
+                                <th>Term</th> 
+                                <th>Amount (UGX)</th>
+                                <th>Paid (UGX)</th>
+                                <th>Balance (UGX)</th>  
+                                <th colspan="1">Previous Payments</th>
+                            </tr>
+                        {% endif %}
                     </thead>
+
                     <tbody>
                         {% for fee in fees_list %}
-                        <tr>
-                            <td>
-                                <input
+                        {% if payment_type == "scholastic" %}
+                            <tr>
+                                <td>
+                                    <input
                                     type="checkbox"
                                     name="fee_{{ fee.id }}"
                                     value="{{ fee.id }}"
                                     class="form-check-input"
-                                >
-                            </td>
-                            <td>{{ fee.name|default:fee.type }}</td>
-                            <td>{{ fee.term|default:"-" }}</td>
-                            {% if payment_type == "scholastic" %}
-                            <td>{{ fee.quantity }} {{ fee.unit }}</td>
-                            <td>{{ fee.monetary_value }}</td>
-                            {% else %}
-                            <td>{{ fee.amount }}</td>
-                            {% endif %}
-                        </tr>
+                                    >
+                                </td>
+                                <td>{{ fee.name|default:"-" }}</td>
+                                <td>{{ fee.term|default:"-" }}</td>
+                                <td>{{ fee.quantity_needed|default:"-" }}</td>
+                                <td>UGX {{ fee.monetary_value|default:"0.00" }}</td>
+                                <td>UGX {{ fee.unit_price|default:"0.00" }}</td>
+                                {% if fee.status %}
+                                    {% if fee.status.quantity_brought %}
+                                        <th class="text-success">{{ fee.status.quantity_brought }}</th>
+                                        <th class="text-danger fw-semibold">{{ fee.quantity_needed|subtract:fee.status.quantity_brought }}</th>
+                                    {% endif %}
+                                    {% if fee.status.amount_paid_ugx > 1 and fee.status.amount_balance_ugx > 1 %}
+                                        <th>UGX. {{ fee.status.amount_paid_ugx }}</th>
+                                        <th>UGX. 
+                                            {% if fee.status.amount_balance_ugx %}
+                                                {{ fee.status.amount_balance_ugx }}
+                                            {% else %}
+                                                {{ fee.monetary_value|subtract:fee.status.amount_paid_ugx }}
+                                            {% endif %}
+                                        </th>
+                                    {% endif %}
+                                    <th>{{ fee.status.last_brought_on }}</th>
+                                {% endif %}
+                                {% if fee.payments %}
+                                    <td class="ps-auto">
+                                        <button type="button" class="btn btn-primary  btn-sm" data-bs-toggle="modal" data-bs-target="#payments_model_for_fee_{{ fee.id }}">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                {% endif %}
+                            </tr>
+
+                        {% else %}
+                            <tr>
+                                <td>
+                                    <input
+                                        type="checkbox"
+                                        name="fee_{{ fee.id }}"
+                                        value="{{ fee.id }}"
+                                        class="form-check-input"
+                                    >
+                                </td>
+                                <td>{{ fee.type }}</td>
+                                <td>{{ fee.amount }}</td>
+                                <td class="text-success">{{ fee.status.amount_paid|default:"0.00" }}</td>
+                                <td class="text-danger fw-semibold">{{ fee.status.amount_balance|default:"0.00" }}</td>
+                                {% if fee.payments %}
+                                    <td class="ps-auto">
+                                        <button type="button" class="btn btn-primary  btn-sm" data-bs-toggle="modal" data-bs-target="#payments_model_for_fee_{{ fee.id }}">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
@@ -176,6 +250,12 @@
     <!-- ======================================================== -->
     {% if payment_part2_done and not payment_part3_done %}
     <div class="card shadow-sm mt-3">
+
+            3490r484589t459859845899484589458945845894589458954894589458954894589548945894589458945894589589458954
+            489458589548959845894589548954895489458945894589458945845894589458945894589458945894589458945894589458
+            784578457857857845784578547857845784578457845784578457845784578457845784578547857575758578458578787854
+            ======================================================================================================
+            {{ selected_fees }}
         <div class="card-header">
             <strong>
                 {% if payment_type == "scholastic" %}
@@ -191,44 +271,63 @@
                 <input type="hidden" name="step" value="part3">
 
                 {% if payment_type == "scholastic" %}
+
+              
+
+
                 <table class="table table-bordered">
                     <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Term</th>
-                            <th>Required</th>
-                            <th>Cash Value (UGX)</th>
-                            <th>Qty Brought</th>
-                            <th>Cash Amount (UGX)</th>
-                        </tr>
+
+                        {% if payment_type == "scholastic" %}
+                            <tr>
+                                <th>item</th>
+                                <th>Term</th> 
+                                <th>Qty.</th>
+                                <th>Cash Value</th>
+                                <th>Enter Qty to pay</th>
+                                <th>Enter Amount to pay</th>
+                                <th>Payments</th>
+                            </tr>
+                        {% endif %}
                     </thead>
                     <tbody>
                         {% for fee in selected_fees %}
                         <tr>
-                            <td>{{ fee.name }}</td>
+                            <td>{{ fee.name|default:"-" }}</td>
                             <td>{{ fee.term|default:"-" }}</td>
-                            <td>{{ fee.quantity }} {{ fee.unit }}</td>
-                            <td>{{ fee.monetary_value }}</td>
-                            <td class="px-1 py-0">
-                                <input
-                                    type="number"
-                                    name="qty_brought_{{ fee.id }}"
-                                    class="form-control border-0 rounded-0 py-1"
-                                    min="0"
-                                    placeholder="0"
-                                >
-                            </td>
-                            <td class="px-1 py-0">
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    name="cash_amount_{{ fee.id }}"
-                                    class="form-control border-0 rounded-0 py-1"
-                                    min="0"
-                                    placeholder="0"
-                                >
-                            </td>
-                        </tr>
+                            <td>{{ fee.quantity_needed|subtract:fee.status.quantity_brought }}</td>
+                            {% if fee.status.amount_balance_ugx > 1 %}
+                                <td>{{ fee.status.amount_balance_ugx|default:"-" }}</td>
+                            {% else %}
+                                <td>UGX {{ fee.monetary_value|default:"0.00" }}</td>
+                            {% endif %}  
+                                <td class="px-1 py-0">
+                                    <input
+                                        type="number"
+                                        name="qty_brought_{{ fee.id }}"
+                                        class="form-control border-0 rounded-0 py-1"
+                                        min="0"
+                                        placeholder="0"
+                                    >
+                                </td>
+                                <td class="px-1 py-0">
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        name="cash_amount_{{ fee.id }}"
+                                        class="form-control border-0 rounded-0 py-1"
+                                        min="0"
+                                        placeholder="0"
+                                    >
+                                </td>
+                                {% if fee.payments %}
+                                    <td class="ps-auto">
+                                        <button type="button" class="btn btn-primary  btn-sm" data-bs-toggle="modal" data-bs-target="#payments_model_for_fee_{{ fee.id }}">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                {% endif %}
+                            </tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -237,13 +336,24 @@
                 </div>
 
                 {% else %}
+
+
+
                 <table class="table table-bordered">
                     <thead>
                         <tr>
                             <th>Name / Type</th>
                             <th>Term</th>
                             <th>Total (UGX)</th>
+                            <th>Paid (UGX)</th>
+                            {% if payment_type == 'scholastic' %}
+                            <th>Balance (UGX)</th>
+                            <th>Balance (UGX)</th>
+                            {% else %}
+                            <th>Balance (UGX)</th>
                             <th>Amount to Pay (UGX)</th>
+                            <th>Payments</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -252,6 +362,8 @@
                             <td>{{ fee.name|default:fee.type }}</td>
                             <td>{{ fee.term|default:"-" }}</td>
                             <td>{{ fee.amount|default:"0.00" }}</td>
+                            <td class="text-success">{{ fee.status.amount_paid|default:"0.00" }}</td>
+                            <td class="text-danger fw-semibold">{{ fee.status.amount_balance|default:"0.00" }}</td>
                             <td class="px-1 py-0">
                                 <input
                                     type="number"
@@ -262,6 +374,14 @@
                                     required
                                 >
                             </td>
+                            {% if fee.payments %}
+                            <td class="ps-auto">
+                                <button type="button" class="btn btn-primary  btn-sm" data-bs-toggle="modal" data-bs-target="#payments_model_for_fee_{{ fee.id }}">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </td>
+                            {% endif %}
+
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -298,7 +418,7 @@
                 <input type="hidden" name="step" value="part4">
 
                 {% if payment_type == "scholastic" %}
-                <table class="table table-bordered">
+                <table class="table table-bordered table-primary">
                     <thead>
                         <tr>
                             <th>Item</th>
@@ -380,4 +500,85 @@
     {% endif %}
 
 </div>
+
+
+
+
+
+{% for fee in fees_list %}
+    <div class="modal fade" id="payments_model_for_fee_{{ fee.id }}" tabindex="-1" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Previous Payments</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if payment_type in "school,assessment_fee" %}
+                <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>DATE</th>
+                                <th>TOTAL AMOUNT</th>
+                                <th>BALANCE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                {% for payment in fee.payments %}
+                                <td>{{ payment.id }}</td>
+                                <td>{{ payment.date }}</td>
+                                <td>UGX {{ fee.amount }}</td>
+                                <td>UGX {{ payment.amount }}</td>
+                                {% endfor %}
+                            </tr>
+                        </tbody>
+                    </table>
+                {% else %}
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Receipt</th>
+                                <th>Date</th>
+                                {% if fee.status.quantity_brought %}
+                                    <th>Qty Brought</th>
+                                {% endif %}
+                                {% if fee.status.amount_paid_ugx %}
+                                    <th>Cash Paid (UGX)</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in fee.payments %}
+                            <tr>
+                                <td>{{ payment.receipt_number }}</td>
+                                <td>{{ payment.date }}</td>
+                                {% if fee.status.quantity_brought %}
+                                    <td>{{ payment.items_brought|default:"—" }}</td>
+                                {% endif %}
+                                {% if fee.status.amount_paid_ugx %}
+                                    <td>{{ payment.amount_paid_ugx|default:"—" }}</td>
+                                {% endif %}
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-muted text-center">No payments yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+
+
+
+
 {% endblock %}

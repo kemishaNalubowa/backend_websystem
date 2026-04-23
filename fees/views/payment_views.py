@@ -267,7 +267,7 @@ from fees.models import (
     SchoolScholasticRequirements, ScholasticRequirementClass,
     StudentFeesPaymentsStatus, StudentScholasticRequirementStatus,ScholasticRequirementPayment
 )
-from fees.utils.payment_utils import generate_receipt_number
+from fees.utils.payment_utils import generate_receipt_number,generate_receipt_number_scholastic
 from students.models import Student
 
 _T = 'fees/payments/'
@@ -293,7 +293,6 @@ def _clear_session(request):
     request.session.modified = True
 
 
-
 def _get_old_payments_details(student, payment_type, payment_type_obj):
     """
     payment_type_obj is:
@@ -306,68 +305,54 @@ def _get_old_payments_details(student, payment_type, payment_type_obj):
 
     # ── School fees ───────────────────────────────────────────────────────
     if payment_type == "school":
-        fee_obj = payment_type_obj.fees   # FeesClass → SchoolFees
+        fee_obj = payment_type_obj.fees
 
-        status = (
-            StudentFeesPaymentsStatus.objects
-            .filter(student=student, school_fees=fee_obj, fully_paid=False)
-            .first()
-        )
+        status   = StudentFeesPaymentsStatus.objects.filter(student=student, school_fees=fee_obj).first()
         payments = FeesPayment.objects.filter(student=student, school_fees=fee_obj)
 
         if status:
             payment_status = {
-                "amount_paid":    float(status.amount_paid) or "0.00",
-                "amount_balance": float(status.amount_balance) or "0.00",
+                "amount_paid":    round(float(status.amount_paid or 0), 2),
+                "amount_balance": round(float(status.amount_balance or 0), 2),
             }
         for p in payments:
             payments_list.append({
                 "id":     p.receipt_number,
                 "date":   f'{p.payment_date}',
-                "amount": float(p.amount) or "0.00",
+                "amount": round(float(p.amount or 0), 2),
             })
 
     # ── Assessment fees ───────────────────────────────────────────────────
     elif payment_type == "assessment":
-        fee_obj = payment_type_obj.assessment_fee   # FeesClass → AssessmentFees
+        fee_obj = payment_type_obj.assessment_fee
 
-        status = (
-            StudentFeesPaymentsStatus.objects
-            .filter(student=student, assessment_fees=fee_obj, fully_paid=False)
-            .first()
-        )
+        status   = StudentFeesPaymentsStatus.objects.filter(student=student, assessment_fees=fee_obj).first()
         payments = FeesPayment.objects.filter(student=student, assessment_fees=fee_obj)
 
         if status:
             payment_status = {
-                "amount_paid":    float(status.amount_paid) or '0.00',
-                "amount_balance": float(status.amount_balance) or '0.00',
+                "amount_paid":    round(float(status.amount_paid or 0), 2),
+                "amount_balance": round(float(status.amount_balance or 0), 2),
             }
         for p in payments:
             payments_list.append({
                 "id":     p.receipt_number,
                 "date":   f'{p.payment_date}',
-                "amount": float(p.amount) or '0.00'
+                "amount": round(float(p.amount or 0), 2),
             })
 
     # ── Scholastic requirements ───────────────────────────────────────────
     elif payment_type == "scholastic":
-        req_obj = payment_type_obj.requirement   # ScholasticRequirementClass → SchoolScholasticRequirements
+        req_obj = payment_type_obj.requirement
 
-        status = (
-            StudentScholasticRequirementStatus.objects
-            .filter(student=student, requirement=req_obj, fully_met=False)
-            .first()
-        )
-        payments = ScholasticRequirementPayment.objects.filter(
-            student=student, requirement=req_obj
-        )
+        status   = StudentScholasticRequirementStatus.objects.filter(student=student, requirement=req_obj).first()
+        payments = ScholasticRequirementPayment.objects.filter(student=student, requirement=req_obj)
 
         if status:
             payment_status = {
                 "quantity_brought":   status.quantity_brought,
-                "amount_paid_ugx":    float(status.amount_paid_ugx) or '0.00',
-                "amount_balance_ugx": float(status.amount_balance_ugx) or '0.00',
+                "amount_paid_ugx":    round(float(status.amount_paid_ugx or 0), 2),
+                "amount_balance_ugx": round(float(status.amount_balance_ugx or 0), 2),
                 "last_brought_on":    f'{status.last_brought_on}',
                 "last_paid_on":       f'{status.last_paid_on}',
             }
@@ -378,16 +363,13 @@ def _get_old_payments_details(student, payment_type, payment_type_obj):
                 "brought_item":    p.brought_item,
                 "items_brought":   p.items_brought,
                 "brought_cash":    p.brought_cash,
-                "amount_paid_ugx": float(p.amount_paid_ugx) or '0.00',
+                "amount_paid_ugx": round(float(p.amount_paid_ugx or 0), 2),
             })
 
     return {
         "status":   payment_status,
         "payments": payments_list,
     }
-
-
-
 
 
 
@@ -589,14 +571,22 @@ def add_payment(request):
 
         if payment_type == "scholastic":
             for item in selected_fees:
-                req_id          = item.get("id")
-                monetary_value  = float(item.get("monetary_value", 0))
-                unit_price      = float(item.get("unit_price", 0))
-                quantity_needed = int(item.get("quantity_needed", 0))
-                item_name       = item.get("name", "")
+                req_id        = item.get("id")
+                item_name     = item.get("name", "")
+                unit_price    = float(item.get("unit_price", 0))
+                status_data   = item.get("status", {})
 
-                raw_qty  = request.POST.get(f"qty_{req_id}",  "").strip()
-                raw_cash = request.POST.get(f"cash_{req_id}", "").strip()
+                # ── Use status if exists, else use defaults ──────────────────────
+                if status_data and status_data.get("amount_balance_ugx") is not None:
+                    monetary_value   = float(status_data.get("amount_balance_ugx", 0))
+                    qty_already_have = int(status_data.get("quantity_brought", 0))
+                    quantity_needed  = max(0, int(item.get("quantity_needed", 0)) - qty_already_have)
+                else:
+                    monetary_value  = float(item.get("monetary_value", 0))
+                    quantity_needed = int(item.get("quantity_needed", 0))
+
+                raw_qty  = request.POST.get(f"qty_brought_{req_id}", "").strip()
+                raw_cash = request.POST.get(f"cash_amount_{req_id}", "").strip()
 
                 qty_brought = 0
                 cash_amount = 0.0
@@ -607,7 +597,7 @@ def add_payment(request):
                         if qty_brought < 0:
                             errors.append(f"Quantity cannot be negative for {item_name}.")
                             continue
-                        qty_brought = min(qty_brought, quantity_needed)
+                        qty_brought = min(qty_brought, quantity_needed)  # cap at remaining
                     except (ValueError, TypeError):
                         errors.append(f"Invalid quantity for {item_name}.")
                         continue
@@ -626,8 +616,13 @@ def add_payment(request):
                     errors.append(f"Enter a quantity or cash amount for {item_name}.")
                     continue
 
-                physical_credit = qty_brought * unit_price
-                balance = max(0.0, monetary_value - physical_credit - cash_amount)
+                physical_credit  = qty_brought * unit_price
+                remaining_after_items = max(0.0, monetary_value - physical_credit)
+
+                # cap cash to what's still owed after items
+                cash_amount = min(cash_amount, remaining_after_items)
+
+                balance = max(0.0, remaining_after_items - cash_amount)
                 status  = "Fully Met" if balance == 0 else "Partially Met"
 
                 payment_amounts[str(req_id)] = {
@@ -641,11 +636,17 @@ def add_payment(request):
                     "balance":         balance,
                     "status":          status,
                 }
-
         else:
             for fee in selected_fees:
                 fee_id     = fee.get("id")
-                fee_amount = float(fee.get("amount", 0))
+
+
+                status_data = fee.get("status", {})
+                if status_data and status_data.get("amount_balance") is not None:
+                    fee_amount = float(status_data.get("amount_balance", 0))
+                else:
+                    fee_amount = float(fee.get("amount", 0))
+
                 label      = fee.get("name") or fee.get("type") or "Fee"
                 raw_amount = request.POST.get(f"amount_{fee_id}", "").strip()
 
@@ -722,6 +723,19 @@ def add_payment(request):
                     for req_id_str, data in payment_amounts.items():
                         req_obj = SchoolScholasticRequirements.objects.get(pk=int(req_id_str))
 
+                        from django.utils.timezone import now
+                        
+
+                        sr_p = ScholasticRequirementPayment.objects.create(
+                            student         = student,
+                            receipt_number  = generate_receipt_number_scholastic(),
+                            requirement     = req_obj,
+                            school_class    = current_class,
+                            payment_date  = now().date()
+                        )
+
+
+
                         status_row, _ = StudentScholasticRequirementStatus.objects.get_or_create(
                             student     = student,
                             requirement = req_obj,
@@ -751,14 +765,31 @@ def add_payment(request):
                         status_row.fully_met          = new_balance <= 0
 
                         if qty_brought > 0:
+                            sr_p.brought_item = True
+                            sr_p.items_brought = qty_brought
+
                             status_row.last_brought_on = today
                         if cash_amount > 0:
+                            sr_p.brought_cash =True
+                            sr_p.amount_paid_ugx = float(cash_amount)
+
                             status_row.last_paid_on = today
                         if status_row.fully_met and not status_row.fully_met_on:
+                            sr_p.paid_fully =True
+
                             status_row.fully_met_on = today
 
+
+                        
+
                         status_row.recorded_by = request.user
+                        sr_p.handled_by = request.user
+
+                        sr_p.save()
                         status_row.save()
+
+
+                         
 
                 # ── School Fees ───────────────────────────────────────────
                 elif payment_type == "school":

@@ -18,6 +18,8 @@ from .models import (
     AssessmentTotalMark,
     AssessmentPerformance,
     AssessmentModification,
+    AssessmentPerformanceEntryStatus,
+    
     ASSESSMENT_TYPE_CHOICES,
     MONTH_CHOICES,
 )
@@ -897,8 +899,10 @@ def add_assessment_subject(request, pk):
             return render(request, 'assessments/add_assessment_subject.html', ctx)
 
         with transaction.atomic():
+
+
             for item in to_create:
-                AssessmentSubject.objects.get_or_create(
+                subject_obj = AssessmentSubject.objects.get_or_create(
                     assessment       = assessment,
                     assessment_class = item['ac'].school_class,
                     subject          = item['subject'],
@@ -907,6 +911,14 @@ def add_assessment_subject(request, pk):
                         'notes':    item['notes'],
                     },
                 )
+                AssessmentPerformanceEntryStatus.objects.get_or_create(
+                    assessment          =   assessment,
+                    school_class        =   item['ac'],
+                    subject             =   subject_obj,
+                    students_attended   =   item['ac'].students_attended,  
+                )
+                
+
             for item in to_update:
                 item['asub'].passmark = item['passmark']
                 item['asub'].notes    = item['notes']

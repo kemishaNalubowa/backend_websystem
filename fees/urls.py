@@ -41,6 +41,10 @@ from fees.views.scholastic_requirements_views import (
     scholastic_requirements_detail,
     delete_scholastic_requirement,
     toggle_scholastic_requirement,
+
+    scholastic_payment_list,
+    scholastic_payment_detail,
+    scholastic_payment_delete
 ) 
 
 
@@ -108,5 +112,8 @@ urlpatterns = [
     path('scholastic-requirements/<int:pk>/',                     scholastic_requirements_detail,    name='scholastic_requirements_detail'),
     path('scholastic-requirements/<int:pk>/delete/',              delete_scholastic_requirement,     name='delete_scholastic_requirement'),
     path('scholastic-requirements/<int:pk>/toggle/',              toggle_scholastic_requirement,     name='toggle_scholastic_requirement'),
+    path('scholastic-payments/',                    scholastic_payment_list,   name='scholastic_payment_list'),
+    path('scholastic-payments/<int:pk>/',           scholastic_payment_detail, name='scholastic_payment_detail'),
+    path('scholastic-payments/<int:pk>/delete/',    scholastic_payment_delete, name='scholastic_payment_delete'),
 
 ]
