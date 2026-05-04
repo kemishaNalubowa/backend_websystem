@@ -1,0 +1,124 @@
+{% extends "dashboard/base_parent.html" %}
+{% comment %}
+dashboard/templates/dashboard/parent_student_class.html
+Lists all terms that have data for this student in this class.
+{% endcomment %}
+
+{% block title %}{{ school_class }} — {{ student.full_name }}{% endblock %}
+
+{% block content %}
+
+<!-- ── Breadcrumb ─────────────────────────────────────────────────────── -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_dashboard' %}" class="text-decoration-none">
+        <i class="bi bi-house-door me-1"></i>Dashboard
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_student_overview' student.pk %}" class="text-decoration-none">
+        {{ student.full_name }}
+      </a>
+    </li>
+    <li class="breadcrumb-item active">{{ school_class }}</li>
+  </ol>
+</nav>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center"
+       style="width:52px;height:52px;">
+    <i class="bi bi-building fs-4 text-primary"></i>
+  </div>
+  <div>
+    <h5 class="mb-0 fw-bold">{{ school_class }}</h5>
+    <p class="mb-0 small text-muted">{{ student.full_name }}
+      {% if current_class and school_class.pk == current_class.pk %}
+        &mdash; <span class="badge bg-success">Current Class</span>
+      {% endif %}
+    </p>
+  </div>
+</div>
+
+<!-- ── Terms ───────────────────────────────────────────────────────────── -->
+<h6 class="fw-bold text-dark mb-3">
+  <i class="bi bi-calendar3 text-primary me-2"></i>Terms
+</h6>
+
+{% if terms_data %}
+  <div class="row g-3">
+    {% for row in terms_data %}
+      <div class="col-12 col-sm-6 col-lg-4">
+        <a href="{% url 'parent_student_class_term' student.pk school_class.pk row.term.pk %}"
+           class="text-decoration-none">
+          <div class="card border-0 shadow-sm h-100
+            {% if row.term.is_active %}border-start border-primary border-3{% endif %}">
+            <div class="card-body">
+
+              <!-- Term name + current badge -->
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <span class="fw-semibold text-dark">{{ row.term }}</span>
+                {% if row.term.is_active %}
+                    <span class="badge bg-primary">Current</span>
+                {% endif %}
+
+              </div>
+
+              <!-- Mini stats inside the card -->
+              <div class="row g-2 text-center">
+                <div class="col-6">
+                  <div class="bg-light rounded p-2">
+                    <div class="small text-muted">Balance</div>
+                    <div class="fw-bold small
+                      {% if row.total_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                      UGX {{ row.total_balance|floatformat:0 }}
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="bg-light rounded p-2">
+                    <div class="small text-muted">Fees Paid</div>
+                    <div class="fw-bold small text-dark">
+                      {{ row.paid_count }}/{{ row.fees_items }}
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="bg-light rounded p-2">
+                    <div class="small text-muted">Scholastic</div>
+                    <div class="fw-bold small text-dark">
+                      {{ row.scholastic_met }}/{{ row.scholastic_total }}
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="bg-light rounded p-2">
+                    <div class="small text-muted">Paid</div>
+                    <div class="fw-bold small text-success">
+                      UGX {{ row.total_paid|floatformat:0 }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-end mt-3">
+                <span class="small text-primary">
+                  View details <i class="bi bi-arrow-right ms-1"></i>
+                </span>
+              </div>
+
+            </div>
+          </div>
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info d-flex align-items-center gap-2">
+    <i class="bi bi-info-circle-fill"></i>
+    No term data found for {{ student.full_name }} in {{ school_class }}.
+  </div>
+{% endif %}
+
+{% endblock %}

@@ -4,22 +4,17 @@
 
 {% block breadcrumb %}
 <li class="breadcrumb-item">
-  <a href="{% url 'fees:assessment_fees_list' %}" class="text-secondary">Fee Assessments</a>
+  <a href="{% url 'fees:assessment_fees_list' %}" class="text-secondary">Assessment Fees</a>
 </li>
 <li class="breadcrumb-item">
-  <a href="{% url 'fees:assessment_fees_detail' assessment.pk %}" class="text-secondary">
-    {{ assessment.student.last_name }}, {{ assessment.student.first_name }}
+  <a href="{% url 'fees:assessment_fees_detail' fee.pk %}" class="text-secondary">
+    {{ fee.assessment.title }}
   </a>
 </li>
 <li class="breadcrumb-item active" aria-current="page">Delete</li>
 {% endblock %}
 
 {% block content %}
-
-{# ══════════════════════════════════════════════════════
-   Context: assessment (AssessmentFees),
-            payment_count (int — payments for same student + term)
-══════════════════════════════════════════════════════ #}
 
 <div class="row justify-content-center">
   <div class="col-12 col-md-8 col-lg-6">
@@ -36,77 +31,43 @@
 
         {# Record summary #}
         <div class="border rounded p-3 mb-4 bg-light">
-          <div class="d-flex align-items-center gap-3 mb-3">
-            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-800 flex-shrink-0"
-                 style="width:44px;height:44px;font-size:.9rem;">
-              {{ assessment.student.first_name|first|upper }}{{ assessment.student.last_name|first|upper }}
-            </div>
-            <div>
-              <div class="fw-800 fs-6">
-                {{ assessment.student.last_name }}, {{ assessment.student.first_name }}
-              </div>
-              {% if assessment.student.student_id %}
-              <code class="text-muted" style="font-size:.72rem;">{{ assessment.student.student_id }}</code>
-              {% endif %}
-            </div>
-          </div>
+          <div class="fw-800 fs-6 mb-2">{{ fee.assessment.title }}</div>
           <dl class="row mb-0 small">
+
+            <dt class="col-5 text-muted fw-700">Type</dt>
+            <dd class="col-7">{{ fee.assessment.get_assessment_type_display }}</dd>
+
             <dt class="col-5 text-muted fw-700">Term</dt>
-            <dd class="col-7">Term {{ assessment.term.name }} — {{ assessment.term.academic_year }}</dd>
+            <dd class="col-7">Term {{ fee.term.name }} — {{ fee.term.academic_year }}</dd>
 
-            <dt class="col-5 text-muted fw-700">Class</dt>
+            <dt class="col-5 text-muted fw-700">Amount</dt>
+            <dd class="col-7 font-monospace fw-800">UGX {{ fee.amount|floatformat:0 }}</dd>
+
+            <dt class="col-5 text-muted fw-700">Due Date</dt>
             <dd class="col-7">
-              {% if assessment.student.current_class %}{{ assessment.student.current_class.display_name }}{% else %}—{% endif %}
+              {% if fee.due_date %}{{ fee.due_date|date:"d M Y" }}{% else %}—{% endif %}
             </dd>
 
-            <dt class="col-5 text-muted fw-700">Required</dt>
-            <dd class="col-7 font-monospace fw-600">{{ assessment.total_required|floatformat:0 }}</dd>
+            <dt class="col-5 text-muted fw-700">Created By</dt>
+            <dd class="col-7">{{ fee.generated_by.get_full_name|default:"System" }}</dd>
 
-            <dt class="col-5 text-muted fw-700">Paid</dt>
-            <dd class="col-7 font-monospace text-success fw-600">{{ assessment.total_paid|floatformat:0 }}</dd>
-
-            <dt class="col-5 text-muted fw-700">Balance</dt>
-            <dd class="col-7 font-monospace fw-800
-              {% if assessment.balance > 0 %}text-danger{% else %}text-success{% endif %}">
-              {{ assessment.balance|floatformat:0 }}
-            </dd>
-
-            <dt class="col-5 text-muted fw-700">Cleared</dt>
-            <dd class="col-7">
-              {% if assessment.is_cleared %}
-              <span class="badge bg-success rounded-pill">Yes</span>
-              {% else %}
-              <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">No</span>
-              {% endif %}
-            </dd>
           </dl>
         </div>
 
-        {# Payment records notice — NOT deleted #}
-        <div class="alert {% if payment_count %}alert-info{% else %}alert-warning{% endif %} mb-4">
+        <div class="alert alert-warning mb-4">
           <i class="bi bi-info-circle me-2"></i>
-          {% if payment_count %}
-          <strong>{{ payment_count }} payment record{{ payment_count|pluralize }}</strong>
-          linked to this student and term will <strong>not</strong> be deleted —
-          they will remain in the payment history. After deleting this assessment
-          you can re-generate it at any time using Bulk Generate.
-          {% else %}
-          No payment records are linked to this assessment for this term.
-          {% endif %}
+          This action <strong>cannot be undone</strong>. Any payment records
+          associated with this assessment fee will remain in the system.
         </div>
-
-        <p class="text-muted small mb-4">
-          This action <strong>cannot be undone</strong>.
-        </p>
 
         <div class="d-flex gap-2">
           <form method="post">
             {% csrf_token %}
             <button type="submit" class="btn btn-danger">
-              <i class="bi bi-trash me-1"></i>Yes, Delete Assessment
+              <i class="bi bi-trash me-1"></i>Yes, Delete
             </button>
           </form>
-          <a href="{% url 'fees:assessment_fees_detail' assessment.pk %}"
+          <a href="{% url 'fees:assessment_fees_detail' fee.pk %}"
              class="btn btn-outline-secondary">Cancel</a>
         </div>
 

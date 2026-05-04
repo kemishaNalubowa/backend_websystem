@@ -329,7 +329,7 @@ class AssessmentPerformance(TimeStampedModel):
     
 
     school_class = models.ForeignKey(
-                       'academics.SchoolClass', on_delete=models.CASCADE,
+                       'academics.SchoolSupportedClasses', on_delete=models.CASCADE,
                        related_name='assessment_performances'
                    )
     marks_obtained = models.DecimalField(max_digits=7, decimal_places=1,
@@ -518,3 +518,7 @@ class AssessmentPerformanceEntryStatus(models.Model):
             f"{self.subject.subject.name} — "
             f"{self.students_entered}/{self.students_attended}"
         )
+
+
+
+        

@@ -1,0 +1,215 @@
+{% extends "dashboard/base_parent.html" %}
+{% comment %}
+dashboard/templates/dashboard/parent_request_detail.html
+Shows a single request with the full reply thread.
+Replies marked as read on page load (done in the view).
+{% endcomment %}
+
+{% block title %}Request {{ parent_request.reference_number }}{% endblock %}
+
+{% block content %}
+
+<!-- ── Breadcrumb ─────────────────────────────────────────────────────── -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_dashboard' %}" class="text-decoration-none">
+        <i class="bi bi-house-door me-1"></i>Dashboard
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_communication' %}" class="text-decoration-none">My Requests</a>
+    </li>
+    <li class="breadcrumb-item active">{{ parent_request.reference_number }}</li>
+  </ol>
+</nav>
+
+
+<!-- ── Request header card ──────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white border-bottom py-3">
+    <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+      <div>
+        <h6 class="fw-bold mb-1">{{ parent_request.subject }}</h6>
+        <div class="d-flex flex-wrap gap-2 small text-muted">
+          <span>
+            <i class="bi bi-hash me-1"></i>{{ parent_request.reference_number }}
+          </span>
+          <span>
+            <i class="bi bi-tag me-1"></i>{{ parent_request.get_request_type_display }}
+          </span>
+          <span>
+            <i class="bi bi-clock me-1"></i>{{ parent_request.created_at|date:"d M Y, g:i A" }}
+          </span>
+          {% if parent_request.student %}
+            <span>
+              <i class="bi bi-person me-1"></i>Re: {{ parent_request.student.full_name }}
+            </span>
+          {% endif %}
+          {% if parent_request.is_urgent %}
+            <span class="badge bg-danger">Urgent</span>
+          {% endif %}
+        </div>
+      </div>
+      <div>
+        {% if parent_request.status == 'pending' %}
+          <span class="badge bg-warning text-dark fs-6 px-3 py-2">Pending</span>
+        {% elif parent_request.status == 'reviewed' %}
+          <span class="badge bg-info text-dark fs-6 px-3 py-2">In Progress</span>
+        {% elif parent_request.status == 'resolved' %}
+          <span class="badge bg-success fs-6 px-3 py-2">Resolved</span>
+        {% elif parent_request.status == 'closed' %}
+          <span class="badge bg-secondary fs-6 px-3 py-2">Closed</span>
+        {% elif parent_request.status == 'rejected' %}
+          <span class="badge bg-danger fs-6 px-3 py-2">Rejected</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Original message body -->
+  <div class="card-body">
+    <div class="d-flex gap-3">
+      <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0"
+           style="width:40px;height:40px;">
+        <i class="bi bi-person-fill text-primary"></i>
+      </div>
+      <div class="flex-grow-1">
+        <div class="fw-semibold small mb-1">You ({{ parent_request.created_at|date:"d M Y" }})</div>
+        <div class="text-dark" style="white-space:pre-wrap;font-size:0.9rem;">{{ parent_request.message }}</div>
+        {% if parent_request.attachment %}
+          <div class="mt-2">
+            <a href="{{ parent_request.attachment.url }}"
+               class="btn btn-outline-secondary btn-sm"
+               target="_blank">
+              <i class="bi bi-paperclip me-1"></i>View Attachment
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Replies thread ────────────────────────────────────────────────────── -->
+{% if replies %}
+  <h6 class="fw-bold mb-3 text-dark">
+    <i class="bi bi-chat-left-fill text-primary me-2"></i>
+    Replies ({{ replies.count }})
+  </h6>
+
+  <div class="d-flex flex-column gap-3 mb-4">
+    {% for reply in replies %}
+      <div class="card border-0 shadow-sm border-start border-3
+                  {% if reply.replied_by == request.user %}border-primary{% else %}border-success{% endif %}">
+        <div class="card-body">
+          <div class="d-flex gap-3">
+
+            {% if reply.replied_by == request.user %}
+              <!-- Parent avatar -->
+              <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0"
+                   style="width:40px;height:40px;">
+                <i class="bi bi-person-fill text-primary"></i>
+              </div>
+            {% else %}
+              <!-- Staff avatar -->
+              <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0"
+                   style="width:40px;height:40px;">
+                <i class="bi bi-person-badge-fill text-success"></i>
+              </div>
+            {% endif %}
+
+            <div class="flex-grow-1">
+              <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                <span class="fw-semibold small">
+                  {% if reply.replied_by == request.user %}
+                    You
+                  {% else %}
+                    {{ reply.replied_by.get_full_name }}
+                    <span class="text-muted fw-normal">(School Staff)</span>
+                  {% endif %}
+                </span>
+                <span class="text-muted small">
+                  {{ reply.created_at|date:"d M Y, g:i A" }}
+                </span>
+              </div>
+              <div class="text-dark  border-0" style="white-space:pre-wrap;font-size:0.9rem;">
+                {{ reply.message }}
+              </div>
+              {% if reply.attachment %}
+                <div class="mt-2">
+                  <a href="{{ reply.attachment.url }}"
+                     class="btn btn-outline-secondary btn-sm"
+                     target="_blank">
+                    <i class="bi bi-paperclip me-1"></i>View Attachment
+                  </a>
+                </div>
+              {% endif %}
+            </div>
+
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+{% else %}
+  <div class="alert alert-light border d-flex align-items-center gap-2 mb-4">
+    <i class="bi bi-hourglass-split text-warning fs-5"></i>
+    <span class="small">
+      Your request is awaiting a response from the school. You will see replies here once the school responds.
+    </span>
+  </div>
+{% endif %}
+
+
+<!-- ── Reply Form ────────────────────────────────────────────────────────── -->
+{% if parent_request.status != 'closed' and parent_request.status != 'rejected' %}
+<div class="card border-0 shadow-sm mt-2 mb-4">
+  <div class="card-header bg-white border-bottom fw-semibold py-3">
+    <i class="bi bi-reply-fill me-1 text-primary"></i> Write a Reply
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <textarea
+          name="body"
+          rows="4"
+          class="form-control {% if errors.body %}is-invalid{% endif %}"
+          placeholder="Type your reply here…"
+        >{{ post.body|default:'' }}</textarea>
+        {% if errors.body %}
+          <div class="invalid-feedback">{{ errors.body }}</div>
+        {% endif %}
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm px-4">
+        <i class="bi bi-send me-1"></i> Send Reply
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ── Resolved note ─────────────────────────────────────────────────────── -->
+{% if parent_request.status == 'resolved' or parent_request.status == 'closed' %}
+  <div class="alert alert-success d-flex align-items-center gap-2">
+    <i class="bi bi-check-circle-fill fs-5"></i>
+    <span class="small">
+      This request has been <strong>{{ parent_request.get_status_display }}</strong>.
+      {% if parent_request.resolved_at %}
+        Resolved on {{ parent_request.resolved_at|date:"d M Y" }}.
+      {% endif %}
+    </span>
+  </div>
+{% endif %}
+
+
+<!-- ── Back button ───────────────────────────────────────────────────────── -->
+<a href="{% url 'parent_communication' %}" class="btn btn-outline-secondary btn-sm mt-2">
+  <i class="bi bi-arrow-left me-1"></i>Back to Requests
+</a>
+
+{% endblock %}

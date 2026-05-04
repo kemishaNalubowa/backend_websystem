@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Enter Performance — Step 3 | {{ assessment.title }}{% endblock %}
-
+{% load  assessments_extras %}
 {% block content %}
 <div class="container-fluid py-4">
 
@@ -51,6 +51,23 @@
   <form method="post">
     {% csrf_token %}
 
+
+    {% if errors %}
+      <div class="alert alert-danger">
+        <strong>Please fix the following:</strong>
+        <ul class="mb-0 mt-1">
+          {{  errors }}
+          {% for k, v in errors.items %}
+            <li>{{ v }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+      =========================================================================================================
+    {{ class_student_map }}
+    =====================================================================================================================
+
     {% for ac_pk, cls_data in class_student_map.items %}
       <div class="card mb-5">
         <div class="card-header bg-light fw-semibold fs-5">
@@ -96,14 +113,16 @@
                                 {% else %}
                                   {# Need to enter #}
                                   {% with field_key="mark_"|add:student.student_id|add:"_"|add:as_pk|stringformat:"s" %}
+
+                                    {{ as_pk }}   => ..................
                                     <input
                                       type="number"
-                                      name="{{ field_key }}"
+                                      name="mark_{{ student.student_id}}_{{ as_pk }}"
                                       step="0.01"
                                       min="0"
                                       class="form-control form-control-sm text-center {% if errors and field_key in errors %}is-invalid{% endif %}"
                                       style="max-width:90px;margin:auto"
-                                      value="{% if post %}{{ post|default_if_none:""|dictsort:field_key }}{% endif %}"
+                                      value="{% if post %}{{ post|getitem:field_key }}{% endif %}"
                                       placeholder="0"
                                     >
                                     {% if errors %}

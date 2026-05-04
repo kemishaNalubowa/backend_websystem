@@ -1,0 +1,260 @@
+{% extends "dashboard/base_parent.html" %}
+{% comment %}
+dashboard/templates/dashboard/parent_student_class_term_fees.html
+Fees structure table for one class + one term.
+Stats shown as cards above. No totals row in the table.
+{% endcomment %}
+
+{% block title %}School Fees — {{ term }} — {{ school_class }}{% endblock %}
+
+{% block content %}
+
+<!-- ── Breadcrumb ─────────────────────────────────────────────────────── -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_dashboard' %}" class="text-decoration-none">
+        <i class="bi bi-house-door me-1"></i>Dashboard
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_student_overview' student.pk %}" class="text-decoration-none">
+        {{ student.full_name }}
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_student_class' student.pk school_class.pk %}" class="text-decoration-none">
+        {{ school_class }}
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_student_class_term' student.pk school_class.pk term.pk %}" class="text-decoration-none">
+        {{ term }}
+      </a>
+    </li>
+    <li class="breadcrumb-item active">School Fees</li>
+  </ol>
+</nav>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center"
+       style="width:52px;height:52px;">
+    <i class="bi bi-cash-coin fs-4 text-primary"></i>
+  </div>
+  <div>
+    <h5 class="mb-0 fw-bold">School Fees</h5>
+    <p class="mb-0 small text-muted">
+      {{ student.full_name }} &mdash; {{ school_class }} &mdash; {{ term }}
+    </p>
+  </div>
+</div>
+
+<!-- ── Stats cards ─────────────────────────────────────────────────────── -->
+{% if fees_stats %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="small text-muted mb-1">Total Fees</div>
+      <div class="fw-bold text-primary">UGX {{ fees_stats.total_fees|floatformat:0 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="small text-muted mb-1">Amount Paid</div>
+      <div class="fw-bold text-success">UGX {{ fees_stats.total_paid|floatformat:0 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="small text-muted mb-1">Balance Due</div>
+      <div class="fw-bold {% if fees_stats.total_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+        UGX {{ fees_stats.total_balance|floatformat:0 }}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="small text-muted mb-1">Fully Paid</div>
+      <div class="fw-bold text-dark">
+        {{ fees_stats.fully_paid_count }} / {{ fees_stats.total_items }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Fees table ───────────────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+    <span class="fw-semibold small">
+      <i class="bi bi-list-columns text-primary me-2"></i>
+      Fees Structure — {{ school_class }} / {{ term }}
+    </span>
+    <span class="badge bg-primary bg-opacity-10 text-primary small">
+      {{ fees_structure_data|length }} item{{ fees_structure_data|length|pluralize }}
+    </span>
+  </div>
+
+  <div class="card-body p-0">
+    {% if fees_structure_data %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3 small">Fee Item</th>
+              <th class="small text-end">Total (UGX)</th>
+              <th class="small text-end">Paid (UGX)</th>
+              <th class="small text-end">Balance (UGX)</th>
+              <th class="small text-center">Transactions</th>
+              <th class="small text-center pe-3">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in fees_structure_data %}
+              <tr {% if row.status and row.status.fully_paid %}class="table-success"{% endif %}>
+
+                <td class="ps-3 fw-semibold small">
+                  {{ row.fee.title|default:row.fee.get_fees_type_display }}
+                </td>
+
+                <td class="small text-end fw-semibold">
+                  {{ row.fee.amount|floatformat:0 }}
+                </td>
+
+                <td class="small text-end text-success fw-semibold">
+                  {% if row.status %}{{ row.status.amount_paid|floatformat:0 }}{% else %}0{% endif %}
+                </td>
+
+                <td class="small text-end fw-semibold
+                  {% if row.status and row.status.fully_paid %}text-success{% else %}text-danger{% endif %}">
+                  {% if row.status %}
+                    {{ row.status.amount_balance|floatformat:0 }}
+                  {% else %}
+                    {{ row.fee.amount|floatformat:0 }}
+                  {% endif %}
+                </td>
+
+                <td class="text-center">
+                  {% if row.transactions %}
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm py-0 px-2 small"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modal-txn-{{ forloop.counter }}">
+                      <i class="bi bi-receipt me-1"></i>{{ row.transactions|length }}
+                    </button>
+                  {% else %}
+                    <span class="text-muted small">—</span>
+                  {% endif %}
+                </td>
+
+                <td class="text-center pe-3">
+                  {% if row.status and row.status.fully_paid %}
+                    <span class="badge bg-success">
+                      <i class="bi bi-check-circle me-1"></i>Paid
+                    </span>
+                  {% elif row.status and row.status.amount_paid > 0 %}
+                    <span class="badge bg-warning text-dark">Partial</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Unpaid</span>
+                  {% endif %}
+                </td>
+
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    {% else %}
+      <div class="p-5 text-center text-muted small">
+        <i class="bi bi-list-columns-reverse fs-3 d-block mb-2"></i>
+        No fees structure found for {{ school_class }} in {{ term }}.
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+
+<!-- ── Transaction modals ───────────────────────────────────────────────── -->
+{% for row in fees_structure_data %}
+  {% if row.transactions %}
+  <div class="modal fade" id="modal-txn-{{ forloop.counter }}"
+       tabindex="-1" aria-labelledby="modal-txn-label-{{ forloop.counter }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+
+        <div class="modal-header py-3">
+          <h6 class="modal-title fw-bold" id="modal-txn-label-{{ forloop.counter }}">
+            <i class="bi bi-receipt me-2 text-primary"></i>
+            {{ row.fee.title|default:row.fee.get_fees_type_display }} — Payment History
+          </h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body p-0">
+          <!-- Summary strip -->
+          <div class="px-4 py-3 border-bottom bg-light d-flex flex-wrap gap-4 small">
+            <span>
+              <span class="text-muted">Total Fee:</span>
+              <span class="fw-semibold ms-1">UGX {{ row.fee.amount|floatformat:0 }}</span>
+            </span>
+            <span>
+              <span class="text-muted">Paid:</span>
+              <span class="fw-semibold ms-1 text-success">
+                UGX {% if row.status %}{{ row.status.amount_paid|floatformat:0 }}{% else %}0{% endif %}
+              </span>
+            </span>
+            <span>
+              <span class="text-muted">Balance:</span>
+              <span class="fw-semibold ms-1
+                {% if row.status and row.status.fully_paid %}text-success{% else %}text-danger{% endif %}">
+                UGX {% if row.status %}{{ row.status.amount_balance|floatformat:0 }}{% else %}{{ row.fee.amount|floatformat:0 }}{% endif %}
+              </span>
+            </span>
+          </div>
+
+          <!-- Receipts table -->
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead class="table-light">
+                <tr>
+                  <th class="ps-4">Receipt No.</th>
+                  <th>Date</th>
+                  <th class="text-end">Prev. Balance</th>
+                  <th class="text-end text-success">Amount Paid</th>
+                  <th class="text-end pe-4">Curr. Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for t in row.transactions %}
+                  <tr {% if t.current_balance == 0 %}class="table-success"{% endif %}>
+                    <td class="ps-4">
+                      <span class="badge bg-light text-dark border">{{ t.txn.receipt_number }}</span>
+                    </td>
+                    <td>{{ t.txn.payment_date|date:"d M Y" }}</td>
+                    <td class="text-end text-muted">UGX {{ t.prev_balance|floatformat:0 }}</td>
+                    <td class="text-end fw-semibold text-success">UGX {{ t.txn.amount|floatformat:0 }}</td>
+                    <td class="text-end pe-4 fw-semibold
+                      {% if t.current_balance == 0 %}text-success{% else %}text-danger{% endif %}">
+                      UGX {{ t.current_balance|floatformat:0 }}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm"
+                  data-bs-dismiss="modal">Close</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  {% endif %}
+{% endfor %}
+
+{% endblock %}

@@ -94,10 +94,17 @@
 
   </div>
 
-  <a href="{% url 'assessments:perf_entry_part1' assessment.pk %}"
-       class="btn btn-sm btn-outline-danger">
-      Add Perfomance
+  
+
+  <a href="{% url 'assessments:performance_enable' assessment.pk %}"
+      class="btn btn-sm btn-outline-danger">
+      enable Add Perfomance
     </a>
+  
+  <a href="{% url 'assessments:performance_overview' assessment.pk %}"
+    class="btn btn-sm btn-outline-danger">
+    Perfomance Center
+  </a>
 </div>
 
 
@@ -474,14 +481,9 @@
                  class="btn btn-sm btn-outline-secondary py-0 px-2" title="View">
                 <i class="bi bi-eye"></i>
               </a>
-              <a href="{% url 'assessments:edit_performance' assessment.pk perf.pk %}"
-                 class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit">
-                <i class="bi bi-pencil"></i>
-              </a>
-              <a href="{% url 'assessments:delete_performance' assessment.pk perf.pk %}"
-                 class="btn btn-sm btn-outline-danger py-0 px-2" title="Delete">
-                <i class="bi bi-trash"></i>
-              </a>
+              
+             
+             
             </div>
           </td>
         </tr>

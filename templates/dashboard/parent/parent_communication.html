@@ -1,0 +1,154 @@
+{% extends "dashboard/base_parent.html" %}
+{% comment %}
+dashboard/templates/dashboard/parent_communication.html
+Full request history with status filter and status badges.
+{% endcomment %}
+
+{% block title %}My Requests{% endblock %}
+{% block sidebar_comm %}active text-primary fw-semibold{% endblock %}
+{% block nav_comm %}active{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ──────────────────────────────────────────────────────── -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <div>
+    <h5 class="mb-0 fw-bold text-dark">
+      <i class="bi bi-chat-left-text-fill text-primary me-2"></i>My Requests
+    </h5>
+    <p class="text-muted small mb-0">
+      All requests submitted to the school
+    </p>
+  </div>
+  <a href="{% url 'parent_new_request' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle me-1"></i>New Request
+  </a>
+</div>
+
+
+<!-- ── Status filter bar ────────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-2 px-3">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <span class="small text-muted me-1">Filter:</span>
+      {% for value, label in status_choices %}
+        <a
+          href="?status={{ value }}"
+          class="btn btn-sm {% if status_filter == value %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+        >
+          {{ label }}
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Requests table ────────────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    {% if requests %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3 small">Reference</th>
+              <th class="small">Type</th>
+              <th class="small">Subject</th>
+              <th class="small">Student</th>
+              <th class="small">Date</th>
+              <th class="small text-center">Replies</th>
+              <th class="small">Status</th>
+              <th class="small pe-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for req in requests %}
+              <tr>
+                <!-- Reference + urgent badge -->
+                <td class="ps-3">
+                  <span class="badge bg-light text-dark border small fw-semibold">
+                    {{ req.reference_number }}
+                  </span>
+                  {% if req.is_urgent %}
+                    <span class="badge bg-danger ms-1 small">Urgent</span>
+                  {% endif %}
+                </td>
+
+                <!-- Request type -->
+                <td class="small text-muted">{{ req.get_request_type_display }}</td>
+
+                <!-- Subject -->
+                <td class="small fw-semibold">{{ req.subject|truncatechars:45 }}</td>
+
+                <!-- Student concerned -->
+                <td class="small text-muted">
+                  {% if req.student %}
+                    {{ req.student.full_name }}
+                  {% else %}
+                    <span class="text-muted fst-italic">General</span>
+                  {% endif %}
+                </td>
+
+                <!-- Date submitted -->
+                <td class="small text-muted">{{ req.created_at|date:"d M Y" }}</td>
+
+                <!-- Unread reply indicator -->
+                <td class="text-center">
+                  {% with unread=req.replies.filter.is_internal__False.is_read_by_parent__False.count %}
+                  {% endwith %}
+                  {# Use a simpler approach - check via template tag or just show reply count #}
+                  <span class="badge bg-light text-dark border small">
+                    {{ req.replies.count }}
+                  </span>
+                </td>
+
+                <!-- Status badge -->
+                <td>
+                  {% if req.status == 'pending' %}
+                    <span class="badge bg-warning text-dark">Pending</span>
+                  {% elif req.status == 'reviewed' %}
+                    <span class="badge bg-info text-dark">In Progress</span>
+                  {% elif req.status == 'resolved' %}
+                    <span class="badge bg-success">Resolved</span>
+                  {% elif req.status == 'closed' %}
+                    <span class="badge bg-secondary">Closed</span>
+                  {% elif req.status == 'rejected' %}
+                    <span class="badge bg-danger">Rejected</span>
+                  {% endif %}
+                </td>
+
+                <!-- View button -->
+                <td class="pe-3">
+                  <a href="{% url 'parent_request_detail' req.pk %}"
+                     class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    {% else %}
+      <div class="p-5 text-center text-muted">
+        <i class="bi bi-chat-left-x fs-2 d-block mb-3"></i>
+        {% if status_filter %}
+          No requests with status "<strong>{{ status_filter }}</strong>" found.
+          <a href="{% url 'parent_communication' %}" class="d-block mt-2 small">
+            Clear filter
+          </a>
+        {% else %}
+          You have not submitted any requests yet.
+          <a href="{% url 'parent_new_request' %}" class="d-block mt-2 small btn btn-primary btn-sm w-auto mx-auto">
+            <i class="bi bi-plus-circle me-1"></i>Submit Your First Request
+          </a>
+        {% endif %}
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}

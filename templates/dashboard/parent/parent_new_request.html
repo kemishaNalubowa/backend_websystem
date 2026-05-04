@@ -1,0 +1,194 @@
+{% extends "dashboard/base_parent.html" %}
+{% comment %}
+dashboard/templates/dashboard/parent_new_request.html
+New request form — plain HTML POST, no Django Forms.
+Re-renders with `errors` dict and `post` dict on validation failure.
+{% endcomment %}
+
+{% block title %}New Request{% endblock %}
+
+{% block content %}
+
+<!-- ── Breadcrumb ─────────────────────────────────────────────────────── -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_dashboard' %}" class="text-decoration-none">
+        <i class="bi bi-house-door me-1"></i>Dashboard
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_communication' %}" class="text-decoration-none">My Requests</a>
+    </li>
+    <li class="breadcrumb-item active">New Request</li>
+  </ol>
+</nav>
+
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8 col-xl-7">
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-bold">
+          <i class="bi bi-plus-circle-fill text-primary me-2"></i>Submit a New Request
+        </h6>
+        <p class="text-muted small mb-0 mt-1">
+          Fill in the form below. The school administration will respond as soon as possible.
+        </p>
+      </div>
+
+      <div class="card-body py-4">
+        <form method="post" action="{% url 'parent_new_request' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <!-- ── Request Type ────────────────────────────────────────── -->
+          <div class="mb-3">
+            <label for="request_type" class="form-label fw-semibold small">
+              Request Type <span class="text-danger">*</span>
+            </label>
+            <select
+              id="request_type"
+              name="request_type"
+              class="form-select form-select-sm {% if errors.request_type %}is-invalid{% endif %}"
+              required
+            >
+              <option value="" disabled {% if not post.request_type %}selected{% endif %}>
+                — Select a type —
+              </option>
+              {% for value, label in request_type_choices %}
+                <option
+                  value="{{ value }}"
+                  {% if post.request_type == value %}selected{% endif %}
+                >
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+            {% if errors.request_type %}
+              <div class="invalid-feedback">{{ errors.request_type }}</div>
+            {% endif %}
+          </div>
+
+          <!-- ── Student (optional) ─────────────────────────────────── -->
+          {% if students %}
+            <div class="mb-3">
+              <label for="student_id" class="form-label fw-semibold small">
+                Concerning which child?
+                <span class="text-muted fw-normal">(optional)</span>
+              </label>
+              <select
+                id="student_id"
+                name="student_id"
+                class="form-select form-select-sm {% if errors.student_id %}is-invalid{% endif %}"
+              >
+                <option value="">— General / not student-specific —</option>
+                {% for student in students %}
+                  <option
+                    value="{{ student.pk }}"
+                    {% if post.student_id == student.pk|stringformat:'s' %}selected
+                    {% elif preselected_student and preselected_student.pk == student.pk %}selected
+                    {% endif %}
+                  >
+                    {{ student.full_name }}
+                    {% if student.current_class %}({{ student.current_class }}){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+              {% if errors.student_id %}
+                <div class="invalid-feedback">{{ errors.student_id }}</div>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          <!-- ── Subject ────────────────────────────────────────────── -->
+          <div class="mb-3">
+            <label for="subject" class="form-label fw-semibold small">
+              Subject <span class="text-danger">*</span>
+            </label>
+            <input
+              type="text"
+              id="subject"
+              name="subject"
+              maxlength="200"
+              value="{{ post.subject|default:'' }}"
+              placeholder="Brief summary of your request"
+              class="form-control form-control-sm {% if errors.subject %}is-invalid{% endif %}"
+              required
+            />
+            {% if errors.subject %}
+              <div class="invalid-feedback">{{ errors.subject }}</div>
+            {% else %}
+              <div class="form-text small text-muted">Max 200 characters.</div>
+            {% endif %}
+          </div>
+
+          <!-- ── Message ────────────────────────────────────────────── -->
+          <div class="mb-3">
+            <label for="message" class="form-label fw-semibold small">
+              Message <span class="text-danger">*</span>
+            </label>
+            <textarea
+              id="message"
+              name="message"
+              rows="6"
+              placeholder="Provide full details of your request or concern..."
+              class="form-control form-control-sm {% if errors.message %}is-invalid{% endif %}"
+              required
+            >{{ post.message|default:'' }}</textarea>
+            {% if errors.message %}
+              <div class="invalid-feedback">{{ errors.message }}</div>
+            {% endif %}
+          </div>
+
+          <!-- ── Urgent checkbox ────────────────────────────────────── -->
+          <div class="mb-3">
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="is_urgent"
+                name="is_urgent"
+                {% if post.is_urgent == 'on' %}checked{% endif %}
+              />
+              <label class="form-check-label small" for="is_urgent">
+                <span class="fw-semibold text-danger">Mark as Urgent</span>
+                <span class="text-muted">— tick if this requires immediate attention</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- ── Attachment ─────────────────────────────────────────── -->
+          <div class="mb-4">
+            <label for="attachment" class="form-label fw-semibold small">
+              Attachment <span class="text-muted fw-normal">(optional)</span>
+            </label>
+            <input
+              type="file"
+              id="attachment"
+              name="attachment"
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              class="form-control form-control-sm"
+            />
+            <div class="form-text small text-muted">
+              Accepted: PDF, JPG, PNG, DOC, DOCX. E.g. medical certificate, doctor's note.
+            </div>
+          </div>
+
+          <!-- ── Actions ────────────────────────────────────────────── -->
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm px-4">
+              <i class="bi bi-send me-1"></i>Submit Request
+            </button>
+            <a href="{% url 'parent_communication' %}" class="btn btn-outline-secondary btn-sm">
+              Cancel
+            </a>
+          </div>
+
+        </form>
+      </div><!-- /card-body -->
+    </div><!-- /card -->
+
+  </div><!-- /col -->
+</div><!-- /row -->
+
+{% endblock %}

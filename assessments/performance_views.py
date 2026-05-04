@@ -1108,7 +1108,7 @@ def perf_edit_part3(request, pk):
     class_student_map = {}
     for cls_info in chosen_classes:
         ac_pk     = cls_info['ac_pk']
-        as_pks    = chosen_subjects.get(str(ac_pk), [])
+        as_pks = [int(x) for x in chosen_subjects.get(str(ac_pk), [])]
         subj_hdrs = [
             s for s in class_subjects.get(str(ac_pk), [])
             if s['as_subj_pk'] in as_pks
@@ -1126,7 +1126,7 @@ def perf_edit_part3(request, pk):
 
         for cls_info in chosen_classes:
             ac_pk    = cls_info['ac_pk']
-            as_pks   = chosen_subjects.get(str(ac_pk), [])
+            as_pks = [int(x) for x in chosen_subjects.get(str(ac_pk), [])]
             subj_map = {
                 s['as_subj_pk']: s
                 for s in class_subjects.get(str(ac_pk), [])
@@ -1141,10 +1141,14 @@ def perf_edit_part3(request, pk):
                         continue
 
                     field_key = f'mark_{student["student_id"]}_{as_pk}'
+                    print("field key:", field_key or '4589458945878')
+                    
+
                     raw = (request.POST.get(field_key) or '').strip()
+                    print("Raw:", raw or '000000000000000000000')
                     if not raw:
                         errors[field_key] = (
-                            f'Mark required for {student["full_name"]} — {ss["subject_name"]}.'
+                            f'Mark required for {student["full_name"]} — {ss["subject_name"]}.,,,,,,,, {field_key}'
                         )
                         continue
 

@@ -4,28 +4,18 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from academics.models import SchoolClass, Term
 from fees.models import AssessmentFees
 from fees.utils.assessment_fees_utils import (
     bulk_generate_for_class,
-    get_assessment_fees_detail_stats,
-    get_assessment_fees_list_stats,
     recalculate_from_payments,
     validate_and_parse_assessment_fees,
 )
-from students.models import Student
 from assessments.models import Assessment
 
 _T = 'fees/assessment_fees/'
-
-_CLASS_LEVEL_CHOICES = [
-    ('baby', 'Baby Class'), ('middle', 'Middle Class'), ('top', 'Top Class'),
-    ('p1', 'P1'), ('p2', 'P2'), ('p3', 'P3'), ('p4', 'P4'),
-    ('p5', 'P5'), ('p6', 'P6'), ('p7', 'P7'),
-]
 
 
 # ── Private helpers ────────────────────────────────────────────────────────────
@@ -33,21 +23,16 @@ _CLASS_LEVEL_CHOICES = [
 def _get_form_lookups() -> dict:
     """Common querysets every assessment fees form template needs."""
     return {
-        'all_terms':    Term.objects.all().order_by('-start_date'),
-        'assessments':  Assessment.objects.filter(
-                            term__is_current=True
-                        ).select_related('term').order_by('title'),
+        'all_terms':   Term.objects.all().order_by('-start_date'),
+        'assessments': Assessment.objects.select_related('term').order_by('-term__start_date', 'title'),
     }
 
 
 def _apply_to_instance(instance: AssessmentFees, cleaned: dict) -> None:
     """Write cleaned scalar and FK fields onto an AssessmentFees instance."""
-    # Scalar fields that actually exist on the current AssessmentFees model
-    scalar_fields = ('amount', 'due_date')
-    for f in scalar_fields:
+    for f in ('amount', 'due_date'):
         if f in cleaned:
             setattr(instance, f, cleaned[f])
-
     if 'assessment_id' in cleaned:
         instance.assessment_id = cleaned['assessment_id']
     if 'term_id' in cleaned:
@@ -55,49 +40,49 @@ def _apply_to_instance(instance: AssessmentFees, cleaned: dict) -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  1. ASSESSMENT FEES LIST
+#  1. LIST
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
 def assessment_fees_list(request):
-    qs = AssessmentFees.objects.select_related('term', 'generated_by', 'assessment')
+    qs = AssessmentFees.objects.select_related('term', 'generated_by', 'assessment__term')
 
     term_filter = request.GET.get('term', '').strip()
     search      = request.GET.get('q', '').strip()
 
     if term_filter:
         qs = qs.filter(term__pk=term_filter)
+    if search:
+        qs = qs.filter(assessment__title__icontains=search)
 
-    qs = qs.order_by('-term__start_date', 'term__name')
+    qs = qs.order_by('-term__start_date', 'assessment__title')
 
     paginator = Paginator(qs, 25)
     page_obj  = paginator.get_page(request.GET.get('page', 1))
 
-    stats = get_assessment_fees_list_stats()
+    terms        = Term.objects.all().order_by('-start_date')
+    current_term = Term.objects.filter(is_active=True).first()
+    school_classes = SchoolClass.objects.all().order_by('name')
 
     return render(request, f'{_T}list.html', {
-        'assessments':         page_obj.object_list,
-        'page_obj':            page_obj,
-        'search':              search,
-        'term_filter':         term_filter,
-        'class_level_choices': _CLASS_LEVEL_CHOICES,
-        **stats,
+        'fee_assessments': page_obj.object_list,
+        'page_obj':        page_obj,
+        'search':          search,
+        'term_filter':     term_filter,
+        'terms':           terms,
+        'current_term':    current_term,
+        'school_classes':  school_classes,
     })
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  2. ADD ASSESSMENT FEES
+#  2. ADD
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
 def assessment_fees_add(request):
-    """
-    Add a single assessment fees record.
-    GET  — blank form; current term pre-selected.
-    POST — validate; save; redirect to detail.
-    """
     lookups      = _get_form_lookups()
-    current_term = Term.objects.filter(is_current=True).first()
+    current_term = Term.objects.filter(is_active=True).first()
 
     if request.method == 'GET':
         return render(request, f'{_T}form.html', {
@@ -109,7 +94,6 @@ def assessment_fees_add(request):
             **lookups,
         })
 
-    # ── POST ──────────────────────────────────────────────────────────────────
     cleaned, errors = validate_and_parse_assessment_fees(request.POST)
 
     if errors:
@@ -149,28 +133,22 @@ def assessment_fees_add(request):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  3. EDIT ASSESSMENT FEES
+#  3. EDIT
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
 def assessment_fees_edit(request, pk):
-    """
-    Edit an existing assessment fees record.
-    Editable fields: assessment, term, amount, due_date.
-    GET  — form pre-filled with current values.
-    POST — validate; save; redirect to detail.
-    """
-    af      = get_object_or_404(
+    af = get_object_or_404(
         AssessmentFees.objects.select_related('assessment', 'term', 'generated_by'),
         pk=pk
     )
     lookups      = _get_form_lookups()
-    current_term = Term.objects.filter(is_current=True).first()
+    current_term = Term.objects.filter(is_active=True).first()
 
     if request.method == 'GET':
         return render(request, f'{_T}form.html', {
-            'fee':          af,                   # instance exposed as 'fee' so template logic is consistent
-            'form_title':   f'Edit Assessment — {af.assessment.title} | {af.term}',
+            'fee':          af,
+            'form_title':   f'Edit — {af.assessment.title} | {af.term}',
             'action':       'edit',
             'post':         {},
             'errors':       {},
@@ -178,7 +156,6 @@ def assessment_fees_edit(request, pk):
             **lookups,
         })
 
-    # ── POST ──────────────────────────────────────────────────────────────────
     cleaned, errors = validate_and_parse_assessment_fees(request.POST, instance=af)
 
     if errors:
@@ -186,7 +163,7 @@ def assessment_fees_edit(request, pk):
             messages.error(request, msg)
         return render(request, f'{_T}form.html', {
             'fee':          af,
-            'form_title':   f'Edit Assessment — {af.assessment.title} | {af.term}',
+            'form_title':   f'Edit — {af.assessment.title} | {af.term}',
             'action':       'edit',
             'post':         request.POST,
             'errors':       errors,
@@ -202,7 +179,7 @@ def assessment_fees_edit(request, pk):
         messages.error(request, f'Could not update fees assessment: {exc}')
         return render(request, f'{_T}form.html', {
             'fee':          af,
-            'form_title':   f'Edit Assessment — {af.assessment.title} | {af.term}',
+            'form_title':   f'Edit — {af.assessment.title} | {af.term}',
             'action':       'edit',
             'post':         request.POST,
             'errors':       {},
@@ -218,7 +195,7 @@ def assessment_fees_edit(request, pk):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  4. DELETE ASSESSMENT FEES
+#  4. DELETE
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
@@ -229,14 +206,14 @@ def assessment_fees_delete(request, pk):
     )
 
     if request.method == 'GET':
-        return render(request, f'{_T}delete_confirm.html', {'assessment': af})
+        return render(request, f'{_T}delete_confirm.html', {'fee': af})
 
     label = f'{af.assessment.title} | {af.term}'
     try:
         af.delete()
         messages.success(request, f'Fees assessment for "{label}" has been deleted.')
     except Exception as exc:
-        messages.error(request, f'Could not delete assessment: {exc}')
+        messages.error(request, f'Could not delete: {exc}')
         return redirect('fees:assessment_fees_detail', pk=pk)
 
     return redirect('fees:assessment_fees_list')
@@ -250,21 +227,18 @@ def assessment_fees_delete(request, pk):
 def assessment_fees_detail(request, pk):
     af = get_object_or_404(
         AssessmentFees.objects.select_related(
-            'assessment', 'term', 'generated_by'
+            'assessment__term', 'term', 'generated_by'
         ),
         pk=pk
     )
-    stats = get_assessment_fees_detail_stats(af)
-
     return render(request, f'{_T}detail.html', {
-        'assessment': af,
-        'page_title': f'{af.assessment.title} — Fees Assessment | {af.term}',
-        **stats,
+        'fee':        af,
+        'page_title': f'{af.assessment.title} — Fee Assessment | {af.term}',
     })
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  6. RECALCULATE (POST-only)
+#  6. RECALCULATE  (POST only)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
@@ -284,7 +258,7 @@ def assessment_fees_recalculate(request, pk):
         messages.error(request, f'Recalculation failed: {exc}')
         return redirect('fees:assessment_fees_detail', pk=af.pk)
 
-    if result['changed']:
+    if result.get('changed'):
         messages.success(
             request,
             f'Recalculated for {af.assessment.title} | {af.term}. '
@@ -292,14 +266,16 @@ def assessment_fees_recalculate(request, pk):
             f'to UGX {result["new_paid"]:,.0f}.'
         )
     else:
-        messages.info(request, f'No change — already correct (UGX {result["new_paid"]:,.0f}).')
+        messages.info(request, f'No change — already correct.')
 
     next_url = request.POST.get('next') or request.META.get('HTTP_REFERER')
-    return redirect(next_url if next_url else 'fees:assessment_fees_detail', pk=af.pk)
+    if next_url:
+        return redirect(next_url)
+    return redirect('fees:assessment_fees_detail', pk=af.pk)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  7. BULK GENERATE (POST-only)
+#  7. BULK GENERATE  (POST only)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
@@ -308,9 +284,9 @@ def assessment_fees_bulk_generate(request):
         messages.warning(request, 'Invalid request method.')
         return redirect('fees:assessment_fees_list')
 
-    errors   = {}
     class_id = (request.POST.get('school_class') or '').strip()
     term_id  = (request.POST.get('term') or '').strip()
+    errors   = {}
 
     if not class_id:
         errors['school_class'] = 'Class is required.'
@@ -344,18 +320,17 @@ def assessment_fees_bulk_generate(request):
         return redirect('fees:assessment_fees_list')
 
     parts = []
-    if result['created']:  parts.append(f'{result["created"]} created')
-    if result['updated']:  parts.append(f'{result["updated"]} updated')
-    if result['skipped']:  parts.append(f'{result["skipped"]} skipped')
+    if result.get('created'): parts.append(f'{result["created"]} created')
+    if result.get('updated'): parts.append(f'{result["updated"]} updated')
+    if result.get('skipped'): parts.append(f'{result["skipped"]} skipped')
 
     messages.success(
         request,
         f'Bulk generation for {school_class} | {term} — '
         f'{", ".join(parts) if parts else "No records processed"}.'
     )
-
     for err in result.get('errors', []):
-        messages.warning(request, f'Error: {err}')
+        messages.warning(request, f'Warning: {err}')
 
     from django.urls import reverse
     return redirect(f"{reverse('fees:assessment_fees_list')}?term={term.pk}")

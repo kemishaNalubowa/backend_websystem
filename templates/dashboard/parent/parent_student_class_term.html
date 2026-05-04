@@ -1,0 +1,212 @@
+{% extends "dashboard/base_parent.html" %}
+{% comment %}
+dashboard/templates/dashboard/parent_student_class_term.html
+Term overview: section mini cards (Fees, Scholastic, Performance).
+{% endcomment %}
+
+{% block title %}{{ term }} — {{ school_class }}{% endblock %}
+
+{% block content %}
+
+<!-- ── Breadcrumb ─────────────────────────────────────────────────────── -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_dashboard' %}" class="text-decoration-none">
+        <i class="bi bi-house-door me-1"></i>Dashboard
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_student_overview' student.pk %}" class="text-decoration-none">
+        {{ student.full_name }}
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_student_class' student.pk school_class.pk %}" class="text-decoration-none">
+        {{ school_class }}
+      </a>
+    </li>
+    <li class="breadcrumb-item active">{{ term }}</li>
+  </ol>
+</nav>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center"
+       style="width:52px;height:52px;">
+    <i class="bi bi-calendar3 fs-4 text-primary"></i>
+  </div>
+  <div>
+    <h5 class="mb-0 fw-bold">{{ term }}</h5>
+    <p class="mb-0 small text-muted">
+      {{ student.full_name }} &mdash; {{ school_class }}
+      {% if term.is_current %}
+        <span class="badge bg-primary ms-1">Current Term</span>
+      {% endif %}
+    </p>
+  </div>
+</div>
+
+<!-- ── Section cards ───────────────────────────────────────────────────── -->
+<div class="row g-4">
+
+  <!-- School Fees card -->
+  <div class="col-12 col-md-4">
+    <a href="{% url 'parent_student_class_term_fees' student.pk school_class.pk term.pk %}"
+       class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100 card-hover">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center"
+                 style="width:44px;height:44px;">
+              <i class="bi bi-cash-coin fs-5 text-primary"></i>
+            </div>
+            <div>
+              <div class="fw-semibold text-dark">School Fees</div>
+              <div class="small text-muted">Fees structure &amp; payments</div>
+            </div>
+          </div>
+
+          <!-- Fees mini stats -->
+          <div class="row g-2 text-center">
+            <div class="col-6">
+              <div class="bg-light rounded p-2">
+                <div class="text-muted" style="font-size:0.72rem;">Total Fees</div>
+                <div class="fw-bold small text-primary">
+                  UGX {{ fees_summary.total_fees|floatformat:0 }}
+                </div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="bg-light rounded p-2">
+                <div class="text-muted" style="font-size:0.72rem;">Paid</div>
+                <div class="fw-bold small text-success">
+                  UGX {{ fees_summary.total_paid|floatformat:0 }}
+                </div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="bg-light rounded p-2">
+                <div class="text-muted" style="font-size:0.72rem;">Balance</div>
+                <div class="fw-bold small
+                  {% if fees_summary.total_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                  UGX {{ fees_summary.total_balance|floatformat:0 }}
+                </div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="bg-light rounded p-2">
+                <div class="text-muted" style="font-size:0.72rem;">Fully Paid</div>
+                <div class="fw-bold small text-dark">
+                  {{ fees_summary.fully_paid_count }}/{{ fees_summary.total_items }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-end mt-3">
+            <span class="small text-primary">
+              View fees <i class="bi bi-arrow-right ms-1"></i>
+            </span>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Scholastic Requirements card -->
+  <div class="col-12 col-md-4">
+    <a href="{% url 'parent_student_class_term_scholastic' student.pk school_class.pk term.pk %}"
+     class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100 card-hover">
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center"
+                style="width:44px;height:44px;">
+                <i class="bi bi-bag fs-5 text-warning"></i>
+            </div>
+            <div>
+                <div class="fw-semibold text-dark">Scholastic Items</div>
+                <div class="small text-muted">Requirements for this term</div>
+            </div>
+            </div>
+
+            <div class="row g-2 text-center">
+            <div class="col-6">
+                <div class="bg-light rounded p-2">
+                <div class="text-muted" style="font-size:0.72rem;">Required</div>
+                <div class="fw-bold small text-dark">{{ scholastic_summary.total }}</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="bg-light rounded p-2">
+                <div class="text-muted" style="font-size:0.72rem;">Fully Met</div>
+                <div class="fw-bold small
+                    {% if scholastic_summary.met == scholastic_summary.total and scholastic_summary.total > 0 %}text-success{% else %}text-warning{% endif %}">
+                    {{ scholastic_summary.met }}/{{ scholastic_summary.total }}
+                </div>
+                </div>
+            </div>
+            </div>
+
+            {% if scholastic_summary.total == 0 %}
+            <div class="text-center text-muted small mt-3">
+                <i class="bi bi-info-circle me-1"></i>No items for this term.
+            </div>
+            {% endif %}
+
+            
+            <div class="text-end mt-3">
+            <span class="small text-warning">
+                View items <i class="bi bi-arrow-right ms-1"></i>
+            </span>
+            </div>
+        </div>
+        
+        </div>
+    </a>
+  </div>
+
+  <!-- Performance card -->
+  <div class="col-12 col-md-4">
+        <a href="{% url 'parent_student_class_term_performance' student.pk school_class.pk term.pk %}"
+            class="text-decoration-none">
+            <div class="card border-0 shadow-sm h-100 card-hover">
+
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center"
+                        style="width:44px;height:44px;">
+                        <i class="bi bi-bar-chart-line fs-5 text-success"></i>
+                    </div>
+                    <div>
+                        <div class="fw-semibold text-dark">Performance</div>
+                        <div class="small text-muted">Assessment results</div>
+                    </div>
+                    </div>
+
+                    <div class="text-center bg-light rounded p-3">
+                    <div class="text-muted small">Assessments Recorded</div>
+                    <div class="fw-bold fs-4 text-dark mt-1">{{ performance_count }}</div>
+                    </div>
+
+                    {% if performance_count == 0 %}
+                    <div class="text-center text-muted small mt-3">
+                        <i class="bi bi-info-circle me-1"></i>No results yet.
+                    </div>
+                    {% endif %}
+
+
+                    <div class="text-end mt-3">
+                        <span class="small text-warning">
+                            View items <i class="bi bi-arrow-right ms-1"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </a>
+  </div>
+
+</div><!-- /row -->
+
+{% endblock %}

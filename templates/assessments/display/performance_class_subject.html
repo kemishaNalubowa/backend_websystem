@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ as_subj.subject.name }} — {{ ac.school_class.supported_class.name }} | {{ assessment.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  {# ── Page header ──────────────────────────────────────────────────────────── #}
+  <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1 small">
+          <li class="breadcrumb-item"><a href="{% url 'assessments:list' %}">Assessments</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'assessments:detail' assessment.pk %}">{{ assessment.title }}</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'assessments:performance_overview' assessment.pk %}">Performance</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'assessments:performance_class' assessment.pk ac.pk %}">{{ ac.school_class.supported_class.name }}</a></li>
+          <li class="breadcrumb-item active">{{ as_subj.subject.name }}</li>
+        </ol>
+      </nav>
+      <h4 class="mb-0 fw-semibold">
+        <i class="bi bi-person-lines-fill me-2 text-primary"></i>
+        {{ as_subj.subject.name }}
+        <span class="text-muted fw-normal fs-6 ms-1">— {{ ac.school_class.supported_class.name }}</span>
+      </h4>
+      <p class="text-muted small mb-0 mt-1">{{ assessment.title }}</p>
+    </div>
+
+    <div class="d-flex gap-2 align-items-center">
+      <a href="{% url 'assessments:perf_entry_part1' assessment.pk %}"
+      class="btn btn-sm btn-outline-danger">
+      Add Perfomance
+    </a>
+
+
+      <a href="{% url 'assessments:performance_class' assessment.pk ac.pk %}"
+         class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Class
+      </a>
+    </div>
+  </div>
+
+  {# ── Django messages ─────────────────────────────────────────────────────── #}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+
+  {# ── Subject + entry info cards ──────────────────────────────────────────── #}
+  <div class="row g-3 mb-4">
+
+    {# Subject details #}
+    <div class="col-12 col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-bottom py-2 small fw-semibold text-muted">
+          <i class="bi bi-book me-1"></i>Subject Info
+        </div>
+        <div class="card-body py-3">
+          <div class="row g-2 small">
+            <div class="col-5 text-muted">Name</div>
+            <div class="col-7 fw-medium">{{ as_subj.subject.name }}</div>
+            <div class="col-5 text-muted">Code</div>
+            <div class="col-7"><span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ as_subj.subject.code }}</span></div>
+            <div class="col-5 text-muted">Pass Mark</div>
+            <div class="col-7 fw-semibold text-primary">{{ as_subj.passmark }}</div>
+            <div class="col-5 text-muted">Total Mark</div>
+            <div class="col-7 fw-semibold">
+              {% if total_mark %}{{ total_mark.total_mark }}{% else %}<span class="text-muted">—</span>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Entry status #}
+    <div class="col-12 col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-bottom py-2 small fw-semibold text-muted">
+          <i class="bi bi-clipboard2-check me-1"></i>Entry Status
+        </div>
+        <div class="card-body py-3">
+          {% if entry_status %}
+            <div class="row g-2 small">
+              <div class="col-6 text-muted">Students Attended</div>
+              <div class="col-6 fw-semibold">{{ entry_status.students_attended }}</div>
+              <div class="col-6 text-muted">Marks Entered</div>
+              <div class="col-6 fw-semibold">{{ entry_status.students_entered }}</div>
+              <div class="col-6 text-muted">Still Missing</div>
+              <div class="col-6 fw-semibold {% if entry_status.students_left %}text-danger{% else %}text-success{% endif %}">
+                {{ entry_status.students_left }}
+              </div>
+              <div class="col-6 text-muted">Passed</div>
+              <div class="col-6 fw-semibold text-success">{{ entry_status.students_passed }}</div>
+              <div class="col-6 text-muted">Tried (did not pass)</div>
+              <div class="col-6 fw-semibold text-warning">{{ entry_status.students_tried }}</div>
+              <div class="col-6 text-muted">Status</div>
+              <div class="col-6">
+                {% if entry_status.is_done %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">
+                    <i class="bi bi-check-lg me-1"></i>Done
+                  </span>
+                {% elif entry_status.is_edit_allowed %}
+                  <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                    <i class="bi bi-pencil-fill me-1"></i>Edit Open
+                  </span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                    <i class="bi bi-hourglass-split me-1"></i>In Progress
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+
+            {# Mini progress bar #}
+            {% if entry_status.students_attended %}
+              {% widthratio entry_status.students_entered entry_status.students_attended 100 as es_pct %}
+              <div class="mt-3">
+                <div class="d-flex justify-content-between mb-1">
+                  <span class="small text-muted">Entry progress</span>
+                  <span class="small text-muted">{{ es_pct }}%</span>
+                </div>
+                <div class="progress" style="height:8px;">
+                  <div class="progress-bar {% if entry_status.is_done %}bg-success{% else %}bg-primary{% endif %}"
+                       role="progressbar" style="width:{{ es_pct }}%"></div>
+                </div>
+              </div>
+            {% endif %}
+
+          {% else %}
+            <div class="text-center text-muted small py-3">
+              <i class="bi bi-dash-circle me-1"></i>No entry status record found yet.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# ── Search ──────────────────────────────────────────────────────────────── #}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+      <form method="get" class="row g-2 align-items-center">
+        <div class="col">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text bg-white border-end-0">
+              <i class="bi bi-search text-muted"></i>
+            </span>
+            <input type="text" name="q" value="{{ search }}"
+                   class="form-control border-start-0 ps-0"
+                   placeholder="Search by student name or ID…">
+          </div>
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-sm btn-primary px-3">Search</button>
+          {% if search %}
+            <a href="{% url 'assessments:performance_class_subject' assessment.pk ac.pk as_subj.pk %}"
+               class="btn btn-sm btn-outline-secondary ms-1">Clear</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# ── Student performance list ─────────────────────────────────────────────── #}
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+      <span class="fw-semibold">
+        <i class="bi bi-people me-1 text-primary"></i>
+        Student Performances
+        {% if search %}
+          <span class="text-muted fw-normal small">— filtered by "{{ search }}"</span>
+        {% endif %}
+      </span>
+      <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+        {{ performances|length }} record{{ performances|length|pluralize }}
+      </span>
+    </div>
+
+    {% if not performances %}
+    <div class="card-body text-center py-5">
+      {% if search %}
+        <i class="bi bi-search fs-1 text-muted mb-3 d-block"></i>
+        <h6 class="fw-semibold">No students match "{{ search }}"</h6>
+        <a href="{% url 'assessments:performance_class_subject' assessment.pk ac.pk as_subj.pk %}"
+           class="btn btn-sm btn-outline-secondary mt-2">Clear Search</a>
+      {% else %}
+        <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
+        <h6 class="fw-semibold">No performance records yet</h6>
+        <p class="text-muted small mb-0">No marks have been entered for this subject in this class.</p>
+      {% endif %}
+    </div>
+    {% else %}
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3" style="width:5%">#</th>
+            <th style="width:12%">Student ID</th>
+            <th style="width:25%">Name</th>
+            <th style="width:12%">Marks</th>
+            <th style="width:10%">Total</th>
+            <th class="text-center" style="width:10%">Result</th>
+            <th style="width:18%">Comment</th>
+            <th class="text-center" style="width:8%">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for perf in performances %}
+          <tr>
+
+            {# Row number #}
+            <td class="ps-3 text-muted small">{{ forloop.counter }}</td>
+
+            {# Student ID #}
+            <td>
+              <span class="badge bg-light text-dark border font-monospace">
+                {{ perf.student.student_id|upper }}
+              </span>
+            </td>
+
+            {# Full name #}
+            <td>
+              <div class="fw-medium">
+                {{ perf.student.last_name|upper }}, {{ perf.student.first_name }}
+              </div>
+              {% if perf.entered_by %}
+                <div class="small text-muted">
+                  <i class="bi bi-person-check me-1"></i>{{ perf.entered_by.get_full_name|default:perf.entered_by.username }}
+                </div>
+              {% endif %}
+            </td>
+
+            {# Marks obtained #}
+            <td>
+              <span class="fw-semibold fs-6">{{ perf.marks_obtained }}</span>
+            </td>
+
+            {# Total mark #}
+            <td class="text-muted">
+              {% if total_mark %}{{ total_mark.total_mark }}{% else %}—{% endif %}
+            </td>
+
+            {# Pass / Fail badge #}
+            <td class="text-center">
+              {% if entry_status %}
+                {% if perf.marks_obtained >= as_subj.passmark %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">
+                    <i class="bi bi-check-lg me-1"></i>Pass
+                  </span>
+                {% else %}
+                  <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                    <i class="bi bi-x-lg me-1"></i>Fail
+                  </span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+
+            {# Comment #}
+            <td class="text-muted small">
+              {% if perf.comment %}
+                {{ perf.comment }}
+              {% else %}
+                <span class="text-muted fst-italic">No comment</span>
+              {% endif %}
+            </td>
+
+            {# Edit button #}
+            <td class="text-center">
+              <a href="{% url 'assessments:performance_student_edit' assessment.pk ac.pk as_subj.pk perf.pk %}"
+                 class="btn btn-sm btn-outline-warning" title="Edit marks">
+                <i class="bi bi-pencil-fill"></i>
+              </a>
+            </td>
+
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+  </div>
+
+</div>
+{% endblock %}

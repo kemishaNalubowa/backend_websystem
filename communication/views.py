@@ -92,7 +92,7 @@ def add_parent_request(request):
             f'Request "{pr.reference_number}" submitted successfully. '
             f'We will respond as soon as possible.'
         )
-        return redirect('requests:detail', ref=pr.reference_number)
+        return redirect('communication:detail', ref=pr.reference_number)
 
     # GET
     return render(request, 'communication/add_parent_request.html', {
@@ -191,7 +191,7 @@ def parent_request_detail(request, ref):
 
     if not user_can_access_request(user, parent_request):
         messages.error(request, 'You do not have permission to view this request.')
-        return redirect('requests:list')
+        return redirect('communication:list')
 
     # ── Mark replies as read when parent opens the detail page ────────────
     if not staff:
@@ -235,7 +235,7 @@ def add_parent_request_reply(request, ref):
     On validation failure, re-renders the detail page with errors inlined.
     """
     if request.method != 'POST':
-        return redirect('requests:detail', ref=ref)
+        return redirect('communication:detail', ref=ref)
 
     user  = request.user
     staff = is_staff_user(user)
@@ -244,12 +244,12 @@ def add_parent_request_reply(request, ref):
 
     if not user_can_access_request(user, parent_request):
         messages.error(request, 'You do not have permission to reply to this request.')
-        return redirect('requests:list')
+        return redirect('communication:list')
 
     # ── Guard: don't allow replies on closed/rejected requests (parents only)
     if not staff and parent_request.status in ('closed', 'rejected'):
         messages.error(request, 'This request is closed and no longer accepts replies.')
-        return redirect('requests:detail', ref=ref)
+        return redirect('communication:detail', ref=ref)
 
     errors, cleaned = validate_request_reply(request.POST, request.FILES, is_staff=staff)
 
@@ -292,4 +292,4 @@ def add_parent_request_reply(request, ref):
             parent_request.save(update_fields=['status', 'resolved_at'])
 
     messages.success(request, 'Your reply has been posted successfully.')
-    return redirect('requests:detail', ref=ref)
+    return redirect('communication:detail', ref=ref)

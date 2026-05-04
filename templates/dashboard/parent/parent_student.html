@@ -1,0 +1,177 @@
+{% extends "dashboard/base_parent.html" %}
+{% comment %}
+dashboard/templates/dashboard/parent_student.html
+Student overview: personal info card + class cards
+{% endcomment %}
+
+{% block title %}{{ student.full_name }}{% endblock %}
+
+{% block content %}
+
+<!-- ── Breadcrumb ─────────────────────────────────────────────────────── -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_dashboard' %}" class="text-decoration-none">
+        <i class="bi bi-house-door me-1"></i>Dashboard
+      </a>
+    </li>
+    <li class="breadcrumb-item active">{{ student.full_name }}</li>
+  </ol>
+</nav>
+
+<!-- ── Student header card ─────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <div class="row align-items-center g-3">
+      <div class="col-auto">
+        <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center"
+             style="width:64px;height:64px;">
+          {% if student.profile_photo %}
+            <img src="{{ student.profile_photo.url }}"
+                 class="rounded-circle object-fit-cover"
+                 style="width:64px;height:64px;" alt="Photo">
+          {% else %}
+            <i class="bi bi-person-fill fs-2 text-success"></i>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col">
+        <h5 class="mb-1 fw-bold">{{ student.full_name }}</h5>
+        <div class="d-flex flex-wrap gap-3 small text-muted">
+          {% if student.admission_number %}
+            <span><i class="bi bi-hash me-1"></i>{{ student.admission_number }}</span>
+          {% endif %}
+          {% if current_class %}
+            <span><i class="bi bi-building me-1"></i>{{ current_class }}</span>
+          {% endif %}
+          {% if student.gender %}
+            <span><i class="bi bi-gender-ambiguous me-1"></i>{{ student.get_gender_display }}</span>
+          {% endif %}
+          {% if student.date_of_birth %}
+            <span><i class="bi bi-cake me-1"></i>{{ student.date_of_birth|date:"d M Y" }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-12 col-sm-auto">
+        <a href="{% url 'parent_new_request_student' student.pk %}"
+           class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-chat-left-text me-1"></i>Submit Request
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Personal & academic info ────────────────────────────────────────── -->
+<div class="row g-4 mb-4">
+  <div class="col-12 col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-bottom py-3">
+        <span class="fw-semibold small">
+          <i class="bi bi-person-fill text-primary me-2"></i>Personal Details
+        </span>
+      </div>
+      <div class="card-body">
+        <dl class="row small mb-0">
+          <dt class="col-5 text-muted fw-normal">Full Name</dt>
+          <dd class="col-7 fw-semibold">{{ student.full_name }}</dd>
+
+          {% if student.admission_number %}
+            <dt class="col-5 text-muted fw-normal">Admission No.</dt>
+            <dd class="col-7">{{ student.admission_number }}</dd>
+          {% endif %}
+          {% if student.date_of_birth %}
+            <dt class="col-5 text-muted fw-normal">Date of Birth</dt>
+            <dd class="col-7">{{ student.date_of_birth|date:"d M Y" }}</dd>
+          {% endif %}
+          {% if student.gender %}
+            <dt class="col-5 text-muted fw-normal">Gender</dt>
+            <dd class="col-7">{{ student.get_gender_display }}</dd>
+          {% endif %}
+          {% if student.nationality %}
+            <dt class="col-5 text-muted fw-normal">Nationality</dt>
+            <dd class="col-7">{{ student.nationality }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-bottom py-3">
+        <span class="fw-semibold small">
+          <i class="bi bi-mortarboard-fill text-success me-2"></i>Academic Details
+        </span>
+      </div>
+      <div class="card-body">
+        <dl class="row small mb-0">
+          <dt class="col-5 text-muted fw-normal">Current Class</dt>
+          <dd class="col-7 fw-semibold">{{ current_class|default:"N/A" }}</dd>
+          {% if student.enrollment_date %}
+            <dt class="col-5 text-muted fw-normal">Enrolled</dt>
+            <dd class="col-7">{{ student.enrollment_date|date:"d M Y" }}</dd>
+          {% endif %}
+          <dt class="col-5 text-muted fw-normal">Status</dt>
+          <dd class="col-7">
+            {% if student.is_active %}
+              <span class="badge bg-success">Active</span>
+            {% else %}
+              <span class="badge bg-secondary">Inactive</span>
+            {% endif %}
+          </dd>
+          {% if student.previous_school %}
+            <dt class="col-5 text-muted fw-normal">Previous School</dt>
+            <dd class="col-7">{{ student.previous_school }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Class cards ─────────────────────────────────────────────────────── -->
+<h6 class="fw-bold text-dark mb-3">
+  <i class="bi bi-building text-primary me-2"></i>Classes
+  <span class="text-muted fw-normal small ms-1">— tap a class to view its terms and fees</span>
+</h6>
+
+{% if class_list %}
+  <div class="row g-3">
+    {% for cls in class_list %}
+      <div class="col-12 col-sm-6 col-md-4">
+        <a href="{% url 'parent_student_class' student.pk cls.pk %}"
+           class="text-decoration-none">
+          <div class="card border-0 shadow-sm h-100
+            {% if current_class and cls.pk == current_class.pk %}border-start border-success border-3{% endif %}">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0
+                {% if current_class and cls.pk == current_class.pk %}bg-success bg-opacity-10{% else %}bg-secondary bg-opacity-10{% endif %}"
+                   style="width:48px;height:48px;">
+                <i class="bi bi-building fs-5
+                  {% if current_class and cls.pk == current_class.pk %}text-success{% else %}text-secondary{% endif %}"></i>
+              </div>
+              <div class="flex-grow-1">
+                <div class="fw-semibold text-dark">{{ cls }}</div>
+                {% if current_class and cls.pk == current_class.pk %}
+                  <span class="badge bg-success small">Current Class</span>
+                {% else %}
+                  <span class="text-muted small">Previous Class</span>
+                {% endif %}
+              </div>
+              <i class="bi bi-chevron-right text-muted"></i>
+            </div>
+          </div>
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info d-flex align-items-center gap-2">
+    <i class="bi bi-info-circle-fill"></i>
+    No class history found for this student.
+  </div>
+{% endif %}
+
+{% endblock %}

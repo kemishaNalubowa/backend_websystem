@@ -269,6 +269,7 @@ from fees.models import (
 )
 from fees.utils.payment_utils import generate_receipt_number,generate_receipt_number_scholastic
 from students.models import Student
+from assessments.models import AssessmentClass,Assessment
 
 _T = 'fees/payments/'
 
@@ -324,7 +325,7 @@ def _get_old_payments_details(student, payment_type, payment_type_obj):
 
     # ── Assessment fees ───────────────────────────────────────────────────
     elif payment_type == "assessment":
-        fee_obj = payment_type_obj.assessment_fee
+        fee_obj = payment_type_obj  # already an AssessmentFees instance
 
         status   = StudentFeesPaymentsStatus.objects.filter(student=student, assessment_fees=fee_obj).first()
         payments = FeesPayment.objects.filter(student=student, assessment_fees=fee_obj)
@@ -464,31 +465,38 @@ def add_payment(request):
 
 
 
-                
-
 
         elif payment_type == "assessment":
-            qs = FeesClass.objects.filter(
-                school_class=current_class,
-                assessment_fee__isnull=False,
-            ).select_related("assessment_fee", "assessment_fee__assessment", "assessment_fee__term")
-            for fc in qs:
-                if fc.assessment_fee.amount is not None:
-                    payment_ = _get_old_payments_details(
-                        student=student,
-                        payment_type=payment_type,
-                        payment_type_obj=fc
-                    )
-                    fees_list.append(
-                        {
-                            "id":     fc.assessment_fee.pk,
-                            "name":   fc.assessment_fee.assessment.title,
-                            "term":   fc.assessment_fee.term.name,
-                            "amount": float(fc.assessment_fee.amount),
-                            **payment_
-                        }
-                        
-                    )
+            # Step 1 — resolve which Assessment PKs are linked to this class
+            assessment_ids = (
+                AssessmentClass.objects
+                .filter(school_class=current_class, assessment__isnull=False)
+                .values_list("assessment_id", flat=True)
+            )
+
+            # Step 2 — get AssessmentFees for those assessments that have an amount set
+            assessment_fees_qs = (
+                AssessmentFees.objects
+                .filter(assessment_id__in=assessment_ids, amount__isnull=False)
+                .select_related("assessment", "term")
+            )
+
+            # Step 3 — build fees_list
+            for af in assessment_fees_qs:
+                payment_ = _get_old_payments_details(
+                    student=student,
+                    payment_type=payment_type,
+                    payment_type_obj=af,
+                )
+                fees_list.append({
+                    "id":     af.pk,
+                    "name":   af.assessment.title,
+                    "term":   af.term.name,
+                    "amount": float(af.amount),
+                    **payment_,
+                })
+                    
+
 
         elif payment_type == "scholastic":
             qs = ScholasticRequirementClass.objects.filter(
@@ -637,9 +645,10 @@ def add_payment(request):
                     "status":          status,
                 }
         else:
-            for fee in selected_fees:
-                fee_id     = fee.get("id")
+            payment_type = request.session.get("payment_wizard", {}).get("payment_type")
 
+            for fee in selected_fees:
+                fee_id = fee.get("id")
 
                 status_data = fee.get("status", {})
                 if status_data and status_data.get("amount_balance") is not None:
@@ -647,7 +656,12 @@ def add_payment(request):
                 else:
                     fee_amount = float(fee.get("amount", 0))
 
-                label      = fee.get("name") or fee.get("type") or "Fee"
+                # ── label differs by payment type ──────────────────────────────
+                if payment_type == "assessment":
+                    label = fee.get("name") or "Assessment Fee"
+                else:
+                    label = fee.get("type") or fee.get("name") or "Fee"
+
                 raw_amount = request.POST.get(f"amount_{fee_id}", "").strip()
 
                 if not raw_amount:
@@ -664,18 +678,31 @@ def add_payment(request):
 
                 if amount >= fee_amount:
                     balance = 0.0
-                    status  = "Fully Paid"
+                    paid_status = "Fully Paid"
                 else:
                     balance = round(fee_amount - amount, 2)
-                    status  = "Partially Paid"
+                    paid_status = "Partially Paid"
 
-                payment_amounts[str(fee_id)] = {
-                    "type":    fee.get("type") or fee.get("name"),
-                    "term":    fee.get("term"),
-                    "amount":  amount,
-                    "balance": balance,
-                    "status":  status,
-                }
+                # ── stored dict differs by payment type ────────────────────────
+                if payment_type == "assessment":
+                    payment_amounts[str(fee_id)] = {
+                        "name":    fee.get("name"),   # template uses {{ fee.name }}
+                        "term":    fee.get("term"),
+                        "amount":  amount,
+                        "balance": balance,
+                        "status":  paid_status,
+                    }
+                else:
+                    payment_amounts[str(fee_id)] = {
+                        "type":    fee.get("type") or fee.get("name"),  # template uses {{ fee.type }}
+                        "term":    fee.get("term"),
+                        "amount":  amount,
+                        "balance": balance,
+                        "status":  paid_status,
+                    }
+
+
+
 
         if errors:
             for err in errors:

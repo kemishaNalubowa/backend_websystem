@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Performance Entry — {{ assessment.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  {# ── Page header ──────────────────────────────────────────────────────────── #}
+  <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1 small">
+          <li class="breadcrumb-item">
+            <a href="{% url 'assessments:list' %}">Assessments</a>
+          </li>
+          <li class="breadcrumb-item">
+            <a href="{% url 'assessments:detail' assessment.pk %}">{{ assessment.title }}</a>
+          </li>
+          <li class="breadcrumb-item active">Performance Entry</li>
+        </ol>
+      </nav>
+      <h4 class="mb-0 fw-semibold">
+        <i class="bi bi-journal-check me-2 text-primary"></i>Performance Entry Status
+      </h4>
+      <p class="text-muted small mb-0 mt-1">{{ assessment.title }}</p>
+    </div>
+
+    {# ── Enable / Disable buttons ──────────────────────────────────────────── #}
+    <div class="d-flex gap-2 align-items-center">
+      {% if mod.modify_performance %}
+        {# Entry is OPEN — show disable button #}
+        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-6">
+          <i class="bi bi-unlock-fill me-1"></i>Entry Open
+        </span>
+        <form method="post" action="{% url 'assessments:performance_disable' assessment.pk %}"
+              onsubmit="return confirm('Close performance entry? Teachers will no longer be able to submit marks.')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-lock-fill me-1"></i>Disable Entry
+          </button>
+        </form>
+      {% else %}
+        {# Entry is CLOSED — show enable button #}
+        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 fs-6">
+          <i class="bi bi-lock-fill me-1"></i>Entry Closed
+        </span>
+        <form method="post" action="{% url 'assessments:performance_enable' assessment.pk %}"
+              onsubmit="return confirm('Open performance entry for this assessment?')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-primary">
+            <i class="bi bi-unlock-fill me-1"></i>Enable Entry
+          </button>
+        </form>
+      {% endif %}
+
+      <a href="{% url 'assessments:detail' assessment.pk %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+    </div>
+  </div>
+
+  {# ── Django messages ─────────────────────────────────────────────────────── #}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+
+  {# ── Overall progress card ───────────────────────────────────────────────── #}
+  {% if overall_total %}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+      <div class="row align-items-center g-3">
+        <div class="col-auto">
+          <div class="rounded-circle bg-primary-subtle d-flex align-items-center justify-content-center"
+               style="width:52px;height:52px;">
+            <i class="bi bi-bar-chart-fill text-primary fs-4"></i>
+          </div>
+        </div>
+        <div class="col">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="fw-semibold small">Overall Completion</span>
+            <span class="small text-muted">{{ overall_done }} / {{ overall_total }} subject slots done</span>
+          </div>
+          <div class="progress" style="height:10px;">
+            <div class="progress-bar bg-primary" role="progressbar"
+                 style="width:{{ overall_pct }}%"
+                 aria-valuenow="{{ overall_pct }}" aria-valuemin="0" aria-valuemax="100">
+            </div>
+          </div>
+          <div class="small text-muted mt-1">{{ overall_pct }}% complete</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── No classes yet ──────────────────────────────────────────────────────── #}
+  {% if not class_groups %}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-exclamation-circle fs-1 text-warning mb-3 d-block"></i>
+        <h6 class="fw-semibold">No classes assigned yet</h6>
+        <p class="text-muted small mb-3">
+          Assign classes and subjects to this assessment before enabling performance entry.
+        </p>
+        <a href="{% url 'assessments:add_class' assessment.pk %}" class="btn btn-sm btn-primary">
+          <i class="bi bi-plus-lg me-1"></i>Assign Classes
+        </a>
+      </div>
+    </div>
+  {% endif %}
+
+  {# ── Class groups ────────────────────────────────────────────────────────── #}
+  {% for group in class_groups %}
+  <div class="card border-0 shadow-sm mb-4">
+
+    {# Card header — class name + mini progress #}
+    <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2 py-3">
+      <div class="d-flex align-items-center gap-2">
+        <span class="rounded-circle bg-primary text-white d-inline-flex align-items-center
+                     justify-content-center" style="width:32px;height:32px;font-size:.8rem;font-weight:600;">
+          {{ group.class_name|slice:":1" }}
+        </span>
+        <div>
+          <span class="fw-semibold">{{ group.class_name }}</span>
+          {% if group.all_done %}
+            <span class="badge bg-success ms-2">
+              <i class="bi bi-check-circle-fill me-1"></i>All Done
+            </span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <span class="small text-muted">
+          {{ group.done_subjects }} / {{ group.total_subjects }} subjects complete
+        </span>
+        <div class="progress" style="width:120px;height:8px;">
+          <div class="progress-bar {% if group.all_done %}bg-success{% else %}bg-primary{% endif %}"
+               role="progressbar"
+               style="width:{% if group.total_subjects %}{% widthratio group.done_subjects group.total_subjects 100 %}{% else %}0{% endif %}%">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Subject rows table #}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3" style="width:28%">Subject</th>
+            <th style="width:18%">Students</th>
+            <th style="width:22%">Entry Progress</th>
+            <th style="width:10%">Passed</th>
+            <th style="width:10%">Tried</th>
+            <th class="text-center" style="width:12%">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          {% if not group.statuses %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4 small">
+              <i class="bi bi-inbox me-1"></i>No subjects linked to this class yet.
+            </td>
+          </tr>
+          {% endif %}
+
+          {% for status in group.statuses %}
+          <tr>
+
+            {# Subject name + code #}
+            <td class="ps-3">
+              <div class="fw-medium">{{ status.subject.subject.name }}</div>
+              <div class="small text-muted">{{ status.subject.subject.code }}</div>
+            </td>
+
+            {# students_entered / students_attended #}
+            <td>
+              <span class="fw-semibold">{{ status.students_entered }}</span>
+              <span class="text-muted small"> / {{ status.students_attended }}</span>
+              {% if status.attendance_entry_met %}
+                <i class="bi bi-check-circle-fill text-success ms-1 small"
+                   title="All attended students have marks entered"></i>
+              {% endif %}
+            </td>
+
+            {# Per-subject progress bar #}
+            <td>
+              {% if status.students_attended %}
+                {% widthratio status.students_entered status.students_attended 100 as subj_pct %}
+                <div class="progress mb-1" style="height:7px;">
+                  <div class="progress-bar {% if status.is_done %}bg-success{% else %}bg-primary{% endif %}"
+                       role="progressbar"
+                       style="width:{{ subj_pct }}%">
+                  </div>
+                </div>
+                <div class="small text-muted">{{ subj_pct }}%</div>
+              {% else %}
+                <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+
+            {# Passed count #}
+            <td>
+              {% if status.students_passed %}
+                <span class="text-success fw-semibold">{{ status.students_passed }}</span>
+              {% else %}
+                <span class="text-muted">0</span>
+              {% endif %}
+            </td>
+
+            {# Tried (attempted but failed) count #}
+            <td>
+              {% if status.students_tried %}
+                <span class="text-warning fw-semibold">{{ status.students_tried }}</span>
+              {% else %}
+                <span class="text-muted">0</span>
+              {% endif %}
+            </td>
+
+            {# Status badges #}
+            <td class="text-center">
+              {% if status.is_done %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                  <i class="bi bi-check-lg me-1"></i>Done
+                </span>
+              {% elif status.is_edit_allowed %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                  <i class="bi bi-pencil-fill me-1"></i>Edit Open
+                </span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                  <i class="bi bi-hourglass-split me-1"></i>In Progress
+                </span>
+              {% endif %}
+            </td>
+
+          </tr>
+          {% endfor %}
+
+        </tbody>
+
+        {# Class totals footer #}
+        {% if group.statuses %}
+        <tfoot class="table-light">
+          <tr>
+            <td class="ps-3 fw-semibold small text-muted">Class Total</td>
+            <td>
+              <span class="fw-semibold">{{ group.total_entered }}</span>
+              <span class="text-muted small"> / {{ group.total_attended }}</span>
+            </td>
+            <td>
+              {% if group.total_attended %}
+                {% widthratio group.total_entered group.total_attended 100 as cls_pct %}
+                <div class="progress mb-1" style="height:7px;">
+                  <div class="progress-bar {% if group.all_done %}bg-success{% else %}bg-primary{% endif %}"
+                       style="width:{{ cls_pct }}%"></div>
+                </div>
+                <div class="small text-muted">{{ cls_pct }}%</div>
+              {% endif %}
+            </td>
+            <td colspan="3"></td>
+          </tr>
+        </tfoot>
+        {% endif %}
+
+      </table>
+    </div>
+
+  </div>
+  {% endfor %}
+
+</div>
+{% endblock %}

@@ -902,7 +902,7 @@ def add_assessment_subject(request, pk):
 
 
             for item in to_create:
-                subject_obj = AssessmentSubject.objects.get_or_create(
+                subject_obj,_ = AssessmentSubject.objects.get_or_create(
                     assessment       = assessment,
                     assessment_class = item['ac'].school_class,
                     subject          = item['subject'],
@@ -951,7 +951,7 @@ def add_assessment_subject(request, pk):
     return render(request, 'assessments/add_assessment_subject.html', ctx)
 
 # =============================================================================
-# STEP 3 — Set Total Marks
+# STEP 3 — Set Total Marks     
 # =============================================================================
 
 # @login_required

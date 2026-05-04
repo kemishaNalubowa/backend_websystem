@@ -1,0 +1,227 @@
+{% extends "dashboard/base_parent.html" %}
+{% comment %}
+dashboard/templates/dashboard/parent/parent_student_class_term_performance.html
+{% endcomment %}
+
+{% block title %}Performance — {{ term }} — {{ school_class }}{% endblock %}
+
+{% block content %}
+
+<!-- ── Breadcrumb ─────────────────────────────────────────────────────── -->
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_dashboard' %}" class="text-decoration-none">
+        <i class="bi bi-house-door me-1"></i>Dashboard
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_student_overview' student.pk %}" class="text-decoration-none">
+        {{ student.full_name }}
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_student_class' student.pk school_class.pk %}" class="text-decoration-none">
+        {{ school_class }}
+      </a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'parent_student_class_term' student.pk school_class.pk term.pk %}" class="text-decoration-none">
+        {{ term }}
+      </a>
+    </li>
+    <li class="breadcrumb-item active">Performance</li>
+  </ol>
+</nav>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center"
+       style="width:52px;height:52px;">
+    <i class="bi bi-graph-up-arrow fs-4 text-primary"></i>
+  </div>
+  <div>
+    <h5 class="mb-0 fw-bold">Academic Performance</h5>
+    <p class="mb-0 small text-muted">
+      {{ student.full_name }} &mdash; {{ school_class }} &mdash; {{ term }}
+    </p>
+  </div>
+</div>
+
+<!-- ── Stats cards ─────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="small text-muted mb-1">Total Assessments</div>
+      <div class="fw-bold text-dark fs-5">{{ performance_stats.total_assessments }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="small text-muted mb-1">Passed</div>
+      <div class="fw-bold fs-5
+        {% if performance_stats.passed_count == performance_stats.total_assessments and performance_stats.total_assessments > 0 %}
+          text-success
+        {% else %}
+          text-warning
+        {% endif %}">
+        {{ performance_stats.passed_count }} / {{ performance_stats.total_assessments }}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="small text-muted mb-1">Average Score</div>
+      <div class="fw-bold fs-5
+        {% if performance_stats.average_percentage >= 50 %}text-success
+        {% else %}text-danger{% endif %}">
+        {{ performance_stats.average_percentage }}%
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Performance table ───────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+    <span class="fw-semibold small">
+      <i class="bi bi-graph-up-arrow text-primary me-2"></i>
+      Assessment Results — {{ school_class }} / {{ term }}
+    </span>
+    <span class="badge bg-primary bg-opacity-10 text-primary small">
+      {{ performance_data|length }} result{{ performance_data|length|pluralize }}
+    </span>
+  </div>
+
+  <div class="card-body p-0">
+    {% if performance_data %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3 small">Assessment</th>
+              <th class="small">Subject</th>
+              <th class="small text-center">Total Marks</th>
+              <th class="small text-center">Pass Mark</th>
+              <th class="small text-center">Marks Obtained</th>
+              <th class="small text-center">Score %</th>
+              <th class="small text-center pe-3">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in performance_data %}
+            <tr {% if row.passed %}class="table-success"{% endif %}>
+
+              <td class="ps-3 small">
+                <div class="fw-semibold">{{ row.assessment.title }}</div>
+                <div class="text-muted" style="font-size:0.72rem;">
+                  {{ row.assessment.get_assessment_type_display }}
+                  &middot; {{ row.assessment.date_given|date:"d M Y" }}
+                </div>
+              </td>
+
+              <td class="small fw-semibold text-muted">
+                {{ row.subject.name }}
+              </td>
+
+              <td class="small text-center">
+                {% if row.total %}{{ row.total|floatformat:0 }}{% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
+
+              <td class="small text-center text-muted">
+                {% if row.pass_mark %}{{ row.pass_mark|floatformat:0 }}{% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
+
+              <td class="small text-center fw-bold
+                {% if row.passed == True %}text-success
+                {% elif row.passed == False %}text-danger
+                {% else %}text-dark{% endif %}">
+                {{ row.obtained|floatformat:0 }}
+              </td>
+
+              <td class="small text-center">
+                {% if row.percentage is not None %}
+                  <div class="d-flex align-items-center justify-content-center gap-2">
+                    <div class="progress" style="width:55px;height:6px;">
+                      <div class="progress-bar
+                        {% if row.percentage >= 75 %}bg-success
+                        {% elif row.percentage >= 50 %}bg-warning
+                        {% else %}bg-danger{% endif %}"
+                        role="progressbar"
+                        style="width:{{ row.percentage }}%"
+                        aria-valuenow="{{ row.percentage }}"
+                        aria-valuemin="0" aria-valuemax="100">
+                      </div>
+                    </div>
+                    <span class="fw-semibold
+                      {% if row.percentage >= 75 %}text-success
+                      {% elif row.percentage >= 50 %}text-warning
+                      {% else %}text-danger{% endif %}">
+                      {{ row.percentage }}%
+                    </span>
+                  </div>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+
+              <td class="text-center pe-3">
+                {% if row.passed == True %}
+                  <span class="badge bg-success">
+                    <i class="bi bi-check-circle me-1"></i>Passed
+                  </span>
+                {% elif row.passed == False %}
+                  <span class="badge bg-danger">
+                    <i class="bi bi-x-circle me-1"></i>Tried
+                  </span>
+                {% else %}
+                  <span class="badge bg-secondary">—</span>
+                {% endif %}
+              </td>
+
+            </tr>
+
+            <!-- Teacher comment row (shown only if a comment exists) -->
+            {% if row.comment %}
+            <tr class="border-0">
+              <td colspan="7" class="ps-3 pt-0 pb-2">
+                <span class="small text-muted">
+                  <i class="bi bi-chat-left-text me-1"></i>
+                  <em>{{ row.comment }}</em>
+                </span>
+              </td>
+            </tr>
+            {% endif %}
+
+            {% endfor %}
+          </tbody>
+
+          <tfoot class="table-light border-top">
+            <tr>
+              <td colspan="4" class="ps-3 small fw-semibold text-muted">Overall Average</td>
+              <td class="small text-center fw-bold text-primary">—</td>
+              <td class="small text-center fw-bold
+                {% if performance_stats.average_percentage >= 50 %}text-success{% else %}text-danger{% endif %}">
+                {{ performance_stats.average_percentage }}%
+              </td>
+              <td class="text-center pe-3">
+                <span class="badge bg-primary">
+                  {{ performance_stats.passed_count }}/{{ performance_stats.total_assessments }} passed
+                </span>
+              </td>
+            </tr>
+          </tfoot>
+
+        </table>
+      </div>
+
+    {% else %}
+      <div class="p-5 text-center text-muted small">
+        <i class="bi bi-graph-up fs-3 d-block mb-2"></i>
+        No assessment results recorded for {{ student.full_name }} in {{ term }}.
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

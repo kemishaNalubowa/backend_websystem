@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Edit Performance — {{ performance.student.first_name }} {{ performance.student.last_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  {# ── Page header ──────────────────────────────────────────────────────────── #}
+  <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1 small">
+          <li class="breadcrumb-item"><a href="{% url 'assessments:list' %}">Assessments</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'assessments:detail' assessment.pk %}">{{ assessment.title }}</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'assessments:performance_overview' assessment.pk %}">Performance</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'assessments:performance_class' assessment.pk ac.pk %}">{{ ac.school_class.supported_class.name }}</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'assessments:performance_class_subject' assessment.pk ac.pk as_subj.pk %}">{{ as_subj.subject.name }}</a></li>
+          <li class="breadcrumb-item active">Edit Performance</li>
+        </ol>
+      </nav>
+      <h4 class="mb-0 fw-semibold">
+        <i class="bi bi-pencil-square me-2 text-warning"></i>Edit Performance
+      </h4>
+      <p class="text-muted small mb-0 mt-1">
+        {{ performance.student.first_name }} {{ performance.student.last_name }}
+        &mdash; {{ as_subj.subject.name }} &mdash; {{ ac.school_class.supported_class.name }}
+      </p>
+    </div>
+
+    <div class="d-flex gap-2 align-items-center">
+      <a href="{% url 'assessments:performance_class_subject' assessment.pk ac.pk as_subj.pk %}"
+         class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Subject
+      </a>
+    </div>
+  </div>
+
+  {# ── Django messages ─────────────────────────────────────────────────────── #}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+
+  <div class="row g-4">
+
+    {# ── LEFT — Edit form ─────────────────────────────────────────────────── #}
+    <div class="col-12 col-lg-7">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3">
+          <span class="fw-semibold">
+            <i class="bi bi-pencil me-1 text-warning"></i>Update Marks
+          </span>
+        </div>
+        <div class="card-body py-4">
+
+          <form method="post"
+                action="{% url 'assessments:performance_student_edit' assessment.pk ac.pk as_subj.pk performance.pk %}">
+            {% csrf_token %}
+
+            {# Marks obtained #}
+            <div class="mb-4">
+              <label for="marks_obtained" class="form-label fw-semibold">
+                Marks Obtained
+                <span class="text-danger">*</span>
+                {% if total_mark %}
+                  <span class="text-muted fw-normal small ms-1">
+                    (max: {{ total_mark.total_mark }})
+                  </span>
+                {% endif %}
+              </label>
+
+              <div class="input-group {% if errors.marks_obtained %}is-invalid{% endif %}">
+                <input type="number"
+                       id="marks_obtained"
+                       name="marks_obtained"
+                       class="form-control {% if errors.marks_obtained %}is-invalid{% endif %}"
+                       step="0.1"
+                       min="0"
+                       {% if total_mark %}max="{{ total_mark.total_mark }}"{% endif %}
+                       value="{% if post.marks_obtained %}{{ post.marks_obtained }}{% else %}{{ performance.marks_obtained }}{% endif %}"
+                       placeholder="Enter marks…"
+                       required>
+                {% if total_mark %}
+                  <span class="input-group-text text-muted small">/ {{ total_mark.total_mark }}</span>
+                {% endif %}
+              </div>
+
+              {% if errors.marks_obtained %}
+                <div class="text-danger small mt-1">
+                  <i class="bi bi-exclamation-circle me-1"></i>{{ errors.marks_obtained }}
+                </div>
+              {% endif %}
+
+              {# Passmark hint #}
+              <div class="form-text">
+                Pass mark for this subject: <strong>{{ as_subj.passmark }}</strong>
+                {% if performance.marks_obtained %}
+                  &mdash; Current mark: <strong>{{ performance.marks_obtained }}</strong>
+                  {% if performance.marks_obtained >= as_subj.passmark %}
+                    <span class="text-success ms-1"><i class="bi bi-check-circle-fill"></i> Passed</span>
+                  {% else %}
+                    <span class="text-danger ms-1"><i class="bi bi-x-circle-fill"></i> Failed</span>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </div>
+
+            {# Comment #}
+            <div class="mb-4">
+              <label for="comment" class="form-label fw-semibold">
+                Teacher Comment
+                <span class="text-muted fw-normal small ms-1">(optional)</span>
+              </label>
+              <textarea id="comment"
+                        name="comment"
+                        class="form-control"
+                        rows="3"
+                        maxlength="300"
+                        placeholder="e.g. Excellent work, Needs more reading…">{% if post.comment %}{{ post.comment }}{% else %}{{ performance.comment }}{% endif %}</textarea>
+              <div class="form-text">Max 300 characters.</div>
+            </div>
+
+            {# Actions #}
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-warning px-4">
+                <i class="bi bi-save me-1"></i>Save Changes
+              </button>
+              <a href="{% url 'assessments:performance_class_subject' assessment.pk ac.pk as_subj.pk %}"
+                 class="btn btn-outline-secondary">
+                <i class="bi bi-x me-1"></i>Cancel
+              </a>
+            </div>
+
+          </form>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── RIGHT — Student / subject info panel ────────────────────────────── #}
+    <div class="col-12 col-lg-5">
+
+      {# Student info #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white border-bottom py-2 small fw-semibold text-muted">
+          <i class="bi bi-person-circle me-1"></i>Student
+        </div>
+        <div class="card-body py-3">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center
+                        justify-content-center fw-bold flex-shrink-0"
+                 style="width:46px;height:46px;font-size:1.1rem;">
+              {{ performance.student.first_name|slice:":1"|upper }}
+            </div>
+            <div>
+              <div class="fw-semibold">
+                {{ performance.student.first_name }} {{ performance.student.last_name }}
+              </div>
+              <div class="small text-muted font-monospace">
+                {{ performance.student.student_id|upper }}
+              </div>
+            </div>
+          </div>
+          <div class="row g-2 small">
+            <div class="col-5 text-muted">Class</div>
+            <div class="col-7 fw-medium">{{ ac.school_class.supported_class.name }}</div>
+            {% if performance.student.gender %}
+            <div class="col-5 text-muted">Gender</div>
+            <div class="col-7">{{ performance.student.gender }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# Subject info #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white border-bottom py-2 small fw-semibold text-muted">
+          <i class="bi bi-book me-1"></i>Subject
+        </div>
+        <div class="card-body py-3">
+          <div class="row g-2 small">
+            <div class="col-5 text-muted">Subject</div>
+            <div class="col-7 fw-medium">{{ as_subj.subject.name }}</div>
+            <div class="col-5 text-muted">Code</div>
+            <div class="col-7">
+              <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                {{ as_subj.subject.code }}
+              </span>
+            </div>
+            <div class="col-5 text-muted">Pass Mark</div>
+            <div class="col-7 fw-semibold text-primary">{{ as_subj.passmark }}</div>
+            <div class="col-5 text-muted">Total Mark</div>
+            <div class="col-7 fw-semibold">
+              {% if total_mark %}{{ total_mark.total_mark }}{% else %}<span class="text-muted">—</span>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Assessment info #}
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-2 small fw-semibold text-muted">
+          <i class="bi bi-journal-text me-1"></i>Assessment
+        </div>
+        <div class="card-body py-3">
+          <div class="row g-2 small">
+            <div class="col-5 text-muted">Title</div>
+            <div class="col-7 fw-medium">{{ assessment.title }}</div>
+            <div class="col-5 text-muted">Type</div>
+            <div class="col-7">{{ assessment.get_assessment_type_display }}</div>
+            <div class="col-5 text-muted">Term</div>
+            <div class="col-7">{{ assessment.term }}</div>
+            <div class="col-5 text-muted">Date Given</div>
+            <div class="col-7">{{ assessment.date_given }}</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

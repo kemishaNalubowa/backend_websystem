@@ -4,7 +4,7 @@
 
 {% block breadcrumb %}
 <li class="breadcrumb-item">
-  <a href="{% url 'fees:assessment_fees_list' %}" class="text-secondary">Fee Assessments</a>
+  <a href="{% url 'fees:assessment_fees_list' %}" class="text-secondary">Assessment Fees</a>
 </li>
 {% if action == 'edit' %}
 <li class="breadcrumb-item">
@@ -14,7 +14,7 @@
 </li>
 <li class="breadcrumb-item active" aria-current="page">Edit</li>
 {% else %}
-<li class="breadcrumb-item active" aria-current="page">Add Assessment</li>
+<li class="breadcrumb-item active" aria-current="page">Add Assessment Fee</li>
 {% endif %}
 {% endblock %}
 
@@ -27,7 +27,7 @@
       {% if action == 'edit' %}
         Update the details for this fees assessment.
       {% else %}
-        Create a new fees assessment. Link it to an assessment and a term.
+        Create a new fees assessment — link an assessment to a term with a fee amount.
       {% endif %}
     </p>
   </div>
@@ -47,20 +47,20 @@
 
 <div class="row g-4">
 
-  {# ════════════════════════ LEFT — fields ════════════════════════ #}
+  {# ── LEFT — fields ── #}
   <div class="col-12 col-lg-8">
 
     <div class="card mb-4">
       <div class="card-header py-3">
         <h6 class="fw-700 mb-0">
-          <i class="bi bi-building me-2 text-primary"></i>Assessment &amp; Term
+          <i class="bi bi-journal-check me-2 text-primary"></i>Assessment &amp; Term
         </h6>
       </div>
       <div class="card-body">
         <div class="row g-3">
 
-          {# ── Assessment ── #}
-          <div class="col-12 col-sm-6">
+          {# Assessment #}
+          <div class="col-12">
             <label class="form-label fw-700 small">
               Assessment <span class="text-danger">*</span>
             </label>
@@ -74,7 +74,7 @@
                 {% elif action == 'edit' %}
                   {% if fee.assessment_id == a.pk %}selected{% endif %}
                 {% endif %}>
-                {{ a.title }}
+                {{ a.title }} — {{ a.term }}
               </option>
               {% endfor %}
             </select>
@@ -83,7 +83,7 @@
             {% endif %}
           </div>
 
-          {# ── Term ── #}
+          {# Term #}
           <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
               Term <span class="text-danger">*</span>
@@ -110,7 +110,7 @@
             {% endif %}
           </div>
 
-          {# ── Amount ── #}
+          {# Amount #}
           <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">
               Amount (UGX) <span class="text-danger">*</span>
@@ -122,16 +122,16 @@
                 name="amount"
                 class="form-control font-monospace {% if errors.amount %}is-invalid{% endif %}"
                 value="{% if post %}{{ post.amount|default:'' }}{% elif action == 'edit' %}{{ fee.amount|floatformat:0 }}{% endif %}"
-                placeholder="e.g. 250000"
+                placeholder="e.g. 25000"
               />
             </div>
-            <div class="form-text">Enter amount in Uganda Shillings. No commas needed.</div>
+            <div class="form-text">Amount in Uganda Shillings. No commas needed.</div>
             {% if errors.amount %}
             <div class="invalid-feedback d-block">{{ errors.amount }}</div>
             {% endif %}
           </div>
 
-          {# ── Due Date ── #}
+          {# Due Date #}
           <div class="col-12 col-sm-6">
             <label class="form-label fw-700 small">Due Date</label>
             <input
@@ -150,7 +150,7 @@
       </div>
     </div>
 
-    {# ── Submit ── #}
+    {# Submit #}
     <div class="d-flex gap-2 pb-2">
       <button type="submit" class="btn btn-primary px-4">
         <i class="bi {% if action == 'edit' %}bi-check-lg{% else %}bi-plus-lg{% endif %} me-1"></i>
@@ -163,18 +163,16 @@
       {% endif %}
     </div>
 
-  </div>{# /col-lg-8 #}
+  </div>
 
-  {# ════════════════════════ RIGHT — snapshot + guide ════════════════════════ #}
+  {# ── RIGHT — snapshot + guide ── #}
   <div class="col-12 col-lg-4">
 
-    {# Current values snapshot — edit only #}
     {% if action == 'edit' %}
     <div class="card bg-light border-0 mb-4">
       <div class="card-body small">
         <div class="fw-700 text-muted text-uppercase mb-3" style="font-size:.72rem;">Current Values</div>
         <dl class="row mb-0">
-
           <dt class="col-5 text-muted fw-700">Assessment</dt>
           <dd class="col-7 fw-600">{{ fee.assessment.title }}</dd>
 
@@ -189,13 +187,11 @@
 
           <dt class="col-5 text-muted fw-700">Created by</dt>
           <dd class="col-7">{{ fee.generated_by.get_full_name|default:"—" }}</dd>
-
         </dl>
       </div>
     </div>
     {% endif %}
 
-    {# Field guide #}
     <div class="card border-primary-subtle sticky-top" style="top:76px;">
       <div class="card-header bg-primary-subtle border-primary-subtle py-3">
         <h6 class="fw-700 mb-0 text-primary">
@@ -205,8 +201,7 @@
       <div class="card-body small text-secondary">
         <dt class="fw-700 text-dark">Assessment</dt>
         <dd class="mb-2">
-          Select the exam or assessment this fee is attached to.
-          Only assessments from the current term are listed.
+          The exam or assessment this fee is attached to.
         </dd>
         <dt class="fw-700 text-dark">Term</dt>
         <dd class="mb-2">
@@ -214,7 +209,7 @@
         </dd>
         <dt class="fw-700 text-dark">Amount</dt>
         <dd class="mb-2">
-          The fee amount in Uganda Shillings (UGX) for this assessment.
+          The fee amount in Uganda Shillings (UGX) charged for sitting this assessment.
         </dd>
         <dt class="fw-700 text-dark">Due Date</dt>
         <dd class="mb-0">

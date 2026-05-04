@@ -285,9 +285,7 @@ class Term(models.Model):
         verbose_name_plural = "School Terms"
 
     def __str__(self):
-
-        return f"{self.name} - {self.academic_year.name}"
-
+        return self.name or f"Term {self.id}"
     # -------------------------
     # Validation
     # -------------------------
@@ -693,7 +691,7 @@ class SchoolClass(TimeStampedModel):
 class SchoolSupportedClasses(TimeStampedModel):
     supported_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE, related_name="school_supported_classess")
     def __str__(self):
-        return self.supported_class.name
+        return self.supported_class.name or f"Class {self.id}"  # never returns None
     
 
 

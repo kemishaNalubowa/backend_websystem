@@ -3,6 +3,8 @@ from . import views
 
 from . import performance_views as pv
 
+from . import assessment_performance_entry_views as apev
+
 app_name = 'assessments'
 
 urlpatterns = [
@@ -136,5 +138,49 @@ urlpatterns = [
         '<int:pk>/performance/edit/step4/',
         pv.perf_edit_part4,
         name='perf_edit_part4',
+    ),
+
+    # ── EDIT PERFOMANCE ─────────────────────────────────────────────────────────────
+    # path('<int:pk>/performance/',                    apev.assessment_performance_list,             name='performance_list'),
+    path('<int:pk>/performance/enable/',             apev.enable_assessment_performance_entry,      name='performance_enable'),
+    path('<int:pk>/performance/disable/',            apev.disable_assessment_performance_entry,     name='performance_disable'),
+    path('<int:pk>/performance/<str:student>/',      apev.assessment_performance_detail,            name='performance_detail'),
+]
+
+
+
+
+
+
+
+from . import performance_display_views as pdv
+ 
+urlpatterns += [
+    # 1. Overview — replaces the old performance_list view
+    path(
+        '<int:pk>/performance/',
+        pdv.performance_overview,
+        name='performance_overview',
+    ),
+ 
+    # 2. Class detail
+    path(
+        '<int:pk>/performance/class/<int:ac_pk>/',
+        pdv.performance_class,
+        name='performance_class',
+    ),
+ 
+    # 3. Class subject detail + student list
+    path(
+        '<int:pk>/performance/class/<int:ac_pk>/subject/<int:as_pk>/',
+        pdv.performance_class_subject,
+        name='performance_class_subject',
+    ),
+ 
+    # 4. Single student performance edit
+    path(
+        '<int:pk>/performance/class/<int:ac_pk>/subject/<int:as_pk>/student/<int:perf_pk>/edit/',
+        pdv.performance_student_edit,
+        name='performance_student_edit',
     ),
 ]

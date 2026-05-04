@@ -210,7 +210,8 @@
                                         class="form-check-input"
                                     >
                                 </td>
-                                <td>{{ fee.type }}</td>
+                                <td>{% if fee.type %} {{ fee.type }} {% else %} {{ fee.name }} {% endif %}</td>
+                                <td>{{ fee.term }}</td>
                                 <td>{{ fee.amount }}</td>
                                 <td class="text-success">{{ fee.status.amount_paid|default:"0.00" }}</td>
                                 <td class="text-danger fw-semibold">{{ fee.status.amount_balance|default:"0.00" }}</td>
@@ -220,6 +221,8 @@
                                             <i class="bi bi-eye"></i>
                                         </button>
                                     </td>
+                                {% else %}
+                                    <td><i class="text-muted">No txn done yet!</i></td>
                                 {% endif %}
                             </tr>
                         {% endif %}
@@ -359,7 +362,9 @@
                     <tbody>
                         {% for fee in selected_fees %}
                         <tr>
-                            <td>{{ fee.name|default:fee.type }}</td>
+                            
+                            <td>{% firstof fee.type fee.name "—" %}</td>
+
                             <td>{{ fee.term|default:"-" }}</td>
                             <td>{{ fee.amount|default:"0.00" }}</td>
                             <td class="text-success">{{ fee.status.amount_paid|default:"0.00" }}</td>
@@ -379,6 +384,10 @@
                                 <button type="button" class="btn btn-primary  btn-sm" data-bs-toggle="modal" data-bs-target="#payments_model_for_fee_{{ fee.id }}">
                                     <i class="bi bi-eye"></i>
                                 </button>
+                            </td>
+                            {% else %}
+                            <td class="text-muted">
+                                <i>No txn done yet!</i>
                             </td>
                             {% endif %}
 
