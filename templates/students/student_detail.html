@@ -73,6 +73,11 @@
       <i class="bi bi-clipboard me-1"></i>Admission Record
     </a>
     {% endif %}
+    {# Add alongside the existing action buttons #}
+    <a href="{% url 'students:admin_student_history' student.pk %}"
+      class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-clock-history me-1"></i>Academic History
+    </a>
   </div>
 </div>
 

@@ -24,6 +24,14 @@ from students.views.student_views import (
     student_detail,
     student_list,
     student_toggle_active,
+
+
+    admin_student_history,
+    admin_student_class_terms,
+    admin_student_class_term_overview,
+    admin_student_class_term_fees,
+    admin_student_class_term_scholastic,
+    admin_student_class_term_performance,
 )
 
 app_name = 'students'
@@ -106,4 +114,32 @@ urlpatterns = [
     path('admissions/<int:pk>/verify/summary/',
          admission_verify_step4,
          name='admission_verify_step4'),
+
+
+
+
+     # Add to urlpatterns:
+     path('<int:pk>/history/',
+          admin_student_history,
+          name='admin_student_history'),
+
+     path('<int:pk>/history/<int:class_id>/',
+          admin_student_class_terms,
+          name='admin_student_class_terms'),
+
+     path('<int:pk>/history/<int:class_id>/term/<int:term_id>/',
+          admin_student_class_term_overview,
+          name='admin_student_class_term_overview'),
+
+     path('<int:pk>/history/<int:class_id>/term/<int:term_id>/fees/',
+          admin_student_class_term_fees,
+          name='admin_student_class_term_fees'),
+
+     path('<int:pk>/history/<int:class_id>/term/<int:term_id>/scholastic/',
+          admin_student_class_term_scholastic,
+          name='admin_student_class_term_scholastic'),
+
+     path('<int:pk>/history/<int:class_id>/term/<int:term_id>/performance/',
+          admin_student_class_term_performance,
+          name='admin_student_class_term_performance'),
 ]

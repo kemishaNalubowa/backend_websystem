@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:student_list' %}" class="text-secondary">Students</a></li>
+<li class="breadcrumb-item"><a href="{% url 'students:student_detail' student.pk %}" class="text-secondary">{{ student.student_id }}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'students:admin_student_history' student.pk %}" class="text-secondary">History</a></li>
+<li class="breadcrumb-item"><a href="{% url 'students:admin_student_class_terms' student.pk school_class.pk %}" class="text-secondary">{{ school_class }}</a></li>
+<li class="breadcrumb-item active">{{ term }}</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ term }}</h4>
+    <p class="text-muted small mb-0">
+      {{ student.full_name }} &mdash; {{ school_class }}
+      {% if term.is_active %}<span class="badge bg-primary ms-1">Current Term</span>{% endif %}
+    </p>
+  </div>
+  <a href="{% url 'students:admin_student_class_terms' student.pk school_class.pk %}"
+     class="btn btn-outline-secondary btn-sm ms-auto">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+</div>
+
+<div class="row g-4">
+
+  <!-- Fees card -->
+  <div class="col-12 col-md-4">
+    <a href="{% url 'students:admin_student_class_term_fees' student.pk school_class.pk term.pk %}"
+       class="text-decoration-none">
+      <div class="card h-100 card-hover">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                 style="width:44px;height:44px;">
+              <i class="bi bi-cash-coin"></i>
+            </div>
+            <div>
+              <div class="fw-700">School Fees</div>
+              <div class="text-muted small">Fees structure &amp; payments</div>
+            </div>
+          </div>
+          <div class="row g-2 text-center">
+            <div class="col-6">
+              <div class="bg-light rounded p-2">
+                <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;">Total</div>
+                <div class="fw-700 font-monospace small text-primary">{{ fees_summary.total_fees|floatformat:0 }}</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="bg-light rounded p-2">
+                <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;">Paid</div>
+                <div class="fw-700 font-monospace small text-success">{{ fees_summary.total_paid|floatformat:0 }}</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="bg-light rounded p-2">
+                <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;">Balance</div>
+                <div class="fw-700 font-monospace small {% if fees_summary.total_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                  {{ fees_summary.total_balance|floatformat:0 }}
+                </div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="bg-light rounded p-2">
+                <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;">Cleared</div>
+                <div class="fw-700 small text-dark">
+                  {{ fees_summary.fully_paid_count }}/{{ fees_summary.total_items }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="text-end mt-3">
+            <span class="small text-primary fw-700">View fees <i class="bi bi-arrow-right ms-1"></i></span>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Scholastic card -->
+  <div class="col-12 col-md-4">
+    <a href="{% url 'students:admin_student_class_term_scholastic' student.pk school_class.pk term.pk %}"
+       class="text-decoration-none">
+      <div class="card h-100 card-hover">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center"
+                 style="width:44px;height:44px;">
+              <i class="bi bi-bag"></i>
+            </div>
+            <div>
+              <div class="fw-700">Scholastic Items</div>
+              <div class="text-muted small">Requirements for this term</div>
+            </div>
+          </div>
+          <div class="row g-2 text-center">
+            <div class="col-6">
+              <div class="bg-light rounded p-2">
+                <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;">Required</div>
+                <div class="fw-700 small text-dark">{{ scholastic_summary.total }}</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="bg-light rounded p-2">
+                <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;">Fully Met</div>
+                <div class="fw-700 small
+                  {% if scholastic_summary.met == scholastic_summary.total and scholastic_summary.total > 0 %}text-success{% else %}text-warning{% endif %}">
+                  {{ scholastic_summary.met }}/{{ scholastic_summary.total }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="text-end mt-3">
+            <span class="small text-warning fw-700">View items <i class="bi bi-arrow-right ms-1"></i></span>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Performance card -->
+  <div class="col-12 col-md-4">
+    <a href="{% url 'students:admin_student_class_term_performance' student.pk school_class.pk term.pk %}"
+       class="text-decoration-none">
+      <div class="card h-100 card-hover">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center"
+                 style="width:44px;height:44px;">
+              <i class="bi bi-bar-chart-line"></i>
+            </div>
+            <div>
+              <div class="fw-700">Performance</div>
+              <div class="text-muted small">Assessment results</div>
+            </div>
+          </div>
+          <div class="text-center bg-light rounded p-3">
+            <div class="text-muted small">Assessments Recorded</div>
+            <div class="fw-800 fs-3 text-dark mt-1">{{ performance_count }}</div>
+          </div>
+          <div class="text-end mt-3">
+            <span class="small text-success fw-700">View results <i class="bi bi-arrow-right ms-1"></i></span>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+</div>
+{% endblock %}

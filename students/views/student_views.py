@@ -425,3 +425,399 @@ def student_toggle_active(request, pk):
     next_url = request.POST.get('next') or request.META.get('HTTP_REFERER')
     return redirect(next_url or 'students:student_detail', pk=student.pk) \
         if not next_url else redirect(next_url)
+
+
+
+
+
+
+
+# Add these imports at the top of student_views.py
+from decimal import Decimal
+from academics.models import Term
+from fees.models import (
+    SchoolFees, FeesPayment, StudentFeesPaymentsStatus,
+    SchoolScholasticRequirements, StudentScholasticRequirementStatus,
+    ScholasticRequirementPayment,
+)
+from assessments.models import AssessmentPerformance, Assessment
+from students.models import StudentClassPromotion
+
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  ADMIN — STUDENT ACADEMIC HISTORY (class → term → fees/scholastic/performance)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _admin_get_student_classes(student):
+    """Collect every class the student has appeared in, oldest first."""
+    promotions = StudentClassPromotion.objects.filter(
+        student=student,
+    ).select_related(
+        'previous_class', 'current_class', 'upcoming_class', 'academic_year'
+    ).order_by('academic_year')
+
+    seen_ids = set()
+    classes  = []
+    for p in promotions:
+        for cls in [p.previous_class, p.current_class, p.upcoming_class]:
+            if cls is not None and cls.pk not in seen_ids:
+                seen_ids.add(cls.pk)
+                classes.append(cls)
+
+    if not classes and student.current_class:
+        classes.append(student.current_class)
+
+    return classes
+
+
+@login_required
+def admin_student_history(request, pk):
+    """Class cards for this student — entry point into the history drill-down."""
+    student       = get_object_or_404(Student, pk=pk)
+    class_list    = _admin_get_student_classes(student)
+    current_class = student.current_class
+
+    return render(request, 'students/details/admin_student_history.html', {
+        'student':       student,
+        'current_class': current_class,
+        'class_list':    class_list,
+        'page_title':    f'{student.full_name} — Class History',
+    })
+
+
+@login_required
+def admin_student_class_terms(request, pk, class_id):
+    """Term cards for a given class."""
+    student      = get_object_or_404(Student, pk=pk)
+    school_class = get_object_or_404(SchoolSupportedClasses, pk=class_id)
+
+    fees_term_ids = SchoolFees.objects.filter(
+        affected_school_class__school_class=school_class,
+        is_active=True,
+    ).values_list('term_id', flat=True).distinct()
+
+    scholastic_term_ids = SchoolScholasticRequirements.objects.filter(
+        assigned_classes__school_class=school_class,
+        is_active=True,
+    ).values_list('term_id', flat=True).distinct()
+
+    all_term_ids = set(list(fees_term_ids) + list(scholastic_term_ids))
+    terms = Term.objects.filter(
+        pk__in=all_term_ids,
+    ).order_by('-is_active', '-start_date')
+
+    terms_data = []
+    for term in terms:
+        fees_qs = SchoolFees.objects.filter(
+            affected_school_class__school_class=school_class,
+            term=term, is_active=True,
+        ).distinct()
+
+        statuses = StudentFeesPaymentsStatus.objects.filter(
+            student=student, school_fees__in=fees_qs,
+        )
+
+        total_fees    = sum(f.amount for f in fees_qs)
+        total_paid    = sum(s.amount_paid for s in statuses)
+        total_balance = total_fees - total_paid
+        paid_count    = statuses.filter(fully_paid=True).count()
+
+        scholastic_total = SchoolScholasticRequirements.objects.filter(
+            assigned_classes__school_class=school_class,
+            term=term, is_active=True,
+        ).distinct().count()
+
+        scholastic_met = StudentScholasticRequirementStatus.objects.filter(
+            student=student,
+            requirement__assigned_classes__school_class=school_class,
+            requirement__term=term,
+            fully_met=True,
+        ).count()
+
+        terms_data.append({
+            'term':             term,
+            'total_fees':       total_fees,
+            'total_paid':       total_paid,
+            'total_balance':    total_balance,
+            'fees_items':       fees_qs.count(),
+            'paid_count':       paid_count,
+            'scholastic_total': scholastic_total,
+            'scholastic_met':   scholastic_met,
+        })
+
+    return render(request, 'students/details/admin_student_class_terms.html', {
+        'student':       student,
+        'school_class':  school_class,
+        'current_class': student.current_class,
+        'terms_data':    terms_data,
+        'page_title':    f'{student.full_name} — {school_class}',
+    })
+
+
+@login_required
+def admin_student_class_term_overview(request, pk, class_id, term_id):
+    """Section mini-cards (Fees, Scholastic, Performance) for one term."""
+    student      = get_object_or_404(Student, pk=pk)
+    school_class = get_object_or_404(SchoolSupportedClasses, pk=class_id)
+    term         = get_object_or_404(Term, pk=term_id)
+
+    # Fees summary
+    fees_qs = SchoolFees.objects.filter(
+        affected_school_class__school_class=school_class,
+        term=term, is_active=True,
+    ).distinct()
+    statuses      = StudentFeesPaymentsStatus.objects.filter(student=student, school_fees__in=fees_qs)
+    total_fees    = sum(f.amount for f in fees_qs)
+    total_paid    = sum(s.amount_paid for s in statuses)
+    total_balance = total_fees - total_paid
+    fees_summary  = {
+        'total_fees':       total_fees,
+        'total_paid':       total_paid,
+        'total_balance':    total_balance,
+        'fully_paid_count': statuses.filter(fully_paid=True).count(),
+        'total_items':      fees_qs.count(),
+    }
+
+    # Scholastic summary
+    scholastic_qs  = SchoolScholasticRequirements.objects.filter(
+        assigned_classes__school_class=school_class, term=term, is_active=True,
+    ).distinct()
+    scholastic_met = StudentScholasticRequirementStatus.objects.filter(
+        student=student, requirement__in=scholastic_qs, fully_met=True,
+    ).count()
+    scholastic_summary = {'total': scholastic_qs.count(), 'met': scholastic_met}
+
+    # Performance summary
+    performance_count = AssessmentPerformance.objects.filter(
+        student=student, assessment__term=term,
+    ).count()
+
+    return render(request, 'students/details/admin_student_class_term_overview.html', {
+        'student':             student,
+        'school_class':        school_class,
+        'current_class':       student.current_class,
+        'term':                term,
+        'fees_summary':        fees_summary,
+        'scholastic_summary':  scholastic_summary,
+        'performance_count':   performance_count,
+        'page_title':          f'{student.full_name} — {school_class} / {term}',
+    })
+
+
+@login_required
+def admin_student_class_term_fees(request, pk, class_id, term_id):
+    """Fees structure table for one class + term."""
+    student      = get_object_or_404(Student, pk=pk)
+    school_class = get_object_or_404(SchoolSupportedClasses, pk=class_id)
+    term         = get_object_or_404(Term, pk=term_id)
+
+    fees_qs = SchoolFees.objects.filter(
+        affected_school_class__school_class=school_class,
+        term=term, is_active=True,
+    ).select_related('term').distinct().order_by('fees_type')
+
+    total_fees_amount = Decimal('0')
+    total_paid        = Decimal('0')
+    total_balance     = Decimal('0')
+    fully_paid_count  = 0
+    fees_structure_data = []
+
+    for fee in fees_qs:
+        status = StudentFeesPaymentsStatus.objects.filter(
+            student=student, school_fees=fee,
+        ).first()
+
+        raw_txns = FeesPayment.objects.filter(
+            student=student, school_fees=fee,
+        ).order_by('payment_date', 'created_at')
+
+        running       = fee.amount
+        enriched_txns = []
+        for txn in raw_txns:
+            prev_bal = running
+            running  = running - txn.amount
+            enriched_txns.append({
+                'txn':             txn,
+                'prev_balance':    prev_bal,
+                'current_balance': max(running, Decimal('0')),
+            })
+
+        fees_structure_data.append({
+            'fee': fee, 'status': status, 'transactions': enriched_txns,
+        })
+
+        total_fees_amount += fee.amount
+        if status:
+            total_paid    += status.amount_paid
+            total_balance += status.amount_balance
+            if status.fully_paid:
+                fully_paid_count += 1
+        else:
+            total_balance += fee.amount
+
+    fees_stats = {
+        'total_fees':       total_fees_amount,
+        'total_paid':       total_paid,
+        'total_balance':    total_balance,
+        'fully_paid_count': fully_paid_count,
+        'total_items':      len(fees_structure_data),
+    }
+
+    return render(request, 'students/details/admin_student_class_term_fees.html', {
+        'student':              student,
+        'school_class':         school_class,
+        'current_class':        student.current_class,
+        'term':                 term,
+        'fees_structure_data':  fees_structure_data,
+        'fees_stats':           fees_stats,
+        'page_title':           f'School Fees — {school_class} / {term}',
+    })
+
+
+@login_required
+def admin_student_class_term_scholastic(request, pk, class_id, term_id):
+    """Scholastic requirements table for one class + term."""
+    student      = get_object_or_404(Student, pk=pk)
+    school_class = get_object_or_404(SchoolSupportedClasses, pk=class_id)
+    term         = get_object_or_404(Term, pk=term_id)
+
+    scholastic_qs = SchoolScholasticRequirements.objects.filter(
+        assigned_classes__school_class=school_class,
+        term=term, is_active=True,
+    ).distinct().order_by('item_name')
+
+    total_items      = 0
+    fully_met_count  = 0
+    total_cash_value = Decimal('0')
+    total_cash_paid  = Decimal('0')
+    scholastic_data  = []
+
+    for req in scholastic_qs:
+        status = StudentScholasticRequirementStatus.objects.filter(
+            student=student, requirement=req,
+        ).first()
+
+        transactions = ScholasticRequirementPayment.objects.filter(
+            student=student, requirement=req,
+        ).order_by('payment_date', 'created_at')
+
+        enriched_txns = []
+        for txn in transactions:
+            if txn.brought_item and txn.brought_cash:
+                txn_type = 'Mixed'
+            elif txn.brought_item:
+                txn_type = 'Items'
+            else:
+                txn_type = 'Cash'
+            enriched_txns.append({'txn': txn, 'txn_type': txn_type})
+
+        scholastic_data.append({
+            'req': req, 'status': status, 'transactions': enriched_txns,
+        })
+
+        total_items      += 1
+        total_cash_value += req.monetary_value
+        if status:
+            total_cash_paid += status.amount_paid_ugx
+            if status.fully_met:
+                fully_met_count += 1
+
+    scholastic_stats = {
+        'total_items':      total_items,
+        'fully_met_count':  fully_met_count,
+        'total_cash_value': total_cash_value,
+        'total_cash_paid':  total_cash_paid,
+    }
+
+    return render(request, 'students/details/admin_student_class_term_scholastic.html', {
+        'student':           student,
+        'school_class':      school_class,
+        'current_class':     student.current_class,
+        'term':              term,
+        'scholastic_data':   scholastic_data,
+        'scholastic_stats':  scholastic_stats,
+        'page_title':        f'Scholastic Items — {school_class} / {term}',
+    })
+
+
+@login_required
+def admin_student_class_term_performance(request, pk, class_id, term_id):
+    """Assessment performance table for one class + term."""
+    from assessments.models import AssessmentSubject, AssessmentTotalMark
+
+    student      = get_object_or_404(Student, pk=pk)
+    school_class = get_object_or_404(SchoolSupportedClasses, pk=class_id)
+    term         = get_object_or_404(Term, pk=term_id)
+
+    performance_qs = AssessmentPerformance.objects.filter(
+        student=student,
+        assessment__term=term,
+        school_class=school_class,
+    ).select_related(
+        'assessment',
+        'assessment__term',
+        'subject',
+    ).order_by('subject__name', 'assessment__date_given')
+
+    performance_data = []
+
+    for perf in performance_qs:
+        # Pass mark lives on AssessmentSubject, not Assessment
+        assessment_subject = AssessmentSubject.objects.filter(
+            assessment=perf.assessment,
+            subject=perf.subject,
+            assessment_class=school_class,
+        ).first()
+        pass_mark = assessment_subject.passmark if assessment_subject else None
+
+        # Total mark lives on AssessmentTotalMark
+        total_mark_obj = AssessmentTotalMark.objects.filter(
+            assessment=perf.assessment,
+            subject=assessment_subject,
+        ).first() if assessment_subject else None
+        total_mark = total_mark_obj.total_mark if total_mark_obj else None
+
+        # Pass / fail
+        if pass_mark is not None and perf.marks_obtained is not None:
+            passed = perf.marks_obtained >= pass_mark
+        else:
+            passed = None
+
+        # Percentage
+        if total_mark and total_mark > 0:
+            percentage = round((perf.marks_obtained / total_mark) * 100, 1)
+        else:
+            percentage = None
+
+        performance_data.append({
+            'assessment': perf.assessment,
+            'subject':    perf.subject,
+            'obtained':   perf.marks_obtained,
+            'total':      total_mark,
+            'pass_mark':  pass_mark,
+            'passed':     passed,
+            'percentage': percentage,
+            'comment':    perf.comment,
+        })
+
+    scored         = [r for r in performance_data if r['percentage'] is not None]
+    passed_count   = sum(1 for r in performance_data if r['passed'] is True)
+    avg_percentage = round(sum(r['percentage'] for r in scored) / len(scored), 1) if scored else 0
+
+    performance_stats = {
+        'total_assessments':  len(performance_data),
+        'passed_count':       passed_count,
+        'average_percentage': avg_percentage,
+    }
+
+    return render(request, 'students/details/admin_student_class_term_performance.html', {
+        'student':           student,
+        'school_class':      school_class,
+        'current_class':     student.current_class,
+        'term':              term,
+        'performance_data':  performance_data,
+        'performance_stats': performance_stats,
+        'page_title':        f'Performance — {school_class} / {term}',
+    })
