@@ -1,0 +1,1244 @@
+[
+  {
+    "model": "permissions.permission",
+    "pk": 1,
+    "fields": {
+      "permission_title": "Academic Year",
+      "permission_code": "academic_year",
+      "description": "Create, view, edit and delete academic years.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": true,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 2,
+    "fields": {
+      "permission_title": "Term",
+      "permission_code": "term",
+      "description": "Create, view, edit and delete terms within an academic year.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": true,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 3,
+    "fields": {
+      "permission_title": "Subject",
+      "permission_code": "subject",
+      "description": "Create, view, edit, delete and activate/deactivate subjects.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": true,
+      "support_view": true,
+      "support_toggle": true,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 4,
+    "fields": {
+      "permission_title": "Class",
+      "permission_code": "class",
+      "description": "Create, view and edit classes. Deletion is not permitted.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 5,
+    "fields": {
+      "permission_title": "Supported Class",
+      "permission_code": "supported_class",
+      "description": "Create, view and edit supported classes for a given academic year.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 6,
+    "fields": {
+      "permission_title": "Assign Class Teacher",
+      "permission_code": "assign_class_teacher",
+      "description": "Assign, view and update class teacher assignments.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 7,
+    "fields": {
+      "permission_title": "Assessment",
+      "permission_code": "assessment",
+      "description": "Create, view, edit and delete assessments.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": true,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 8,
+    "fields": {
+      "permission_title": "Publish Assessment",
+      "permission_code": "publish_assessment",
+      "description": "Toggle publish and unpublish state of an assessment.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 9,
+    "fields": {
+      "permission_title": "Enable Assessment Performance",
+      "permission_code": "enable_assessment_performance",
+      "description": "Toggle whether performance entry is enabled for an assessment.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 10,
+    "fields": {
+      "permission_title": "Release Assessment Results",
+      "permission_code": "release_assessment_results",
+      "description": "Toggle release of assessment results to students and parents.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 11,
+    "fields": {
+      "permission_title": "Assign Class to Assessment",
+      "permission_code": "assign_class_to_assessment",
+      "description": "Assign and view classes linked to an assessment.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 12,
+    "fields": {
+      "permission_title": "Assign Subject to Assessment",
+      "permission_code": "assign_subject_to_assessment",
+      "description": "Assign and view subjects linked to an assessment.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 13,
+    "fields": {
+      "permission_title": "Assign Teacher to Assessment",
+      "permission_code": "assign_teacher_to_assessment",
+      "description": "Assign and view teachers responsible for an assessment.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 14,
+    "fields": {
+      "permission_title": "Assessment Performance Center",
+      "permission_code": "assessment_performance_center",
+      "description": "View the assessment performance center overview.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 15,
+    "fields": {
+      "permission_title": "Open Performance Entry",
+      "permission_code": "open_performance_entry",
+      "description": "Toggle open state to allow performance entries to be submitted.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 16,
+    "fields": {
+      "permission_title": "Disable Performance Entry",
+      "permission_code": "disable_performance_entry",
+      "description": "Toggle disable state to lock performance entry for a class or subject.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 17,
+    "fields": {
+      "permission_title": "View Class Performance",
+      "permission_code": "view_class_performance",
+      "description": "View performance entries for an entire class.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 18,
+    "fields": {
+      "permission_title": "Add Performance Entry",
+      "permission_code": "add_performance_entry",
+      "description": "Add student performance scores for an assessment.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": false,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 19,
+    "fields": {
+      "permission_title": "View Class Subject Performance",
+      "permission_code": "view_class_subject_performance",
+      "description": "View performance entries for a specific subject within a class.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 20,
+    "fields": {
+      "permission_title": "Edit Student Performance Entry",
+      "permission_code": "edit_student_performance_entry",
+      "description": "Edit an individual student performance score entry.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": true,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": false,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 21,
+    "fields": {
+      "permission_title": "Delete Student Performance Entry",
+      "permission_code": "delete_student_performance_entry",
+      "description": "Delete an individual student performance score entry.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": true,
+      "support_view": false,
+      "support_toggle": false,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 22,
+    "fields": {
+      "permission_title": "Admissions List",
+      "permission_code": "admissions_list",
+      "description": "View the list of all admissions.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 23,
+    "fields": {
+      "permission_title": "Admission Details",
+      "permission_code": "admission_details",
+      "description": "View the full detail page of a single admission record.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 24,
+    "fields": {
+      "permission_title": "Add Admission",
+      "permission_code": "add_admission",
+      "description": "Create a new student admission record.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 25,
+    "fields": {
+      "permission_title": "Edit Admission Parent Details",
+      "permission_code": "edit_admission_parent_details",
+      "description": "Edit the parent or guardian details on an admission record.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": true,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 26,
+    "fields": {
+      "permission_title": "Delete Admission",
+      "permission_code": "delete_admission",
+      "description": "Permanently delete an admission record.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": true,
+      "support_view": false,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 27,
+    "fields": {
+      "permission_title": "Update Admission Status",
+      "permission_code": "update_admission_status",
+      "description": "Toggle or update the current status of an admission (e.g. pending, approved, rejected).",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 28,
+    "fields": {
+      "permission_title": "Verify Admission",
+      "permission_code": "verify_admission",
+      "description": "Toggle verification state of an admission record.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 29,
+    "fields": {
+      "permission_title": "Change Admission Verification Status",
+      "permission_code": "change_admission_verification",
+      "description": "Override and change the admission verification status.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 30,
+    "fields": {
+      "permission_title": "Students List",
+      "permission_code": "students_list",
+      "description": "View the full list of enrolled students.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 31,
+    "fields": {
+      "permission_title": "Student Details",
+      "permission_code": "student_details",
+      "description": "View the detail page of an individual student.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 32,
+    "fields": {
+      "permission_title": "Enrol Student",
+      "permission_code": "enrol_student",
+      "description": "Enrol an admitted student into a class for the current academic year.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 33,
+    "fields": {
+      "permission_title": "Activate / Deactivate Student",
+      "permission_code": "activate_deactivate_student",
+      "description": "Toggle active or inactive status of a student account.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 34,
+    "fields": {
+      "permission_title": "View Student Academic History",
+      "permission_code": "view_student_academic_history",
+      "description": "View the full academic history of a student across all years.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 35,
+    "fields": {
+      "permission_title": "View History by Class",
+      "permission_code": "view_history_by_class",
+      "description": "View a student's academic history filtered by class.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 36,
+    "fields": {
+      "permission_title": "View History by Term",
+      "permission_code": "view_history_by_term",
+      "description": "View a student's academic history filtered by term.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 37,
+    "fields": {
+      "permission_title": "View History \u2014 Fees",
+      "permission_code": "view_history_fees",
+      "description": "View fee payment history within a student's academic record.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 38,
+    "fields": {
+      "permission_title": "View History \u2014 Scholastic Requirements",
+      "permission_code": "view_history_scholastic",
+      "description": "View scholastic requirement history within a student's academic record.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 39,
+    "fields": {
+      "permission_title": "View History \u2014 Performance",
+      "permission_code": "view_history_performance",
+      "description": "View assessment performance history within a student's academic record.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 40,
+    "fields": {
+      "permission_title": "Parent Requests Center",
+      "permission_code": "parent_requests_center",
+      "description": "View the parent requests overview center.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 41,
+    "fields": {
+      "permission_title": "View Parent Request Details",
+      "permission_code": "view_parent_request_details",
+      "description": "View the full details of an individual parent request.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 42,
+    "fields": {
+      "permission_title": "Post Request Reply",
+      "permission_code": "post_request_reply",
+      "description": "Post an official reply to a parent request.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 43,
+    "fields": {
+      "permission_title": "Users List",
+      "permission_code": "users_list",
+      "description": "View the list of all staff and system users.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 44,
+    "fields": {
+      "permission_title": "Staff Details",
+      "permission_code": "staff_details",
+      "description": "View, edit and delete individual staff member profiles.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": true,
+      "support_delete": true,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 45,
+    "fields": {
+      "permission_title": "Activate / Deactivate Staff",
+      "permission_code": "activate_deactivate_staff",
+      "description": "Toggle active or inactive status of a staff account.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 46,
+    "fields": {
+      "permission_title": "Permissions Center",
+      "permission_code": "permissions_center",
+      "description": "View the permissions management center.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 47,
+    "fields": {
+      "permission_title": "Assign Permissions",
+      "permission_code": "assign_permissions",
+      "description": "Assign and update permission sets for user roles.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 48,
+    "fields": {
+      "permission_title": "School Fees List",
+      "permission_code": "school_fees_list",
+      "description": "View the list of school fee structures.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 49,
+    "fields": {
+      "permission_title": "School Fee",
+      "permission_code": "school_fee",
+      "description": "Create, view, edit and delete a school fee record.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": true,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 50,
+    "fields": {
+      "permission_title": "Duplicate Fee Info",
+      "permission_code": "duplicate_fee_info",
+      "description": "Duplicate an existing fee structure to a new term or class.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 51,
+    "fields": {
+      "permission_title": "Assessment Fees List",
+      "permission_code": "assessment_fees_list",
+      "description": "View the list of assessment fee structures.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 52,
+    "fields": {
+      "permission_title": "Assessment Fee",
+      "permission_code": "assessment_fee",
+      "description": "Create, view, edit and delete an assessment fee record.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": true,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 53,
+    "fields": {
+      "permission_title": "Scholastic Requirements List",
+      "permission_code": "scholastic_requirements_list",
+      "description": "View the list of scholastic requirements.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 54,
+    "fields": {
+      "permission_title": "Scholastic Requirement",
+      "permission_code": "scholastic_requirement",
+      "description": "Create, view, edit, delete and activate/deactivate a scholastic requirement.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": true,
+      "support_view": true,
+      "support_toggle": true,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 55,
+    "fields": {
+      "permission_title": "Fee Payments List",
+      "permission_code": "fee_payments_list",
+      "description": "View the list of school fee payment records.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 56,
+    "fields": {
+      "permission_title": "Fee Payment",
+      "permission_code": "fee_payment",
+      "description": "Create, view, edit and delete a school fee payment record.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": true,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 57,
+    "fields": {
+      "permission_title": "Assessment Payments List",
+      "permission_code": "assessment_payments_list",
+      "description": "View the list of assessment payment records.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 58,
+    "fields": {
+      "permission_title": "Assessment Payment",
+      "permission_code": "assessment_payment",
+      "description": "Create, view, edit and delete an assessment payment record.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": true,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 59,
+    "fields": {
+      "permission_title": "Scholastic Payments List",
+      "permission_code": "scholastic_payments_list",
+      "description": "View the list of scholastic requirement payment records.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 60,
+    "fields": {
+      "permission_title": "Scholastic Payment",
+      "permission_code": "scholastic_payment",
+      "description": "Create, view, edit and delete a scholastic requirement payment record.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": true,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 61,
+    "fields": {
+      "permission_title": "Announcements List",
+      "permission_code": "announcements_list",
+      "description": "View the list of all school announcements.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 62,
+    "fields": {
+      "permission_title": "Announcement",
+      "permission_code": "announcement",
+      "description": "Create, view, edit and delete an announcement.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": true,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 63,
+    "fields": {
+      "permission_title": "Publish Announcement",
+      "permission_code": "publish_announcement",
+      "description": "Toggle publish or unpublish state of an announcement.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 64,
+    "fields": {
+      "permission_title": "Events List",
+      "permission_code": "events_list",
+      "description": "View the list of all school events.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 65,
+    "fields": {
+      "permission_title": "Event",
+      "permission_code": "event",
+      "description": "Create, view, edit and delete a school event.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": true,
+      "support_edit": true,
+      "support_delete": true,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 66,
+    "fields": {
+      "permission_title": "Cancel Event",
+      "permission_code": "cancel_event",
+      "description": "Toggle cancel or reopen state of a school event.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": false,
+      "support_toggle": true,
+      "support_my_limit": true,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 67,
+    "fields": {
+      "permission_title": "School Profile",
+      "permission_code": "school_profile",
+      "description": "View and edit the school profile information.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": true,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 68,
+    "fields": {
+      "permission_title": "School Settings",
+      "permission_code": "school_settings",
+      "description": "View and edit system-wide school settings.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": true,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  },
+  {
+    "model": "permissions.permission",
+    "pk": 69,
+    "fields": {
+      "permission_title": "Dashboard",
+      "permission_code": "dashboard",
+      "description": "Access and view the main system dashboard.",
+      "is_active": true,
+      "date": "2025-01-01",
+      "support_add": false,
+      "support_edit": false,
+      "support_delete": false,
+      "support_view": true,
+      "support_toggle": false,
+      "support_my_limit": false,
+      "support_all_limit": true
+    }
+  }
+]

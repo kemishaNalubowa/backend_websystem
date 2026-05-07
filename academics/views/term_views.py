@@ -6,9 +6,11 @@ from django.utils.dateparse import parse_date
 from django.contrib.auth.decorators import login_required
 
 from academics.models import Term, AcademicYear
+from permissions.decorators import has_permission
 
 
 @login_required
+@has_permission('term', action='read')
 def terms_list(request):
 
     # =========================
@@ -76,6 +78,7 @@ def terms_list(request):
 # =========================
 
 @login_required
+@has_permission('term', action='edit')
 def term_update(request, pk):
 
     term = get_object_or_404(
@@ -123,6 +126,7 @@ def term_update(request, pk):
 # =========================
 
 @login_required
+@has_permission('term', action='delete')
 def term_delete(request, pk):
 
     term = get_object_or_404(

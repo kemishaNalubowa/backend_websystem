@@ -6,12 +6,13 @@ from django.utils.dateparse import parse_date
 from django.core.exceptions import ValidationError
 
 from academics.models import AcademicYear
+from permissions.decorators import has_permission
 
 
 # =========================
 # LIST ACADEMIC YEARS
 # =========================
-
+@has_permission('academic_year', 'read')
 def academic_year_list(request):
 
     years = AcademicYear.objects.all()
@@ -86,7 +87,7 @@ from django.core.exceptions import ValidationError
 from django.utils.dateparse import parse_date
 
 
-
+@has_permission('academic_year', action='create')
 def academic_year_create(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
@@ -153,7 +154,7 @@ def academic_year_create(request):
 # =========================
 # UPDATE ACADEMIC YEAR
 # =========================
-
+@has_permission('academic_year', action='edit')
 def academic_year_update(request, pk):
 
     year = get_object_or_404(
@@ -214,7 +215,7 @@ def academic_year_update(request, pk):
 # =========================
 # DELETE ACADEMIC YEAR
 # =========================
-
+@has_permission('academic_year', action='delete')
 def academic_year_delete(request, pk):
 
     year = get_object_or_404(

@@ -2,10 +2,11 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from academics.models import SchoolSupportedClasses, SchoolClass
 from django.contrib import messages
+from permissions.decorators import has_permission
 
 
 
-
+@has_permission('class', action='read')
 def school_supported_classes_manage(request):
 
     classes = SchoolClass.objects.all()
@@ -136,6 +137,7 @@ from accounts.models import (
 
 
 @login_required
+@has_permission("assign_class_teacher", action='read')
 def assign_class_teacher(request):
 
     supported_classes = (

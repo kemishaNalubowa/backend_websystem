@@ -1,13 +1,13 @@
-
 <div class="table-responsive">
   <table class="table align-middle mb-0 table-primary table-borderless mb-3 small">
-    <thead class=" border-primary border-start-0 border-top border-bottom border-end-0">
+    <thead class="border-primary border-start-0 border-top border-bottom border-end-0">
       <tr>
         <th class="text-primary fw-bold">Permission</th>
         <th class="text-center text-primary fw-bold">Add</th>
         <th class="text-center text-primary fw-bold">Read</th>
         <th class="text-center text-primary fw-bold">Edit</th>
-        <th class="text-center  text-primary fw-bold">Delete</th>
+        <th class="text-center text-primary fw-bold">Delete</th>
+        <th class="text-center text-primary fw-bold">Toggle</th>
         <th class="text-center text-primary fw-bold">Limit</th>
         <th class="text-center text-primary fw-bold">Status</th>
       </tr>
@@ -15,69 +15,114 @@
     <tbody>
       {% for asgn in rows %}
       <tr>
-        <td class="{% if forloop.last %} border-bottom-0 border-top border-start-0 border-end {% else %} border-start-0 border-top border-bottom border-end {% endif %} border-primary">
+
+        {# ── Permission title ── #}
+        <td class="border-primary border-start-0 border-end
+          {% if forloop.last %}border-bottom-0 border-top{% else %}border-top border-bottom{% endif %}">
           <div class="fw-700 fw-bold">{{ asgn.permission.permission_title }}</div>
         </td>
 
-        <td class="text-center {% if forloop.last %} border-bottom-0 border-top border-start border-end {% else %} border {% endif %} border-primary">
-          {% if asgn.can_create %}
-          <i class="bi bi-check-circle-fill text-success"></i>
+        {# ── ADD ── #}
+        <td class="text-center border-primary
+          {% if forloop.last %}border-bottom-0 border-top border-start border-end{% else %}border{% endif %}">
+          {% if asgn.permission.support_add %}
+            {% if asgn.can_create %}
+            <i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}
+            <i class="bi bi-dash-circle text-muted opacity-50"></i>
+            {% endif %}
           {% else %}
-          <i class="bi bi-dash-circle text-muted opacity-50"></i>
+          <span class="text-muted opacity-50">—</span>
           {% endif %}
         </td>
 
-        <td class="text-center {% if forloop.last %} border-bottom-0 border-top border-start border-end {% else %} border {% endif %} border-primary">
-          {% if asgn.can_read %}
-          <i class="bi bi-check-circle-fill text-success"></i>
+        {# ── READ ── #}
+        <td class="text-center border-primary
+          {% if forloop.last %}border-bottom-0 border-top border-start border-end{% else %}border{% endif %}">
+          {% if asgn.permission.support_view %}
+            {% if asgn.can_read %}
+            <i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}
+            <i class="bi bi-dash-circle text-muted opacity-50"></i>
+            {% endif %}
           {% else %}
-          <i class="bi bi-dash-circle text-muted opacity-50"></i>
+          <span class="text-muted opacity-50">—</span>
           {% endif %}
         </td>
 
-        <td class="text-center {% if forloop.last %} border-bottom-0 border-top border-start border-end {% else %} border {% endif %} border-primary">
-          {% if asgn.can_edit %}
-          <i class="bi bi-check-circle-fill text-success"></i>
+        {# ── EDIT ── #}
+        <td class="text-center border-primary
+          {% if forloop.last %}border-bottom-0 border-top border-start border-end{% else %}border{% endif %}">
+          {% if asgn.permission.support_edit %}
+            {% if asgn.can_edit %}
+            <i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}
+            <i class="bi bi-dash-circle text-muted opacity-50"></i>
+            {% endif %}
           {% else %}
-          <i class="bi bi-dash-circle text-muted opacity-50"></i>
+          <span class="text-muted opacity-50">—</span>
           {% endif %}
         </td>
 
-        <td class="text-center {% if forloop.last %} border-bottom-0 border-top border-start border-end {% else %} border {% endif %} border-primary">
-          {% if asgn.can_delete %}
-          <i class="bi bi-check-circle-fill text-success"></i>
+        {# ── DELETE ── #}
+        <td class="text-center border-primary
+          {% if forloop.last %}border-bottom-0 border-top border-start border-end{% else %}border{% endif %}">
+          {% if asgn.permission.support_delete %}
+            {% if asgn.can_delete %}
+            <i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}
+            <i class="bi bi-dash-circle text-muted opacity-50"></i>
+            {% endif %}
           {% else %}
-          <i class="bi bi-dash-circle text-muted opacity-50"></i>
+          <span class="text-muted opacity-50">—</span>
           {% endif %}
         </td>
 
-        <td class="text-center {% if forloop.last %} border-bottom-0 border-top border-start border-end {% else %} border {% endif %} border-primary">
-          {% if asgn.action_effect == 'can_my' %}
-          <span class=" text-dark">
-            <i class="bi bi-person-fill me-2"></i>
-            My</span>
+        {# ── TOGGLE ── #}
+        <td class="text-center border-primary
+          {% if forloop.last %}border-bottom-0 border-top border-start border-end{% else %}border{% endif %}">
+          {% if asgn.permission.support_toggle %}
+            {% if asgn.can_toggle %}
+            <i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}
+            <i class="bi bi-dash-circle text-muted opacity-50"></i>
+            {% endif %}
           {% else %}
-          <span class="text-dark">
-            <i class="bi bi-people-fill me-2"></i>
-            All</span>
+          <span class="text-muted opacity-50">—</span>
           {% endif %}
         </td>
 
-        <td class="text-center {% if forloop.last %} border-bottom-0 border-top border-start border-end-0 {% else %} border-start border-end-0 border-top border-bottom-0 {% endif %} border-primary">
+        {# ── LIMIT ── #}
+        <td class="text-center border-primary
+          {% if forloop.last %}border-bottom-0 border-top border-start border-end{% else %}border{% endif %}">
+          {% if asgn.permission.support_my_limit or asgn.permission.support_all_limit %}
+            {% if asgn.action_effect == 'can_my' %}
+            <span class="text-dark"><i class="bi bi-person-fill me-1"></i>My</span>
+            {% else %}
+            <span class="text-dark"><i class="bi bi-people-fill me-1"></i>All</span>
+            {% endif %}
+          {% else %}
+          <span class="text-muted opacity-50">—</span>
+          {% endif %}
+        </td>
+
+        {# ── STATUS ── #}
+        <td class="text-center border-primary
+          {% if forloop.last %}border-bottom-0 border-top border-start border-end-0
+          {% else %}border-start border-end-0 border-top border-bottom{% endif %}">
           {% if asgn.is_active %}
           <span class="text-success fw-semibold">
-            <i class="bi bi-check-all me-2"></i>
-            Active</span>
-          {% else %}
-          <span class=" fw-semibold text-dark border-warning-subtle">
-            Pending
+            <i class="bi bi-check-all me-1"></i>Active
           </span>
+          {% else %}
+          <span class="fw-semibold text-dark">Pending</span>
           {% endif %}
         </td>
+
       </tr>
       {% empty %}
       <tr>
-        <td colspan="7" class="text-center text-muted py-3 small">No assignments to show.</td>
+        <td colspan="8" class="text-center text-muted py-3 small">No assignments to show.</td>
       </tr>
       {% endfor %}
     </tbody>

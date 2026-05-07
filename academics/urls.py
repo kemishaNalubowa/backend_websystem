@@ -40,6 +40,9 @@ from academics.views.subject_views import (
     subject_detail_info,
     subject_detail_teachers,
     subject_detail_classes,
+
+    assign_subject_to_class,
+    assign_subject_to_teacher,
 )
 
 from academics.views.academic_yr_views import (
@@ -170,6 +173,20 @@ urlpatterns = [
         "academic-years/delete/<int:pk>/",
         academic_year_delete,
         name="academic_year_delete"
+    ),
+
+
+
+    # ── Assignments ───────────────────────────────────────────────────────────
+    path(
+        'subjects/<int:pk>/assign-classes/',
+        assign_subject_to_class,
+        name='assign_subject_to_class',
+    ),
+    path(
+        'subjects/<int:pk>/assign-teacher/',
+        assign_subject_to_teacher,
+        name='assign_subject_to_teacher',
     ),
 
 

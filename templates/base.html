@@ -529,8 +529,64 @@
   </div>
   {% endif %}
 
+
+  {{ user_perms  }}
+  =====================================================
+  {{ request.user.user_type }}
+
+
   {% block content %}{% endblock %}
 </main>
+
+
+
+{% if perm_denied %}
+<div class="modal fade" id="permDeniedModal" tabindex="-1"
+     aria-labelledby="permDeniedModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-danger border">
+
+      <div class="modal-header bg-danger-subtle border-bottom border-danger">
+        <h5 class="modal-title fw-bold text-danger" id="permDeniedModalLabel">
+          <i class="bi bi-shield-lock-fill me-2"></i>Access Restricted
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body py-4 text-center">
+        <i class="bi bi-lock-fill text-danger" style="font-size:2.5rem;"></i>
+        <p class="mt-3 mb-1 fw-semibold text-dark fs-6">
+          You don't have permission to perform this action.
+        </p>
+        <p class="text-muted small mb-3">
+          Required: <strong>{{ perm_denied.permission_title }}</strong>
+          — <span class="text-danger">{{ perm_denied.action_label }}</span>
+        </p>
+        <p class="text-muted small mb-0">
+          Contact your system administrator if you need access.
+        </p>
+      </div>
+
+      <div class="modal-footer border-top border-danger-subtle justify-content-center">
+        <button type="button" class="btn btn-danger px-4"
+                data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-1"></i>Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // Auto-open as soon as the page is ready
+  document.addEventListener('DOMContentLoaded', function () {
+    var modal = new bootstrap.Modal(document.getElementById('permDeniedModal'));
+    modal.show();
+  });
+</script>
+{% endif %}
 <!-- ═══════════════════════════════ /CONTENT ══════════════════════════════ -->
 
 

@@ -41,6 +41,7 @@ from assessments.utils import is_month_in_range, is_range_overlaps_year, period_
 from academics.utils.subject_utils import get_sch_supported_classes
 from django.urls import reverse
 from students.models import Student
+from permissions.decorators import has_permission
 
 
 
@@ -89,6 +90,7 @@ def get_select_context():
 # =============================================================================
 
 @login_required
+@has_permission('assessment', action='read')
 def assessment_list(request):
     qs = Assessment.objects.select_related('term', 'created_by')
 
@@ -131,6 +133,7 @@ def assessment_list(request):
 # 2. Add Assessment
 # =============================================================================
 @login_required
+@has_permission('assessment', action='create')
 def add_assessment(request):
 
     if request.method == 'POST':
@@ -258,6 +261,7 @@ def add_assessment(request):
 # =============================================================================
 
 @login_required
+@has_permission('assessment', action='read')
 def assessment_detail(request, pk):
     assessment = get_object_or_404(
         Assessment.objects.select_related('term', 'term__academic_year', 'created_by'),
@@ -297,6 +301,7 @@ def assessment_detail(request, pk):
 # =============================================================================
 
 @login_required
+@has_permission('assessment', action='delete')
 def delete_assessment(request, pk):
     assessment = get_object_or_404(Assessment, pk=pk)
 
@@ -317,6 +322,7 @@ def delete_assessment(request, pk):
 # =============================================================================
 
 @login_required
+@has_permission('publish_assessment', action='toggle')
 def change_assessment_status(request, pk):
     """
     Toggles is_published and/or results_published via a POST form.
@@ -507,6 +513,7 @@ def _get_or_create_mod(assessment):
 
 
 @login_required
+@has_permission('assign_class_to_assessment', action='create')
 def add_assessment_class(request, pk):
     assessment = get_object_or_404(Assessment, pk=pk)
     mod        = _get_or_create_mod(assessment)
@@ -622,167 +629,9 @@ def add_assessment_class(request, pk):
 # STEP 2 — Assign Subjects
 # =============================================================================
 
-# @login_required
-# def add_assessment_subject(request, pk):
-#     """
-#     For each class already linked to the assessment, show that class's
-#     curriculum subjects (from ClassSubject).  Staff tick which subjects
-#     are being assessed and set a pass mark for each.
-
-#     Guard: assessment must have at least one class linked first.
-#     """
-#     assessment = get_object_or_404(Assessment, pk=pk)
-
-#     assessment_classes = (
-#         AssessmentClass.objects
-#         .filter(assessment=assessment)
-#         .select_related('school_class__supported_class')
-#         .order_by('school_class__supported_class__order')
-#     )
-
-#     if not assessment_classes.exists():
-#         messages.error(
-#             request,
-#             'Please assign classes to this assessment first (Step 1).'
-#         )
-#         return redirect(reverse('assessments:add_class', args=[pk]))
-
-
-
-#     already_linked_subject_pks = set(
-#         AssessmentSubject.objects
-#         .filter(assessment=assessment)
-#         .values_list('subject_id', flat=True)
-#     )
-
-#     class_subject_groups = []
-#     for ac in assessment_classes:
-#         subjects = (
-#             ClassSubject.objects
-#             .filter(school_class=ac.school_class)
-#             .select_related('subject')
-#             .order_by('subject__name')
-#         )
-#         class_subject_groups.append({          # ← uncomment this
-#             'ac':       ac,
-#             'subjects': list(subjects),        # ← no filtering, show ALL
-#         })
-
-#     # Existing assessment subjects (for display)
-#     existing_subjects = (
-#         AssessmentSubject.objects
-#         .filter(assessment=assessment)
-#         .select_related('subject')
-#         .order_by('subject__name')
-#     )
-
-#     if request.method == 'POST':
-#         print("POST DATA:", dict(request.POST))
-#         errors  = {}
-#         to_save = []
-
-#         # print("class_subject_groups: ", class_subject_groups)
-#         # messages.error(request, f'{class_subject_groups}')
-#         # return redirect(reverse('assessments:add_subject', args=[pk]))
-
-
-#         for group in class_subject_groups:
-#             ac = group['ac']
-#             print("GROUP AC:", ac, "| school_class:", ac.school_class, "| supported_class key:", ac.school_class.supported_class.key)
-
-
-#             for cs in group['subjects']:
-#                 subj     = cs.subject
-#                 key      = f'{group["ac"].school_class.supported_class.key}_{subj.code}'.lower()
-#                 passmark_raw = request.POST.get(f'passmark_{key}', '').strip()
-
-
-
-#                 if AssessmentSubject.objects.filter(
-#                     assessment=assessment,
-#                     assessment_class=ac.school_class,
-#                     subject=subj
-#                     ).exists():
-#                     continue
-
-
-#                 if not passmark_raw:
-#                     continue
-
-#                 passmark = _parse_pos_decimal(
-#                     passmark_raw,
-#                     f'{subj.code} — Pass Mark',
-#                     errors,
-#                     f'passmark_{key}',
-#                 )
-#                 notes = (request.POST.get(f'notes_{key}', '') or '').strip()[:200]
-
-#                 if passmark is not None:
-#                     to_save.append({
-#                         'ac':       ac,
-#                         'subject':  subj,
-#                         'passmark': passmark,
-#                         'notes':    notes,
-#                     })
-
-
-
-#         # print("To Save: ", to_save)
-#         # return redirect(reverse('assessments:add_subject', args=[pk]))
-
-
-#         # print ('TO SAVE: ',to_save)
-#         # messages.error(request, f'{to_save}')
-#         # return redirect(reverse('assessments:add_subject', args=[pk]))
-
-
-#         if not to_save and not errors:
-#             messages.error(request, 'Please fill in a pass mark for at least one subject.')
-#             return redirect(reverse('assessments:add_subject', args=[pk]))
-
-#         if errors:
-#             messages.error(request, 'Please correct the highlighted errors.')
-#             ctx = {
-#                 'assessment':                 assessment,
-#                 'class_subject_groups':       class_subject_groups,
-#                 'existing_subjects':          existing_subjects,
-#                 'errors':                     errors,
-#                 'post':                       request.POST,
-#                 'already_linked_subject_pks': already_linked_subject_pks,
-#             }
-#             return render(request, 'assessments/add_assessment_subject.html', ctx)
-
-#         with transaction.atomic():
-#             for item in to_save:                          # ← no .values()
-#                 AssessmentSubject.objects.get_or_create(
-#                     assessment       = assessment,
-#                     assessment_class = item['ac'].school_class,  # ← per class
-#                     subject          = item['subject'],
-#                     defaults={
-#                         'passmark': item['passmark'],
-#                         'notes':    item['notes'],
-#                     },
-#                 )
-
-#         total = len(to_save)
-#         messages.success(
-#             request,
-#             f'{total} subject{"s" if total != 1 else ""} added to "{assessment.title}".'
-#         )
-#         return redirect(reverse('assessments:add_total_marks', args=[pk]))
-
-
-#     ctx = {
-#         'assessment':           assessment,
-#         'class_subject_groups': class_subject_groups,
-#         'existing_subjects':    existing_subjects,
-#         'errors':               {},
-#         'post':                 {},
-#         'already_linked_subject_pks': already_linked_subject_pks, 
-#     }
-#     return render(request, 'assessments/add_assessment_subject.html', ctx)
 
 @login_required
+@has_permission('assign_subject_to_assessment', action='create')
 def add_assessment_subject(request, pk):
     assessment = get_object_or_404(Assessment, pk=pk)
     mod        = _get_or_create_mod(assessment)
@@ -954,99 +803,10 @@ def add_assessment_subject(request, pk):
 # STEP 3 — Set Total Marks     
 # =============================================================================
 
-# @login_required
-# def add_assessment_total_marks(request, pk):
-#     """
-#     For each AssessmentSubject already linked to this assessment, allow
-#     staff to set the maximum (total) marks available.
-
-#     This updates the AssessmentSubject.total_marks field.
-#     NOTE: your AssessmentSubject model needs a `total_marks` DecimalField.
-#     If you are reusing `passmark` as total_marks (as per your model's help_text)
-#     then swap the field name below.
-
-#     Guard: assessment must have at least one subject linked first.
-#     """
-#     assessment = get_object_or_404(Assessment, pk=pk)
-
-#     assessment_subjects = (
-#         AssessmentSubject.objects
-#         .filter(assessment=assessment)
-#         .select_related('subject')
-#         .order_by('subject__name')
-#     )
-
-#     if not assessment_subjects.exists():
-#         messages.error(
-#             request,
-#             'Please assign subjects to this assessment first (Step 2).'
-#         )
-#         return redirect(reverse('assessments:add_subject', args=[pk]))
-
-#     if request.method == 'POST':
-#         errors  = {}
-#         to_save = []
-
-#         for as_subj in assessment_subjects:
-#             field_key = f'total_mark_{as_subj.pk}'
-#             total = _parse_pos_decimal(
-#                 request.POST.get(field_key, ''),
-#                 f'{as_subj.subject.code} — Total Marks',
-#                 errors,
-#                 field_key,
-#             )
-#             if total is not None:
-#                 # Total mark must be >= passmark
-#                 if as_subj.passmark and total < as_subj.passmark:
-#                     errors[field_key] = (
-#                         f'Total marks ({total}) cannot be less than the pass mark ({as_subj.passmark}).'
-#                     )
-#                 else:
-#                     to_save.append({'as_subj': as_subj, 'total': total})
-
-
-#         # messages.error(request, f'{to_save}')
-#         # return redirect(reverse('assessments:add_total_marks', args=[pk]))
-    
-
-
-
-#         if errors:
-#             messages.error(request, 'Please correct the highlighted errors.')
-#             ctx = {
-#                 'assessment':          assessment,
-#                 'assessment_subjects': assessment_subjects,
-#                 'errors':              errors,
-#                 'post':                request.POST,
-#             }
-#             return render(request, 'assessments/add_assessment_total_marks.html', ctx)
-
-#         with transaction.atomic():
-#             for item in to_save:
-#                 AssessmentTotalMark.objects.get_or_create(
-#                     assessment = assessment,
-#                     subject    = item['as_subj'],
-#                     defaults   = {
-#                         'total_mark': item['total'],
-#                     },
-#                 )
-
-#         messages.success(
-#             request,
-#             f'Total marks set for {len(to_save)} subject(s) in "{assessment.title}".'
-#         )
-#         return redirect(reverse('assessments:add_teacher', args=[pk]))
-
-#     ctx = {
-#         'assessment':          assessment,
-#         'assessment_subjects': assessment_subjects,
-#         'errors':              {},
-#         'post':                {},
-#     }
-#     return render(request, 'assessments/add_assessment_total_marks.html', ctx)
 
 
 @login_required
+@has_permission('assign_subject_to_assessment', action='create')
 def add_assessment_total_marks(request, pk):
     assessment = get_object_or_404(Assessment, pk=pk)
     mod        = _get_or_create_mod(assessment)
@@ -1329,6 +1089,7 @@ def add_assessment_total_marks(request, pk):
 
 
 @login_required
+@has_permission('assign_teacher_to_assessment', action='create')
 def add_assessment_teacher(request, pk):
     assessment = get_object_or_404(Assessment, pk=pk)
     mod        = _get_or_create_mod(assessment)

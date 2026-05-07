@@ -35,6 +35,7 @@ from .models import (
     AssessmentSubject,
     AssessmentTotalMark,
 )
+from permissions.decorators import has_permission
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -55,6 +56,7 @@ def _get_or_create_mod(assessment):
 # =============================================================================
 
 @login_required
+@has_permission('assessment_performance_center', action='read')
 def performance_overview(request, pk):
     assessment = get_object_or_404(Assessment, pk=pk)
     mod        = _get_or_create_mod(assessment)
@@ -135,6 +137,7 @@ def performance_overview(request, pk):
 # =============================================================================
 
 @login_required
+@has_permission('view_class_performance', action='read')
 def performance_class(request, pk, ac_pk):
     assessment = get_object_or_404(Assessment, pk=pk)
     ac         = get_object_or_404(AssessmentClass, pk=ac_pk, assessment=assessment)
@@ -185,6 +188,7 @@ def performance_class(request, pk, ac_pk):
 # =============================================================================
 
 @login_required
+@has_permission('view_class_subject_performance', action='read')
 def performance_class_subject(request, pk, ac_pk, as_pk):
     assessment = get_object_or_404(Assessment, pk=pk)
     ac         = get_object_or_404(AssessmentClass,   pk=ac_pk, assessment=assessment)
@@ -240,6 +244,7 @@ def performance_class_subject(request, pk, ac_pk, as_pk):
 # =============================================================================
 
 @login_required
+@has_permission('edit_student_performance_entry', 'edit')
 def performance_student_edit(request, pk, ac_pk, as_pk, perf_pk):
     assessment  = get_object_or_404(Assessment,          pk=pk)
     ac          = get_object_or_404(AssessmentClass,     pk=ac_pk,   assessment=assessment)

@@ -159,31 +159,10 @@ def validate_and_parse_permission(post: dict) -> tuple[dict, dict]:
     return cleaned, errors
 
 def validate_and_parse_assignment(post: dict, role_key: str, all_permissions) -> tuple[dict, dict]:
-    """
-    Validate POST data for a single role accordion submission.
-
-    A row is VALID only when it has:
-        - the permission itself (iterated from all_permissions)
-        - at least one action checked  (can_create / can_read / can_edit / can_delete)
-        - a scope selected             (can_my | can_all)
-
-    Rows that don't meet the passmark are categorised:
-        empty          — no action, no scope  → silently skipped
-        missing_limit  — has action(s) but no scope
-        missing_action — has scope but no actions
-
-    cleaned returns:
-        {
-            role:           str,
-            assignments:    [...],   # valid rows only
-            missing_limit:  [...],   # permission titles skipped (action, no scope)
-            missing_action: [...],   # permission titles skipped (scope, no action)
-        }
-    """
     errors:         dict       = {}
     assignments:    list[dict] = []
-    missing_limit:  list[str]  = []   # has action, no scope
-    missing_action: list[str]  = []   # has scope,  no action
+    missing_limit:  list[str]  = []
+    missing_action: list[str]  = []
 
     valid_roles = {r[0] for r in ALL_ROLES}
     if role_key not in valid_roles:
@@ -194,41 +173,45 @@ def validate_and_parse_assignment(post: dict, role_key: str, all_permissions) ->
         pid    = perm.pk
         prefix = f'perm_{pid}_'
 
-        can_create = post.get(f'{prefix}create') in ('on', '1', 'true')
-        can_read   = post.get(f'{prefix}read')   in ('on', '1', 'true')
-        can_edit   = post.get(f'{prefix}edit')   in ('on', '1', 'true')
-        can_delete = post.get(f'{prefix}delete') in ('on', '1', 'true')
+        # ── read each action — gated by what the permission actually supports ──
+        can_create = post.get(f'{prefix}create') in ('on', '1', 'true') and perm.support_add
+        can_read   = post.get(f'{prefix}read')   in ('on', '1', 'true') and perm.support_view
+        can_edit   = post.get(f'{prefix}edit')   in ('on', '1', 'true') and perm.support_edit
+        can_delete = post.get(f'{prefix}delete') in ('on', '1', 'true') and perm.support_delete
+        can_toggle = post.get(f'{prefix}toggle') in ('on', '1', 'true') and perm.support_toggle  # ← new
 
         raw_limit = post.get(f'{prefix}limit') or None
         if raw_limit is not None and raw_limit not in (
             UserTypePermission.CAN_MY, UserTypePermission.CAN_ALL
         ):
-            raw_limit = None   # reject garbage values
+            raw_limit = None
 
-        has_action = any([can_create, can_read, can_edit, can_delete])
+        has_action = any([can_create, can_read, can_edit, can_delete, can_toggle])  # ← toggle included
         has_limit  = raw_limit is not None
+        # for permissions where limits don't apply, treat as always having limit
+        limit_applies = perm.support_my_limit or perm.support_all_limit
+        if not limit_applies:
+            has_limit = True
+            raw_limit = None  # store as None — limit not relevant for this permission
 
-        # ── completely untouched row — skip silently ──────────────────────────
         if not has_action and not has_limit:
             continue
 
-        # ── action ticked but no scope chosen ────────────────────────────────
         if has_action and not has_limit:
             missing_limit.append(perm.permission_title)
             continue
 
-        # ── scope chosen but no action ticked ────────────────────────────────
         if has_limit and not has_action:
             missing_action.append(perm.permission_title)
             continue
 
-        # ── valid row: permission + at least one action + scope ───────────────
         assignments.append({
             'permission_id': pid,
             'can_create':    can_create,
             'can_read':      can_read,
             'can_edit':      can_edit,
             'can_delete':    can_delete,
+            'can_toggle':    can_toggle,   # ← new
             'action_effect': raw_limit,
         })
 
@@ -239,6 +222,9 @@ def validate_and_parse_assignment(post: dict, role_key: str, all_permissions) ->
         'missing_action': missing_action,
     }
     return cleaned, errors
+
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  LIST STATS
 # ═══════════════════════════════════════════════════════════════════════════════

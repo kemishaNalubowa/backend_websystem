@@ -12,26 +12,29 @@
         </h4>
 
         <div>
+            {% if user_perms.class.can_create and not request.user.user_type == 'admin' %}
+                <button
+                    class="btn btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#addModal">
+                    <i class="bi bi-plus-circle"></i>
+                    Add Classes
+                </button>
+            {% endif %}
 
-            <button
-                class="btn btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#addModal">
+            {% if user_perms.class.can_edit %}
+                <button
+                    class="btn btn-warning"
+                    data-bs-toggle="modal"
+                    data-bs-target="#editModal">
 
-                <i class="bi bi-plus-circle"></i>
-                Add Classes
+                    <i class="bi bi-pencil-square"></i>
+                    Edit Classes
 
-            </button>
+                </button>
+            {% endif %}
 
-            <button
-                class="btn btn-warning"
-                data-bs-toggle="modal"
-                data-bs-target="#editModal">
 
-                <i class="bi bi-pencil-square"></i>
-                Edit Classes
-
-            </button>
 
         </div>
 

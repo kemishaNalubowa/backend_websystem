@@ -6,7 +6,6 @@ from django.db import models
 # ──────────────────────────────────────────
 # PERMISSION MODEL
 # ──────────────────────────────────────────
-
 class Permission(models.Model):
 
     permission_title = models.CharField(max_length=255)
@@ -14,6 +13,17 @@ class Permission(models.Model):
     description      = models.TextField(blank=True)
     date             = models.DateField(auto_now_add=True)
     is_active        = models.BooleanField(default=True)
+
+    # ── Supported actions ──────────────────
+    support_add      = models.BooleanField(default=False)
+    support_edit     = models.BooleanField(default=False)
+    support_delete   = models.BooleanField(default=False)
+    support_view     = models.BooleanField(default=False)
+    support_toggle   = models.BooleanField(default=False)
+
+    # ── Supported action limits ────────────
+    support_my_limit  = models.BooleanField(default=False)
+    support_all_limit = models.BooleanField(default=False)
 
     class Meta:
         verbose_name        = "Permission"
@@ -24,12 +34,9 @@ class Permission(models.Model):
         return f"{self.permission_title} [{self.permission_code}]"
 
 
-
-
 # ──────────────────────────────────────────
 # USER TYPE PERMISSION ASSIGNMENT MODEL
 # ──────────────────────────────────────────
-
 class UserTypePermission(models.Model):
 
     ROLE_CHOICES = [
@@ -50,15 +57,12 @@ class UserTypePermission(models.Model):
         ('cook',            'Cook / Catering Staff'),
         ('it_officer',      'IT Officer'),
         ('other',           'Other'),
-        
         # Parent
         ('parent',          'Parent'),
-
-        # Admin, 
-        ('admin',            'Admin'),
+        # Admin
+        ('admin',           'Admin'),
     ]
 
-    # ── action effect scope ──
     CAN_MY  = "can_my"
     CAN_ALL = "can_all"
 
@@ -72,34 +76,31 @@ class UserTypePermission(models.Model):
                         on_delete=models.CASCADE,
                         related_name="role_assignments",
                     )
-    role     = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    role          = models.CharField(max_length=20, choices=ROLE_CHOICES)
 
-    # ── actions ──
+    # ── actions ──────────────────────────────
     can_create    = models.BooleanField(default=False)
     can_read      = models.BooleanField(default=False)
     can_edit      = models.BooleanField(default=False)
     can_delete    = models.BooleanField(default=False)
+    can_toggle    = models.BooleanField(default=False)   # ← new
 
-    # ── scope ──
+    # ── scope ────────────────────────────────
     action_effect = models.CharField(
                         max_length=10,
                         choices=ACTION_EFFECT_CHOICES,
                         default=None,
-                        null=True,      # ← add
+                        null=True,
                         blank=True,
                     )
 
     assigned_at   = models.DateTimeField(auto_now_add=True)
     updated_at    = models.DateTimeField(auto_now=True)
-
-    is_active = models.BooleanField(default=False)
+    is_active     = models.BooleanField(default=False)
 
     class Meta:
         verbose_name        = "User Type Permission"
         verbose_name_plural = "User Type Permissions"
-        # A role cannot hold the same permission more than once.
-        # But the same permission CAN exist across different roles
-        # (e.g. school_fees → admin with edit, school_fees → teacher with read only).
         constraints = [
             models.UniqueConstraint(
                 fields=["permission", "role"],
@@ -114,22 +115,10 @@ class UserTypePermission(models.Model):
             "read"   if self.can_read   else "",
             "edit"   if self.can_edit   else "",
             "delete" if self.can_delete else "",
+            "toggle" if self.can_toggle else "",   # ← new
         ])) or "no actions"
         return (
             f"{self.get_role_display()} → "
             f"{self.permission.permission_title} "
             f"[{actions}] ({self.get_action_effect_display()})"
         )
-    
-
-
-
-
-
-
-
-
-
-
-
-

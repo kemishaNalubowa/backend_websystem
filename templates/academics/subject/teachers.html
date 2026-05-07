@@ -30,6 +30,7 @@
 <div class="card">
   <div class="card-header py-3 fw-semibold">
     {{ page_obj.paginator.count|default:0 }} Teacher{{ page_obj.paginator.count|pluralize }}
+    <a href="{% url 'academics:assign_subject_to_teacher' subject.pk %}" class="float-end"><button class="btn-sm btn btn-primary" type="button"> <i class="bi bi-plus me-2"></i> Assign Teacher to subject</button></a>
   </div>
 
   {% if teacher_subjects %}

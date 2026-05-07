@@ -412,15 +412,15 @@ def assign_save_role(request):
     """
     POST-only sub-action for Step 2.
     Saves / updates UserTypePermission rows for ONE role with is_active=False.
-    Marks that role as saved in the session.
 
     POST fields:
-        role              — role key
-        perm_{pk}_create  — checkbox (per active permission)
-        perm_{pk}_read
-        perm_{pk}_edit
-        perm_{pk}_delete
-        perm_{pk}_limit   — 'can_my' | 'can_all'
+        role                — role key
+        perm_{pk}_create    — checkbox
+        perm_{pk}_read      — checkbox
+        perm_{pk}_edit      — checkbox
+        perm_{pk}_delete    — checkbox
+        perm_{pk}_toggle    — checkbox  ← new
+        perm_{pk}_limit     — 'can_my' | 'can_all'
     """
     if request.method != 'POST':
         return redirect('permissions:assign_edit_roles')
@@ -438,13 +438,11 @@ def assign_save_role(request):
     all_perms = Permission.objects.filter(is_active=True).order_by('permission_title')
     cleaned, errors = validate_and_parse_assignment(request.POST, role_key, all_perms)
 
-# AFTER ───────────────────────────────────────────────────────────────────
     if errors:
         for msg in errors.values():
             messages.error(request, msg)
         return redirect('permissions:assign_edit_roles')
 
-    # ── notify about incomplete rows (skipped, not saved) ────────────────────
     if cleaned.get('missing_limit'):
         skipped = ', '.join(f'"{t}"' for t in cleaned['missing_limit'])
         messages.warning(
@@ -461,7 +459,6 @@ def assign_save_role(request):
             f'a scope was chosen but no actions were ticked: {skipped}.'
         )
 
-    # ── if nothing valid to save, still mark role as saved so flow can proceed ─
     if not cleaned['assignments']:
         mark_session_role_saved(request, role_key)
         messages.info(
@@ -483,8 +480,9 @@ def assign_save_role(request):
                         'can_read':      row['can_read'],
                         'can_edit':      row['can_edit'],
                         'can_delete':    row['can_delete'],
+                        'can_toggle':    row['can_toggle'],    # ← new
                         'action_effect': row['action_effect'],
-                        'is_active':     False,   # pending until confirmed
+                        'is_active':     False,
                     }
                 )
                 if not created:
@@ -492,10 +490,12 @@ def assign_save_role(request):
                     utp.can_read      = row['can_read']
                     utp.can_edit      = row['can_edit']
                     utp.can_delete    = row['can_delete']
+                    utp.can_toggle    = row['can_toggle']      # ← new
                     utp.action_effect = row['action_effect']
-                    utp.is_active     = False     # back to pending on re-save
+                    utp.is_active     = False
                     utp.save(update_fields=[
                         'can_create', 'can_read', 'can_edit', 'can_delete',
+                        'can_toggle',                          # ← new
                         'action_effect', 'is_active', 'updated_at',
                     ])
                 new_pending_ids.append(utp.pk)
@@ -512,7 +512,6 @@ def assign_save_role(request):
         f'"{get_role_label(role_key)}" saved — pending confirmation.'
     )
     return redirect('permissions:assign_edit_roles')
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  10. ASSIGN — STEP 3: REVIEW + PASSWORD CONFIRM

@@ -29,6 +29,7 @@ from academics.utils.subject_utils import (
     get_sch_supported_classes,
     # LEVEL_DISPLAY,
 )
+from permissions.decorators import has_permission
 
 _T = 'academics/subject/'
 
@@ -38,6 +39,7 @@ _T = 'academics/subject/'
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('subject', action='read')
 def subject_list(request):
     """
     All subjects with filtering and list-level statistics.
@@ -97,6 +99,7 @@ def subject_list(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('subject', action='create')
 def subject_add(request):
     """
     Add a new subject.
@@ -173,6 +176,7 @@ def subject_add(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('subject', action='edit')
 def subject_edit(request, pk):
     """
     Edit an existing subject.
@@ -250,6 +254,7 @@ def subject_edit(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('subject', action='delete')
 def subject_delete(request, pk):
     """
     Delete a subject.
@@ -310,6 +315,7 @@ def subject_delete(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('subject', action='toggle')
 def subject_toggle_active(request, pk):
     """
     Quick POST-only toggle for is_active.
@@ -348,6 +354,7 @@ def subject_toggle_active(request, pk):
 
 
 @login_required
+@has_permission('subject', action='read')
 def subject_detail_info(request, pk):
     subject = get_object_or_404(Subject, pk=pk)
 
@@ -363,6 +370,7 @@ def subject_detail_info(request, pk):
 
 
 @login_required
+@has_permission('subject', action='read')
 def subject_detail_teachers(request, pk):
     subject = get_object_or_404(Subject, pk=pk)
 
@@ -392,6 +400,7 @@ def subject_detail_teachers(request, pk):
 
 
 @login_required
+@has_permission('subject', action='read')
 def subject_detail_classes(request, pk):
     subject = get_object_or_404(Subject, pk=pk)
 
@@ -415,3 +424,483 @@ def subject_detail_classes(request, pk):
         'search': search,
     }
     return render(request, f'{_T}classes.html', context)
+
+
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  7. ASSIGN SUBJECT → CLASSES  (multi-step)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  Step 1  GET  /subjects/<pk>/assign-classes/
+#               → Render checklist of ALL SchoolSupportedClasses.
+#                 Classes already linked are pre-checked.
+#
+#  Step 2  POST step=1
+#               → Validate at least one class was chosen.
+#                 Store chosen class PKs in session.
+#                 Redirect to GET step 2 (confirmation page).
+#
+#  Step 2  GET  /subjects/<pk>/assign-classes/?step=2
+#               → Show summary of chosen classes + password field.
+#
+#  Step 3  POST step=2
+#               → Verify password.
+#                 Sync ClassSubject rows (add new, keep existing, remove unchecked).
+#                 Clear session key.  Redirect to subject classes tab.
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+@has_permission('subject', action='edit')
+def assign_subject_to_class(request, pk):
+    """
+    Assign (or re-sync) a subject to one or more SchoolSupportedClasses.
+    Uses session to carry chosen class PKs between step 1 and step 2.
+    """
+    subject = get_object_or_404(Subject, pk=pk)
+
+    # Session key is unique per subject so concurrent tabs don't collide.
+    SESSION_KEY = f'assign_cls_{pk}'
+
+    # ── Already-linked class PKs (for pre-checking checkboxes) ────────────────
+    already_linked_pks = set(
+        ClassSubject.objects.filter(subject=subject)
+        .values_list('school_class_id', flat=True)
+    )
+
+    # ── All supported classes ─────────────────────────────────────────────────
+    from academics.models import SchoolSupportedClasses
+    all_classes = (
+        SchoolSupportedClasses.objects
+        .select_related('supported_class')
+        .order_by('supported_class__order')
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  POST — determine which step we're processing
+    # ─────────────────────────────────────────────────────────────────────────
+    if request.method == 'POST':
+        step = request.POST.get('step', '1')
+
+        # ── Step 1 POST: collect chosen classes, redirect to confirmation ────
+        if step == '1':
+            chosen_pks = request.POST.getlist('classes')  # list of str PKs
+
+            if not chosen_pks:
+                messages.error(request, 'Please select at least one class.')
+                return render(request, f'{_T}assign-class/assign_class_step1.html', {
+                    'subject':           subject,
+                    'all_classes':       all_classes,
+                    'already_linked_pks': already_linked_pks,
+                    'section':           'assign_class',
+                })
+
+            # Validate that submitted PKs actually exist
+            valid_classes = SchoolSupportedClasses.objects.filter(
+                pk__in=chosen_pks
+            )
+            valid_pks = list(valid_classes.values_list('pk', flat=True))
+
+            if not valid_pks:
+                messages.error(request, 'None of the selected classes were valid.')
+                return render(request, f'{_T}assign-class/assign_class_step1.html', {
+                    'subject':           subject,
+                    'all_classes':       all_classes,
+                    'already_linked_pks': already_linked_pks,
+                    'section':           'assign_class',
+                })
+
+            # Stash in session and show confirmation
+            request.session[SESSION_KEY] = valid_pks
+            return redirect(
+                f"{request.path}?step=2"
+            )
+
+        # ── Step 2 POST: verify password and commit ──────────────────────────
+        if step == '2':
+            chosen_pks = request.session.get(SESSION_KEY)
+            if not chosen_pks:
+                messages.error(request, 'Session expired. Please start over.')
+                return redirect(request.path)
+
+            password = request.POST.get('password', '').strip()
+            if not request.user.check_password(password):
+                messages.error(request, 'Incorrect password. Assignment not saved.')
+                # Re-render confirmation page — fetch classes from session
+                chosen_classes = SchoolSupportedClasses.objects.filter(
+                    pk__in=chosen_pks
+                ).select_related('supported_class').order_by('supported_class__order')
+                return render(request, f'{_T}assign-class/assign_class_step2.html', {
+                    'subject':         subject,
+                    'chosen_classes':  chosen_classes,
+                    'password_error':  True,
+                    'section':         'assign_class',
+                })
+
+            # Commit: sync ClassSubject rows
+            try:
+                with transaction.atomic():
+                    # Remove any existing links NOT in the new selection
+                    ClassSubject.objects.filter(subject=subject).exclude(
+                        school_class_id__in=chosen_pks
+                    ).delete()
+
+                    # Add new links (skip duplicates via get_or_create)
+                    chosen_classes_qs = SchoolSupportedClasses.objects.filter(
+                        pk__in=chosen_pks
+                    )
+                    added = 0
+                    for cls in chosen_classes_qs:
+                        _, created = ClassSubject.objects.get_or_create(
+                            school_class=cls,
+                            subject=subject,
+                        )
+                        if created:
+                            added += 1
+
+                del request.session[SESSION_KEY]
+
+            except Exception as exc:
+                messages.error(request, f'Could not save assignment: {exc}')
+                return redirect(request.path)
+
+            messages.success(
+                request,
+                f'"{subject.name}" is now assigned to {len(chosen_pks)} class(es). '
+                f'({added} newly added)'
+            )
+            return redirect('academics:subject_detail_classes', pk=subject.pk)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  GET
+    # ─────────────────────────────────────────────────────────────────────────
+    step = request.GET.get('step', '1')
+
+    # ── Step 2 GET: confirmation / password page ──────────────────────────────
+    if step == '2':
+        chosen_pks = request.session.get(SESSION_KEY)
+        if not chosen_pks:
+            messages.warning(request, 'No classes selected. Please start again.')
+            return redirect(request.path)
+
+        chosen_classes = (
+            SchoolSupportedClasses.objects
+            .filter(pk__in=chosen_pks)
+            .select_related('supported_class')
+            .order_by('supported_class__order')
+        )
+        return render(request, f'{_T}assign-class/assign_class_step2.html', {
+            'subject':        subject,
+            'chosen_classes': chosen_classes,
+            'section':        'assign_class',
+        })
+
+    # ── Step 1 GET: class-selection checklist ─────────────────────────────────
+    return render(request, f'{_T}assign-class/assign_class_step1.html', {
+        'subject':            subject,
+        'all_classes':        all_classes,
+        'already_linked_pks': already_linked_pks,
+        'section':            'assign_class',
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  8. ASSIGN SUBJECT → TEACHER  (multi-step)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  Step 1  GET  /subjects/<pk>/assign-teacher/
+#               → Form: enter teacher Employee ID / Staff ID.
+#
+#  Step 1  POST step=1
+#               → Look up teacher by employee_id on StaffProfile.
+#                 If not found → error, re-render step 1.
+#                 If found → store teacher user PK in session.
+#                 Redirect to GET step 2.
+#
+#  Step 2  GET  ?step=2
+#               → Display teacher info + checklist of ALL
+#                 SchoolSupportedClasses the teacher is linked to
+#                 via TeacherSubject (or TeacherClass).
+#                 Classes where this teacher already teaches THIS subject
+#                 are pre-checked.
+#
+#  Step 2  POST step=2
+#               → Validate at least one class selected.
+#                 Store chosen class PKs in session.
+#                 Redirect to GET step 3.
+#
+#  Step 3  GET  ?step=3
+#               → Summary + password confirmation.
+#
+#  Step 3  POST step=3
+#               → Verify password.
+#                 Sync TeacherSubject rows for this teacher+subject combination.
+#                 Clear session keys.  Redirect to subject teachers tab.
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+@has_permission('subject', action='edit')
+def assign_subject_to_teacher(request, pk):
+    """
+    Assign a subject to a teacher for one or more classes they already teach.
+
+    Session keys (all scoped to this subject pk):
+        assign_tch_{pk}_teacher_pk   → int  — resolved teacher user PK
+        assign_tch_{pk}_classes      → list — chosen SchoolSupportedClasses PKs
+    """
+    subject = get_object_or_404(Subject, pk=pk)
+
+    S_TEACHER = f'assign_tch_{pk}_teacher_pk'
+    S_CLASSES = f'assign_tch_{pk}_classes'
+
+    from accounts.models import StaffProfile
+    from academics.models import SchoolSupportedClasses, TeacherClass
+
+    def _clear_session():
+        request.session.pop(S_TEACHER, None)
+        request.session.pop(S_CLASSES, None)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  POST
+    # ─────────────────────────────────────────────────────────────────────────
+    if request.method == 'POST':
+        step = request.POST.get('step', '1')
+
+        # ── Step 1 POST: resolve teacher by employee / staff ID ──────────────
+        if step == '1':
+            staff_id = request.POST.get('staff_id', '').strip().upper()
+
+            if not staff_id:
+                messages.error(request, 'Please enter a Staff / Employee ID.')
+                return render(request, f'{_T}assign-tr/assign_teacher_step1.html', {
+                    'subject': subject,
+                    'section': 'assign_teacher',
+                    'post':    request.POST,
+                })
+
+            try:
+                staff_profile = StaffProfile.objects.select_related('user').get(
+                    employee_id__iexact=staff_id
+                )
+            except StaffProfile.DoesNotExist:
+                messages.error(
+                    request,
+                    f'No staff member found with ID "{staff_id}". '
+                    'Check the ID and try again.'
+                )
+                return render(request, f'{_T}assign-tr/assign_teacher_step1.html', {
+                    'subject': subject,
+                    'section': 'assign_teacher',
+                    'post':    request.POST,
+                })
+
+            # Store teacher reference and move to step 2
+            request.session[S_TEACHER] = staff_profile.user.pk
+            return redirect(f"{request.path}?step=2")
+
+        # ── Step 2 POST: collect chosen classes ──────────────────────────────
+        if step == '2':
+            teacher_user_pk = request.session.get(S_TEACHER)
+            if not teacher_user_pk:
+                messages.error(request, 'Session expired. Please start over.')
+                _clear_session()
+                return redirect(request.path)
+
+            chosen_pks = request.POST.getlist('classes')
+
+            if not chosen_pks:
+                messages.error(request, 'Please select at least one class.')
+                # Re-render step 2 without losing teacher context
+                return redirect(f"{request.path}?step=2")
+
+            valid_pks = list(
+                SchoolSupportedClasses.objects.filter(pk__in=chosen_pks)
+                .values_list('pk', flat=True)
+            )
+            if not valid_pks:
+                messages.error(request, 'None of the selected classes were valid.')
+                return redirect(f"{request.path}?step=2")
+
+            request.session[S_CLASSES] = valid_pks
+            return redirect(f"{request.path}?step=3")
+
+        # ── Step 3 POST: verify password and commit ──────────────────────────
+        if step == '3':
+            teacher_user_pk = request.session.get(S_TEACHER)
+            chosen_pks      = request.session.get(S_CLASSES)
+
+            if not teacher_user_pk or not chosen_pks:
+                messages.error(request, 'Session expired. Please start over.')
+                _clear_session()
+                return redirect(request.path)
+
+            password = request.POST.get('password', '').strip()
+            if not request.user.check_password(password):
+                messages.error(request, 'Incorrect password. Assignment not saved.')
+                # Re-render step 3 confirmation
+                try:
+                    staff_profile = StaffProfile.objects.select_related('user').get(
+                        user_id=teacher_user_pk
+                    )
+                except StaffProfile.DoesNotExist:
+                    _clear_session()
+                    messages.error(request, 'Teacher record no longer found.')
+                    return redirect(request.path)
+
+                chosen_classes = (
+                    SchoolSupportedClasses.objects
+                    .filter(pk__in=chosen_pks)
+                    .select_related('supported_class')
+                    .order_by('supported_class__order')
+                )
+                return render(request, f'{_T}assign-tr/assign_teacher_step3.html', {
+                    'subject':        subject,
+                    'staff_profile':  staff_profile,
+                    'chosen_classes': chosen_classes,
+                    'password_error': True,
+                    'section':        'assign_teacher',
+                })
+
+            # Commit: sync TeacherSubject rows for this teacher+subject
+            try:
+                staff_profile = StaffProfile.objects.select_related('user').get(
+                    user_id=teacher_user_pk
+                )
+                teacher_user = staff_profile.user
+
+                with transaction.atomic():
+                    # Remove links for this teacher+subject NOT in new selection
+                    TeacherSubject.objects.filter(
+                        teacher=teacher_user,
+                        subject=subject,
+                    ).exclude(school_class_id__in=chosen_pks).delete()
+
+                    # Add new links
+                    chosen_classes_qs = SchoolSupportedClasses.objects.filter(
+                        pk__in=chosen_pks
+                    )
+                    added = 0
+                    for cls in chosen_classes_qs:
+                        _, created = TeacherSubject.objects.get_or_create(
+                            teacher=teacher_user,
+                            subject=subject,
+                            school_class=cls,
+                        )
+                        if created:
+                            added += 1
+
+                _clear_session()
+
+            except Exception as exc:
+                messages.error(request, f'Could not save assignment: {exc}')
+                return redirect(request.path)
+
+            messages.success(
+                request,
+                f'"{subject.name}" assigned to {staff_profile.full_name} '
+                f'for {len(chosen_pks)} class(es). ({added} newly added)'
+            )
+            return redirect('academics:subject_detail_teachers', pk=subject.pk)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  GET
+    # ─────────────────────────────────────────────────────────────────────────
+    step = request.GET.get('step', '1')
+
+    # ── Step 3 GET: confirmation / password ───────────────────────────────────
+    if step == '3':
+        teacher_user_pk = request.session.get(S_TEACHER)
+        chosen_pks      = request.session.get(S_CLASSES)
+
+        if not teacher_user_pk or not chosen_pks:
+            messages.warning(request, 'Session expired. Please start over.')
+            _clear_session()
+            return redirect(request.path)
+
+        try:
+            staff_profile = StaffProfile.objects.select_related('user').get(
+                user_id=teacher_user_pk
+            )
+        except StaffProfile.DoesNotExist:
+            messages.error(request, 'Teacher record no longer found.')
+            _clear_session()
+            return redirect(request.path)
+
+        chosen_classes = (
+            SchoolSupportedClasses.objects
+            .filter(pk__in=chosen_pks)
+            .select_related('supported_class')
+            .order_by('supported_class__order')
+        )
+        return render(request, f'{_T}assign-tr/assign_teacher_step3.html', {
+            'subject':        subject,
+            'staff_profile':  staff_profile,
+            'chosen_classes': chosen_classes,
+            'section':        'assign_teacher',
+        })
+
+    # ── Step 2 GET: class checklist for chosen teacher ────────────────────────
+    if step == '2':
+        teacher_user_pk = request.session.get(S_TEACHER)
+
+        if not teacher_user_pk:
+            messages.warning(request, 'No teacher selected. Please start over.')
+            return redirect(request.path)
+
+        try:
+            staff_profile = StaffProfile.objects.select_related('user').get(
+                user_id=teacher_user_pk
+            )
+        except StaffProfile.DoesNotExist:
+            messages.error(request, 'Teacher record no longer found.')
+            _clear_session()
+            return redirect(request.path)
+
+        teacher_user = staff_profile.user
+
+        # All classes this teacher is assigned to (via TeacherClass)
+        teacher_class_pks = (
+            TeacherClass.objects
+            .filter(teacher=teacher_user, is_active=True)
+            .values_list('school_class_id', flat=True)
+        )
+        teacher_classes = (
+            SchoolSupportedClasses.objects
+            .filter(pk__in=teacher_class_pks)
+            .select_related('supported_class')
+            .order_by('supported_class__order')
+        )
+
+        # Classes where teacher already teaches THIS subject (pre-check)
+        already_assigned_pks = set(
+            TeacherSubject.objects.filter(
+                teacher=teacher_user,
+                subject=subject,
+            ).values_list('school_class_id', flat=True)
+        )
+
+        return render(request, f'{_T}assign-tr/assign_teacher_step2.html', {
+            'subject':             subject,
+            'staff_profile':       staff_profile,
+            'teacher_classes':     teacher_classes,
+            'already_assigned_pks': already_assigned_pks,
+            'section':             'assign_teacher',
+        })
+
+    # ── Step 1 GET: staff ID entry form ──────────────────────────────────────
+    _clear_session()   # always reset on fresh start
+    return render(request, f'{_T}assign-tr/assign_teacher_step1.html', {
+        'subject': subject,
+        'section': 'assign_teacher',
+        'post':    {},
+    })
+
+
+
+
+
+
+

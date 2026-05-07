@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Assign Teacher — {{ subject.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  {# ── Breadcrumb ── #}
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'academics:subject_list' %}">Subjects</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'academics:subject_detail_info' subject.pk %}">{{ subject.name }}</a></li>
+      <li class="breadcrumb-item active">Assign Teacher</li>
+    </ol>
+  </nav>
+
+  {# ── Page header ── #}
+  <div class="mb-4">
+    <h4 class="mb-1">Assign Teacher</h4>
+    <p class="text-muted mb-0 small">
+      Assign a teacher to
+      <strong>{{ subject.name }} ({{ subject.code }})</strong>
+      for one or more of their classes.
+    </p>
+  </div>
+
+  {# ── Step indicator ── #}
+  <div class="d-flex gap-2 mb-4">
+    <span class="badge rounded-pill bg-primary px-3 py-2">Step 1 — Find Teacher</span>
+    <span class="badge rounded-pill bg-secondary px-3 py-2">Step 2 — Select Classes</span>
+    <span class="badge rounded-pill bg-secondary px-3 py-2">Step 3 — Confirm</span>
+  </div>
+
+  {# ── Messages ── #}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+
+  {# ── Form ── #}
+  <div class="row justify-content-start">
+    <div class="col-12 col-md-6 col-lg-5">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white fw-semibold">Enter Staff ID</div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="step" value="1">
+
+            <p class="text-muted small mb-3">
+              Enter the teacher's Employee ID or Staff ID
+              (e.g. <code>EMP20250001</code>).
+            </p>
+
+            <div class="mb-3">
+              <label for="staff_id" class="form-label">Staff / Employee ID</label>
+              <input
+                type="text"
+                class="form-control text-uppercase"
+                id="staff_id"
+                name="staff_id"
+                value="{{ post.staff_id|default:'' }}"
+                placeholder="e.g. EMP20250001"
+                autofocus
+                required
+              >
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <a href="{% url 'academics:subject_detail_teachers' subject.pk %}"
+                 class="btn btn-outline-secondary btn-sm">
+                Cancel
+              </a>
+              <button type="submit" class="btn btn-primary btn-sm">
+                Find Teacher &rarr;
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
