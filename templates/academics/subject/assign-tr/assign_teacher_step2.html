@@ -1,33 +1,30 @@
 {% extends "base.html" %}
-{% block title %}Select Classes — {{ subject.name }}{% endblock %}
+{% block title %}Review Assignment — {{ subject.name }}{% endblock %}
 
 {% block content %}
 <div class="container py-4">
 
-  {# ── Breadcrumb ── #}
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="{% url 'academics:subject_list' %}">Subjects</a></li>
       <li class="breadcrumb-item"><a href="{% url 'academics:subject_detail_info' subject.pk %}">{{ subject.name }}</a></li>
       <li class="breadcrumb-item"><a href="{% url 'academics:assign_subject_to_teacher' subject.pk %}">Assign Teacher</a></li>
-      <li class="breadcrumb-item active">Select Classes</li>
+      <li class="breadcrumb-item active">Review</li>
     </ol>
   </nav>
 
-  {# ── Page header ── #}
   <div class="mb-4">
-    <h4 class="mb-1">Select Classes</h4>
+    <h4 class="mb-1">Review & Adjust</h4>
     <p class="text-muted mb-0 small">
-      Choose the class(es) in which
-      <strong>{{ staff_profile.full_name }}</strong>
-      will teach <strong>{{ subject.name }} ({{ subject.code }})</strong>.
+      Review your selections for <strong>{{ subject.name }}</strong>.
+      Previously assigned teachers are shown with a tick — uncheck any you want to remove.
     </p>
   </div>
 
   {# ── Step indicator ── #}
-  <div class="d-flex gap-2 mb-4">
-    <span class="badge rounded-pill bg-secondary px-3 py-2">Step 1 — Find Teacher</span>
-    <span class="badge rounded-pill bg-primary px-3 py-2">Step 2 — Select Classes</span>
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <span class="badge rounded-pill bg-secondary px-3 py-2">Step 1 — Select Teachers</span>
+    <span class="badge rounded-pill bg-primary px-3 py-2">Step 2 — Review</span>
     <span class="badge rounded-pill bg-secondary px-3 py-2">Step 3 — Confirm</span>
   </div>
 
@@ -39,82 +36,78 @@
     </div>
   {% endfor %}
 
-  {# ── Teacher info strip ── #}
-  <div class="alert alert-light border mb-4 d-flex align-items-center gap-3">
-    <div>
-      <div class="fw-semibold">{{ staff_profile.full_name }}</div>
-      <div class="text-muted small">
-        {{ staff_profile.employee_id }}
-        &bull;
-        {{ staff_profile.get_role_display }}
-      </div>
-    </div>
-  </div>
-
-  {# ── Form ── #}
   <form method="post">
     {% csrf_token %}
     <input type="hidden" name="step" value="2">
 
-    <div class="card shadow-sm">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <span class="fw-semibold">Teacher's Active Classes</span>
-        <span class="text-muted small">{{ teacher_classes|length }} class(es)</span>
-      </div>
+    {% for row in review_rows %}
+      <div class="card shadow-sm mb-3">
 
-      <div class="card-body p-0">
-        {% if teacher_classes %}
-          <ul class="list-group list-group-flush">
-            {% for cls in teacher_classes %}
-              <li class="list-group-item">
-                <div class="form-check">
-                  <input
-                    class="form-check-input"
-                    type="checkbox"
-                    name="classes"
-                    value="{{ cls.pk }}"
-                    id="cls_{{ cls.pk }}"
-                    {% if cls.pk in already_assigned_pks %}checked{% endif %}
-                  >
-                  <label class="form-check-label d-flex align-items-center gap-2" for="cls_{{ cls.pk }}">
-                    {{ cls.supported_class.name }}
-                    <span class="text-muted small">({{ cls.supported_class.section|capfirst }})</span>
-                    {% if cls.pk in already_assigned_pks %}
-                      <span class="badge text-bg-success fw-normal">Already assigned</span>
-                    {% endif %}
-                  </label>
-                </div>
-              </li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <div class="text-center text-muted py-5">
-            <p class="mb-1 fw-semibold">No active class assignments found.</p>
-            <p class="small mb-0">
-              Assign this teacher to a class first, then return here.
-            </p>
-          </div>
-        {% endif %}
-      </div>
+        <div class="card-header bg-white fw-semibold">
+          {{ row.class_name }}
+        </div>
 
-      {% if teacher_classes %}
-        <div class="card-footer bg-white d-flex justify-content-between align-items-center">
-          <a href="{% url 'academics:assign_subject_to_teacher' subject.pk %}"
-             class="btn btn-outline-secondary btn-sm">
-            &larr; Back
-          </a>
-          <button type="submit" class="btn btn-primary btn-sm">
-            Continue &rarr;
-          </button>
-        </div>
-      {% else %}
-        <div class="card-footer bg-white">
-          <a href="{% url 'academics:assign_subject_to_teacher' subject.pk %}"
-             class="btn btn-outline-secondary btn-sm">
-            &larr; Back
-          </a>
-        </div>
-      {% endif %}
+        <ul class="list-group list-group-flush">
+
+          {# ── New selection ── #}
+          {% if row.new_teacher %}
+            <li class="list-group-item d-flex align-items-center gap-2">
+              <span class="badge text-bg-primary fw-normal">New</span>
+              <span>{{ row.new_teacher.get_full_name }}</span>
+              {% if row.new_teacher.staff_profile %}
+                <span class="text-muted small">· {{ row.new_teacher.staff_profile.employee_id }}</span>
+              {% endif %}
+            </li>
+          {% else %}
+            <li class="list-group-item text-muted small fst-italic">
+              No new teacher selected for this class.
+            </li>
+          {% endif %}
+
+          {# ── Previous teachers ── #}
+          {% for prev in row.previous_teachers %}
+            <li class="list-group-item">
+              <div class="form-check d-flex align-items-center gap-2 mb-0">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  name="{{ prev.cb_name }}"
+                  id="{{ prev.cb_name }}"
+                  value="1"
+                  {% if not prev.is_same_as_new %}checked{% endif %}
+                >
+                <label class="form-check-label d-flex align-items-center gap-2 mb-0"
+                       for="{{ prev.cb_name }}">
+                  <span class="badge text-bg-secondary fw-normal">Previous</span>
+                  {{ prev.teacher.get_full_name }}
+                  {% if prev.teacher.staff_profile %}
+                    <span class="text-muted small">· {{ prev.teacher.staff_profile.employee_id }}</span>
+                  {% endif %}
+                  {% if prev.is_same_as_new %}
+                    <span class="badge text-bg-warning text-dark fw-normal">Same as new — will be merged</span>
+                  {% endif %}
+                </label>
+              </div>
+              <div class="text-muted small ms-4 mt-1">
+                Uncheck to remove this teacher from
+                <strong>{{ subject.name }}</strong> in {{ row.class_name }}.
+              </div>
+            </li>
+          {% endfor %}
+
+        </ul>
+
+      </div>
+    {% endfor %}
+
+    <div class="d-flex justify-content-between mt-2">
+      <a href="{% url 'academics:assign_subject_to_teacher' subject.pk %}"
+         class="btn btn-outline-secondary btn-sm">
+        &larr; Back
+      </a>
+      <button type="submit" class="btn btn-primary btn-sm">
+        Continue &rarr;
+      </button>
     </div>
 
   </form>

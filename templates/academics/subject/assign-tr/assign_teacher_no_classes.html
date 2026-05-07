@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Assign Teacher — {{ subject.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'academics:subject_list' %}">Subjects</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'academics:subject_detail_info' subject.pk %}">{{ subject.name }}</a></li>
+      <li class="breadcrumb-item active">Assign Teacher</li>
+    </ol>
+  </nav>
+
+  <div class="row justify-content-center mt-5">
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm border-warning">
+        <div class="card-body text-center py-5">
+          <div class="mb-3">
+            <span class="display-6">⚠️</span>
+          </div>
+          <h5 class="card-title">No Classes Assigned Yet</h5>
+          <p class="text-muted mb-4">
+            <strong>{{ subject.name }} ({{ subject.code }})</strong> has no classes linked to it.
+            You must assign at least one class to this subject before you can assign a teacher.
+          </p>
+          <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
+            <a href="{% url 'academics:assign_subject_to_class' subject.pk %}"
+               class="btn btn-primary">
+              Assign Classes First
+            </a>
+            <a href="{% url 'academics:subject_detail_info' subject.pk %}"
+               class="btn btn-outline-secondary">
+              Back to Subject
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

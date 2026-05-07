@@ -607,61 +607,111 @@ def assign_subject_to_class(request, pk):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  8. ASSIGN SUBJECT → TEACHER  (multi-step)
+#  ASSIGN SUBJECT → TEACHER  (revised flow)
 # ═══════════════════════════════════════════════════════════════════════════════
 #
+#  GUARD: If the subject has no ClassSubject rows → block and notify.
+#
 #  Step 1  GET  /subjects/<pk>/assign-teacher/
-#               → Form: enter teacher Employee ID / Staff ID.
+#               Query all classes assigned to this subject (ClassSubject).
+#               For each class, list all teachers assigned to that class
+#               via TeacherClass.  Render as a grouped checklist so the
+#               user picks one teacher per class (or none).
 #
 #  Step 1  POST step=1
-#               → Look up teacher by employee_id on StaffProfile.
-#                 If not found → error, re-render step 1.
-#                 If found → store teacher user PK in session.
-#                 Redirect to GET step 2.
+#               Collect selections: field name pattern → "cls_{class_pk}" = teacher_user_pk
+#               Build a list of (class_pk, teacher_user_pk) pairs.
+#               Store in session.  Redirect to GET step=2.
 #
 #  Step 2  GET  ?step=2
-#               → Display teacher info + checklist of ALL
-#                 SchoolSupportedClasses the teacher is linked to
-#                 via TeacherSubject (or TeacherClass).
-#                 Classes where this teacher already teaches THIS subject
-#                 are pre-checked.
+#               Show chosen pairs side-by-side with any previously assigned
+#               teacher for that class.
+#               Previously assigned teachers appear pre-checked. If the user
+#               unchecks one it means "remove this teacher from the subject
+#               in this class".
+#               The page also shows newly chosen teachers (from step 1) so
+#               the user can review everything before committing.
 #
 #  Step 2  POST step=2
-#               → Validate at least one class selected.
-#                 Store chosen class PKs in session.
-#                 Redirect to GET step 3.
+#               Collect "keep_previous" checkboxes and merge with new choices.
+#               Store final decision in session.  Redirect to GET step=3.
 #
 #  Step 3  GET  ?step=3
-#               → Summary + password confirmation.
+#               Display a full diff:
+#                 • New assignments  (class → teacher)
+#                 • Kept assignments (class → teacher, was already there)
+#                 • Removed          (class → teacher, was there, now unchecked)
+#               Password field to confirm.
 #
 #  Step 3  POST step=3
-#               → Verify password.
-#                 Sync TeacherSubject rows for this teacher+subject combination.
-#                 Clear session keys.  Redirect to subject teachers tab.
+#               Verify password → apply changes in one transaction →
+#               redirect to subject_detail_teachers.
 #
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
 @has_permission('subject', action='edit')
 def assign_subject_to_teacher(request, pk):
-    """
-    Assign a subject to a teacher for one or more classes they already teach.
-
-    Session keys (all scoped to this subject pk):
-        assign_tch_{pk}_teacher_pk   → int  — resolved teacher user PK
-        assign_tch_{pk}_classes      → list — chosen SchoolSupportedClasses PKs
-    """
     subject = get_object_or_404(Subject, pk=pk)
 
-    S_TEACHER = f'assign_tch_{pk}_teacher_pk'
-    S_CLASSES = f'assign_tch_{pk}_classes'
-
-    from accounts.models import StaffProfile
     from academics.models import SchoolSupportedClasses, TeacherClass
+    from accounts.models import StaffProfile
+    from authentication.models import CustomUser
+
+    # ── Session keys (scoped to this subject) ─────────────────────────────────
+    S_NEW      = f'asgn_tr_{pk}_new'       # list of [class_pk, teacher_user_pk]
+    S_FINAL    = f'asgn_tr_{pk}_final'     # same shape, after step-2 review
 
     def _clear_session():
-        request.session.pop(S_TEACHER, None)
-        request.session.pop(S_CLASSES, None)
+        for k in (S_NEW, S_FINAL):
+            request.session.pop(k, None)
+
+    # ── Helper: classes assigned to this subject ───────────────────────────────
+    def _subject_classes():
+        return (
+            ClassSubject.objects
+            .filter(subject=subject)
+            .select_related('school_class__supported_class')
+            .order_by('school_class__supported_class__order')
+        )
+
+    # ── Helper: current TeacherSubject map for this subject ────────────────────
+    # Returns {class_pk: [teacher_user, ...]}
+    def _current_teacher_map():
+        rows = (
+            TeacherSubject.objects
+            .filter(subject=subject)
+            .select_related('teacher', 'school_class')
+        )
+        mapping = {}
+        for row in rows:
+            cpk = row.school_class_id
+            mapping.setdefault(cpk, [])
+            mapping[cpk].append(row.teacher)
+        return mapping
+
+    # ── Helper: teachers in a class via TeacherClass ───────────────────────────
+    def _teachers_for_class(school_class_pk):
+        user_pks = (
+            TeacherClass.objects
+            .filter(school_class_id=school_class_pk, is_active=True)
+            .values_list('teacher_id', flat=True)
+        )
+        return (
+            CustomUser.objects
+            .filter(pk__in=user_pks)
+            .select_related('staff_profile')
+        )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  GUARD — no classes on this subject yet
+    # ─────────────────────────────────────────────────────────────────────────
+    subject_class_rows = _subject_classes()
+    if not subject_class_rows.exists():
+        return render(request, f'{_T}assign-tr/assign_teacher_no_classes.html', {
+            'subject': subject,
+            'section': 'assign_teacher',
+        })
 
     # ─────────────────────────────────────────────────────────────────────────
     #  POST
@@ -669,139 +719,117 @@ def assign_subject_to_teacher(request, pk):
     if request.method == 'POST':
         step = request.POST.get('step', '1')
 
-        # ── Step 1 POST: resolve teacher by employee / staff ID ──────────────
+        # ── Step 1 POST: collect new teacher selections per class ─────────────
         if step == '1':
-            staff_id = request.POST.get('staff_id', '').strip().upper()
+            new_pairs = []
+            for cs in subject_class_rows:
+                cpk = cs.school_class_id
+                tpk = request.POST.get(f'cls_{cpk}', '').strip()
+                if tpk:
+                    try:
+                        tpk_int = int(tpk)
+                        new_pairs.append([cpk, tpk_int])
+                    except ValueError:
+                        pass
 
-            if not staff_id:
-                messages.error(request, 'Please enter a Staff / Employee ID.')
-                return render(request, f'{_T}assign-tr/assign_teacher_step1.html', {
-                    'subject': subject,
-                    'section': 'assign_teacher',
-                    'post':    request.POST,
-                })
-
-            try:
-                staff_profile = StaffProfile.objects.select_related('user').get(
-                    employee_id__iexact=staff_id
-                )
-            except StaffProfile.DoesNotExist:
+            if not new_pairs:
                 messages.error(
                     request,
-                    f'No staff member found with ID "{staff_id}". '
-                    'Check the ID and try again.'
+                    'Please select at least one teacher for at least one class.'
                 )
+                # rebuild context and re-render step 1
+                grouped = _build_step1_groups(subject_class_rows, _current_teacher_map())
                 return render(request, f'{_T}assign-tr/assign_teacher_step1.html', {
-                    'subject': subject,
-                    'section': 'assign_teacher',
-                    'post':    request.POST,
+                    'subject':  subject,
+                    'grouped':  grouped,
+                    'section':  'assign_teacher',
                 })
 
-            # Store teacher reference and move to step 2
-            request.session[S_TEACHER] = staff_profile.user.pk
+            request.session[S_NEW] = new_pairs
             return redirect(f"{request.path}?step=2")
 
-        # ── Step 2 POST: collect chosen classes ──────────────────────────────
+        # ── Step 2 POST: merge kept-previous + new, store final ───────────────
         if step == '2':
-            teacher_user_pk = request.session.get(S_TEACHER)
-            if not teacher_user_pk:
+            new_pairs = request.session.get(S_NEW)
+            if not new_pairs:
                 messages.error(request, 'Session expired. Please start over.')
                 _clear_session()
                 return redirect(request.path)
 
-            chosen_pks = request.POST.getlist('classes')
+            current_map = _current_teacher_map()
+            final_pairs = []   # [class_pk, teacher_user_pk, action]
+            #  action: 'add' | 'keep' | 'remove'
 
-            if not chosen_pks:
-                messages.error(request, 'Please select at least one class.')
-                # Re-render step 2 without losing teacher context
-                return redirect(f"{request.path}?step=2")
+            # Determine what the user wants to keep from previous assignments
+            # Checkbox name: keep_{class_pk}_{teacher_user_pk}
+            for cpk, teachers in current_map.items():
+                for t in teachers:
+                    cb_name = f'keep_{cpk}_{t.pk}'
+                    if request.POST.get(cb_name):
+                        final_pairs.append([cpk, t.pk, 'keep'])
+                    else:
+                        final_pairs.append([cpk, t.pk, 'remove'])
 
-            valid_pks = list(
-                SchoolSupportedClasses.objects.filter(pk__in=chosen_pks)
-                .values_list('pk', flat=True)
-            )
-            if not valid_pks:
-                messages.error(request, 'None of the selected classes were valid.')
-                return redirect(f"{request.path}?step=2")
+            # Merge new selections (avoid duplicating a 'keep' as 'add')
+            keep_and_kept_pairs = {(p[0], p[1]) for p in final_pairs if p[2] == 'keep'}
+            for cpk, tpk in new_pairs:
+                if (cpk, tpk) not in keep_and_kept_pairs:
+                    final_pairs.append([cpk, tpk, 'add'])
 
-            request.session[S_CLASSES] = valid_pks
+            request.session[S_FINAL] = final_pairs
             return redirect(f"{request.path}?step=3")
 
-        # ── Step 3 POST: verify password and commit ──────────────────────────
+        # ── Step 3 POST: verify password and commit ───────────────────────────
         if step == '3':
-            teacher_user_pk = request.session.get(S_TEACHER)
-            chosen_pks      = request.session.get(S_CLASSES)
-
-            if not teacher_user_pk or not chosen_pks:
+            final_pairs = request.session.get(S_FINAL)
+            if not final_pairs:
                 messages.error(request, 'Session expired. Please start over.')
                 _clear_session()
                 return redirect(request.path)
 
             password = request.POST.get('password', '').strip()
             if not request.user.check_password(password):
-                messages.error(request, 'Incorrect password. Assignment not saved.')
-                # Re-render step 3 confirmation
-                try:
-                    staff_profile = StaffProfile.objects.select_related('user').get(
-                        user_id=teacher_user_pk
-                    )
-                except StaffProfile.DoesNotExist:
-                    _clear_session()
-                    messages.error(request, 'Teacher record no longer found.')
-                    return redirect(request.path)
-
-                chosen_classes = (
-                    SchoolSupportedClasses.objects
-                    .filter(pk__in=chosen_pks)
-                    .select_related('supported_class')
-                    .order_by('supported_class__order')
-                )
+                messages.error(request, 'Incorrect password. No changes were saved.')
+                diff = _build_diff(final_pairs)
                 return render(request, f'{_T}assign-tr/assign_teacher_step3.html', {
                     'subject':        subject,
-                    'staff_profile':  staff_profile,
-                    'chosen_classes': chosen_classes,
+                    'diff':           diff,
                     'password_error': True,
                     'section':        'assign_teacher',
                 })
 
-            # Commit: sync TeacherSubject rows for this teacher+subject
             try:
-                staff_profile = StaffProfile.objects.select_related('user').get(
-                    user_id=teacher_user_pk
-                )
-                teacher_user = staff_profile.user
-
                 with transaction.atomic():
-                    # Remove links for this teacher+subject NOT in new selection
-                    TeacherSubject.objects.filter(
-                        teacher=teacher_user,
-                        subject=subject,
-                    ).exclude(school_class_id__in=chosen_pks).delete()
+                    for cpk, tpk, action in final_pairs:
+                        teacher_user = CustomUser.objects.get(pk=tpk)
+                        cls          = SchoolSupportedClasses.objects.get(pk=cpk)
 
-                    # Add new links
-                    chosen_classes_qs = SchoolSupportedClasses.objects.filter(
-                        pk__in=chosen_pks
-                    )
-                    added = 0
-                    for cls in chosen_classes_qs:
-                        _, created = TeacherSubject.objects.get_or_create(
-                            teacher=teacher_user,
-                            subject=subject,
-                            school_class=cls,
-                        )
-                        if created:
-                            added += 1
+                        if action == 'remove':
+                            TeacherSubject.objects.filter(
+                                teacher=teacher_user,
+                                subject=subject,
+                                school_class=cls,
+                            ).delete()
+
+                        elif action in ('add', 'keep'):
+                            TeacherSubject.objects.get_or_create(
+                                teacher=teacher_user,
+                                subject=subject,
+                                school_class=cls,
+                            )
 
                 _clear_session()
 
             except Exception as exc:
-                messages.error(request, f'Could not save assignment: {exc}')
+                messages.error(request, f'Could not save changes: {exc}')
                 return redirect(request.path)
 
+            added   = sum(1 for p in final_pairs if p[2] == 'add')
+            removed = sum(1 for p in final_pairs if p[2] == 'remove')
             messages.success(
                 request,
-                f'"{subject.name}" assigned to {staff_profile.full_name} '
-                f'for {len(chosen_pks)} class(es). ({added} newly added)'
+                f'Teacher assignments updated for "{subject.name}". '
+                f'{added} added, {removed} removed.'
             )
             return redirect('academics:subject_detail_teachers', pk=subject.pk)
 
@@ -810,97 +838,182 @@ def assign_subject_to_teacher(request, pk):
     # ─────────────────────────────────────────────────────────────────────────
     step = request.GET.get('step', '1')
 
-    # ── Step 3 GET: confirmation / password ───────────────────────────────────
+    # ── Step 3 GET: diff + password ───────────────────────────────────────────
     if step == '3':
-        teacher_user_pk = request.session.get(S_TEACHER)
-        chosen_pks      = request.session.get(S_CLASSES)
-
-        if not teacher_user_pk or not chosen_pks:
+        final_pairs = request.session.get(S_FINAL)
+        if not final_pairs:
             messages.warning(request, 'Session expired. Please start over.')
             _clear_session()
             return redirect(request.path)
 
-        try:
-            staff_profile = StaffProfile.objects.select_related('user').get(
-                user_id=teacher_user_pk
-            )
-        except StaffProfile.DoesNotExist:
-            messages.error(request, 'Teacher record no longer found.')
-            _clear_session()
-            return redirect(request.path)
-
-        chosen_classes = (
-            SchoolSupportedClasses.objects
-            .filter(pk__in=chosen_pks)
-            .select_related('supported_class')
-            .order_by('supported_class__order')
-        )
+        diff = _build_diff(final_pairs)
         return render(request, f'{_T}assign-tr/assign_teacher_step3.html', {
-            'subject':        subject,
-            'staff_profile':  staff_profile,
-            'chosen_classes': chosen_classes,
-            'section':        'assign_teacher',
+            'subject': subject,
+            'diff':    diff,
+            'section': 'assign_teacher',
         })
 
-    # ── Step 2 GET: class checklist for chosen teacher ────────────────────────
+    # ── Step 2 GET: review + previous-teacher checkboxes ─────────────────────
     if step == '2':
-        teacher_user_pk = request.session.get(S_TEACHER)
-
-        if not teacher_user_pk:
-            messages.warning(request, 'No teacher selected. Please start over.')
+        new_pairs = request.session.get(S_NEW)
+        if not new_pairs:
+            messages.warning(request, 'No selections found. Please start over.')
             return redirect(request.path)
 
-        try:
-            staff_profile = StaffProfile.objects.select_related('user').get(
-                user_id=teacher_user_pk
-            )
-        except StaffProfile.DoesNotExist:
-            messages.error(request, 'Teacher record no longer found.')
-            _clear_session()
-            return redirect(request.path)
-
-        teacher_user = staff_profile.user
-
-        # All classes this teacher is assigned to (via TeacherClass)
-        teacher_class_pks = (
-            TeacherClass.objects
-            .filter(teacher=teacher_user, is_active=True)
-            .values_list('school_class_id', flat=True)
-        )
-        teacher_classes = (
-            SchoolSupportedClasses.objects
-            .filter(pk__in=teacher_class_pks)
-            .select_related('supported_class')
-            .order_by('supported_class__order')
-        )
-
-        # Classes where teacher already teaches THIS subject (pre-check)
-        already_assigned_pks = set(
-            TeacherSubject.objects.filter(
-                teacher=teacher_user,
-                subject=subject,
-            ).values_list('school_class_id', flat=True)
-        )
-
+        current_map = _current_teacher_map()
+        review_rows = _build_step2_rows(subject_class_rows, new_pairs, current_map)
         return render(request, f'{_T}assign-tr/assign_teacher_step2.html', {
-            'subject':             subject,
-            'staff_profile':       staff_profile,
-            'teacher_classes':     teacher_classes,
-            'already_assigned_pks': already_assigned_pks,
-            'section':             'assign_teacher',
+            'subject':     subject,
+            'review_rows': review_rows,
+            'section':     'assign_teacher',
         })
 
-    # ── Step 1 GET: staff ID entry form ──────────────────────────────────────
-    _clear_session()   # always reset on fresh start
+    # ── Step 1 GET: grouped class → teacher checklist ─────────────────────────
+    _clear_session()
+    current_map = _current_teacher_map()
+    grouped = _build_step1_groups(subject_class_rows, current_map)
     return render(request, f'{_T}assign-tr/assign_teacher_step1.html', {
         'subject': subject,
+        'grouped': grouped,
         'section': 'assign_teacher',
-        'post':    {},
     })
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  Private helpers  (defined at module level so they're importable in tests)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _build_step1_groups(subject_class_rows, current_map):
+    """
+    Returns a list of dicts, one per class:
+    {
+        'class_subject': ClassSubject instance,
+        'teachers':      [CustomUser, ...],   # active in this class
+        'current_pks':   set of int,          # teacher user PKs already assigned to subject here
+    }
+    """
+    from academics.models import TeacherClass
+    from authentication.models import CustomUser
+
+    groups = []
+    for cs in subject_class_rows:
+        cpk = cs.school_class_id
+        teacher_user_pks = (
+            TeacherClass.objects
+            .filter(school_class_id=cpk, is_active=True)
+            .values_list('teacher_id', flat=True)
+        )
+        teachers = list(
+            CustomUser.objects
+            .filter(pk__in=teacher_user_pks)
+            .select_related('staff_profile')
+            .order_by('last_name', 'first_name')
+        )
+        current_pks = {t.pk for t in current_map.get(cpk, [])}
+        groups.append({
+            'class_subject': cs,
+            'teachers':      teachers,
+            'current_pks':   current_pks,
+        })
+    return groups
 
 
+def _build_step2_rows(subject_class_rows, new_pairs, current_map):
+    """
+    Returns a list of dicts, one per class that has either a new selection
+    or an existing teacher assignment:
+    {
+        'school_class':       SchoolSupportedClasses instance,
+        'class_name':         str,
+        'new_teacher':        CustomUser | None,
+        'previous_teachers':  [{'teacher': CustomUser, 'cb_name': str}, ...]
+    }
+    Only classes that appear in new_pairs OR have previous teachers are included.
+    """
+    from authentication.models import CustomUser
+
+    # Map class_pk → new teacher user pk
+    new_map = {cpk: tpk for cpk, tpk in new_pairs}
+
+    # Collect all relevant class pks
+    relevant_cpks = set(new_map.keys()) | set(current_map.keys())
+
+    # Build a lookup for class objects
+    class_lookup = {cs.school_class_id: cs for cs in subject_class_rows}
+
+    rows = []
+    for cpk in sorted(relevant_cpks,
+                       key=lambda x: class_lookup[x].school_class.supported_class.order
+                       if x in class_lookup else 9999):
+        cs = class_lookup.get(cpk)
+        if not cs:
+            continue
+
+        # New teacher for this class
+        new_teacher = None
+        ntpk = new_map.get(cpk)
+        if ntpk:
+            try:
+                new_teacher = CustomUser.objects.select_related('staff_profile').get(pk=ntpk)
+            except CustomUser.DoesNotExist:
+                pass
+
+        # Previous teachers
+        prev = []
+        for t in current_map.get(cpk, []):
+            # Don't show previous teacher as "previous" if they are the new selection too
+            prev.append({
+                'teacher': t,
+                'cb_name': f'keep_{cpk}_{t.pk}',
+                'is_same_as_new': new_teacher and t.pk == new_teacher.pk,
+            })
+
+        rows.append({
+            'school_class':      cs.school_class,
+            'class_name':        cs.school_class.supported_class.name,
+            'class_pk':          cpk,
+            'new_teacher':       new_teacher,
+            'previous_teachers': prev,
+        })
+    return rows
+
+
+def _build_diff(final_pairs):
+    """
+    Resolve user PKs and class PKs into objects and group by action.
+    Returns:
+    {
+        'added':   [{'class_name': str, 'teacher_name': str}, ...],
+        'kept':    [...],
+        'removed': [...],
+    }
+    """
+    from authentication.models import CustomUser
+    from academics.models import SchoolSupportedClasses
+
+    # Bulk fetch to avoid N+1
+    user_pks  = {p[1] for p in final_pairs}
+    class_pks = {p[0] for p in final_pairs}
+
+    users   = {u.pk: u for u in CustomUser.objects.filter(pk__in=user_pks).select_related('staff_profile')}
+    classes = {c.pk: c for c in SchoolSupportedClasses.objects.filter(pk__in=class_pks).select_related('supported_class')}
+
+    diff = {'added': [], 'kept': [], 'removed': []}
+    for cpk, tpk, action in final_pairs:
+        u = users.get(tpk)
+        c = classes.get(cpk)
+        entry = {
+            'class_name':   c.supported_class.name if c else str(cpk),
+            'teacher_name': u.get_full_name() if u else str(tpk),
+        }
+        if action == 'add':
+            diff['added'].append(entry)
+        elif action == 'keep':
+            diff['kept'].append(entry)
+        elif action == 'remove':
+            diff['removed'].append(entry)
+
+    return diff
 
 
 

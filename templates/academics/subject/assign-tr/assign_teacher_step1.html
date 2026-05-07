@@ -4,7 +4,6 @@
 {% block content %}
 <div class="container py-4">
 
-  {# ── Breadcrumb ── #}
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="{% url 'academics:subject_list' %}">Subjects</a></li>
@@ -13,20 +12,19 @@
     </ol>
   </nav>
 
-  {# ── Page header ── #}
   <div class="mb-4">
-    <h4 class="mb-1">Assign Teacher</h4>
+    <h4 class="mb-1">Assign Teacher to Subject</h4>
     <p class="text-muted mb-0 small">
-      Assign a teacher to
-      <strong>{{ subject.name }} ({{ subject.code }})</strong>
-      for one or more of their classes.
+      For each class below, select the teacher who will teach
+      <strong>{{ subject.name }} ({{ subject.code }})</strong>.
+      Leave a class on "Skip" to make no change to it.
     </p>
   </div>
 
   {# ── Step indicator ── #}
-  <div class="d-flex gap-2 mb-4">
-    <span class="badge rounded-pill bg-primary px-3 py-2">Step 1 — Find Teacher</span>
-    <span class="badge rounded-pill bg-secondary px-3 py-2">Step 2 — Select Classes</span>
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <span class="badge rounded-pill bg-primary px-3 py-2">Step 1 — Select Teachers</span>
+    <span class="badge rounded-pill bg-secondary px-3 py-2">Step 2 — Review</span>
     <span class="badge rounded-pill bg-secondary px-3 py-2">Step 3 — Confirm</span>
   </div>
 
@@ -38,50 +36,98 @@
     </div>
   {% endfor %}
 
-  {# ── Form ── #}
-  <div class="row justify-content-start">
-    <div class="col-12 col-md-6 col-lg-5">
-      <div class="card shadow-sm">
-        <div class="card-header bg-white fw-semibold">Enter Staff ID</div>
-        <div class="card-body">
-          <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="step" value="1">
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="step" value="1">
 
-            <p class="text-muted small mb-3">
-              Enter the teacher's Employee ID or Staff ID
-              (e.g. <code>EMP20250001</code>).
-            </p>
+    {% for group in grouped %}
+      <div class="card shadow-sm mb-3">
 
-            <div class="mb-3">
-              <label for="staff_id" class="form-label">Staff / Employee ID</label>
-              <input
-                type="text"
-                class="form-control text-uppercase"
-                id="staff_id"
-                name="staff_id"
-                value="{{ post.staff_id|default:'' }}"
-                placeholder="e.g. EMP20250001"
-                autofocus
-                required
-              >
-            </div>
-
-            <div class="d-flex justify-content-between">
-              <a href="{% url 'academics:subject_detail_teachers' subject.pk %}"
-                 class="btn btn-outline-secondary btn-sm">
-                Cancel
-              </a>
-              <button type="submit" class="btn btn-primary btn-sm">
-                Find Teacher &rarr;
-              </button>
-            </div>
-
-          </form>
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">
+            {{ group.class_subject.school_class.supported_class.name }}
+            <span class="text-muted fw-normal small ms-1">
+              ({{ group.class_subject.school_class.supported_class.section|capfirst }})
+            </span>
+          </span>
+          {% if group.current_pks %}
+            <span class="badge text-bg-info fw-normal">
+              {{ group.current_pks|length }} currently assigned
+            </span>
+          {% else %}
+            <span class="badge bg-light text-muted border fw-normal">No teacher yet</span>
+          {% endif %}
         </div>
+
+        <div class="card-body p-0">
+          {% if group.teachers %}
+            <ul class="list-group list-group-flush">
+
+              {# Skip option — default selected #}
+              <li class="list-group-item bg-light">
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    name="cls_{{ group.class_subject.school_class_id }}"
+                    id="skip_{{ group.class_subject.school_class_id }}"
+                    value=""
+                    checked
+                  >
+                  <label class="form-check-label text-muted fst-italic small"
+                         for="skip_{{ group.class_subject.school_class_id }}">
+                    — Skip / no change —
+                  </label>
+                </div>
+              </li>
+
+              {% for teacher in group.teachers %}
+                <li class="list-group-item">
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="radio"
+                      name="cls_{{ group.class_subject.school_class_id }}"
+                      id="cls_{{ group.class_subject.school_class_id }}_{{ teacher.pk }}"
+                      value="{{ teacher.pk }}"
+                      {% if teacher.pk in group.current_pks %}checked{% endif %}
+                    >
+                    <label class="form-check-label d-flex align-items-center gap-2"
+                           for="cls_{{ group.class_subject.school_class_id }}_{{ teacher.pk }}">
+                      {{ teacher.get_full_name }}
+                      {% if teacher.staff_profile %}
+                        <span class="text-muted small">· {{ teacher.staff_profile.employee_id }}</span>
+                      {% endif %}
+                      {% if teacher.pk in group.current_pks %}
+                        <span class="badge text-bg-success fw-normal">Currently assigned</span>
+                      {% endif %}
+                    </label>
+                  </div>
+                </li>
+              {% endfor %}
+
+            </ul>
+          {% else %}
+            <div class="text-center text-muted py-3 small fst-italic">
+              No active teachers are assigned to this class.
+            </div>
+          {% endif %}
+        </div>
+
       </div>
+    {% endfor %}
+
+    <div class="d-flex justify-content-between mt-2">
+      <a href="{% url 'academics:subject_detail_teachers' subject.pk %}"
+         class="btn btn-outline-secondary btn-sm">
+        Cancel
+      </a>
+      <button type="submit" class="btn btn-primary btn-sm">
+        Continue &rarr;
+      </button>
     </div>
-  </div>
+
+  </form>
 
 </div>
 {% endblock %}

@@ -1,10 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Confirm Teacher Assignment — {{ subject.name }}{% endblock %}
+{% block title %}Confirm Changes — {{ subject.name }}{% endblock %}
 
 {% block content %}
 <div class="container py-4">
 
-  {# ── Breadcrumb ── #}
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="{% url 'academics:subject_list' %}">Subjects</a></li>
@@ -14,25 +13,25 @@
     </ol>
   </nav>
 
-  {# ── Page header ── #}
   <div class="mb-4">
-    <h4 class="mb-1">Confirm Assignment</h4>
+    <h4 class="mb-1">Confirm Changes</h4>
     <p class="text-muted mb-0 small">
-      Review the details below, then enter your password to save.
+      Review all changes below for <strong>{{ subject.name }} ({{ subject.code }})</strong>,
+      then enter your password to apply them.
     </p>
   </div>
 
   {# ── Step indicator ── #}
-  <div class="d-flex gap-2 mb-4">
-    <span class="badge rounded-pill bg-secondary px-3 py-2">Step 1 — Find Teacher</span>
-    <span class="badge rounded-pill bg-secondary px-3 py-2">Step 2 — Select Classes</span>
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <span class="badge rounded-pill bg-secondary px-3 py-2">Step 1 — Select Teachers</span>
+    <span class="badge rounded-pill bg-secondary px-3 py-2">Step 2 — Review</span>
     <span class="badge rounded-pill bg-primary px-3 py-2">Step 3 — Confirm</span>
   </div>
 
   {# ── Password error ── #}
   {% if password_error %}
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-      Incorrect password. Please try again.
+      Incorrect password. No changes have been saved.
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
   {% endif %}
@@ -47,48 +46,74 @@
 
   <div class="row g-4">
 
-    {# ── Summary card ── #}
+    {# ── Diff summary ── #}
     <div class="col-12 col-md-7">
-      <div class="card shadow-sm h-100">
-        <div class="card-header bg-white fw-semibold">Assignment Summary</div>
-        <div class="card-body">
 
-          {# Teacher row #}
-          <div class="mb-3 pb-3 border-bottom">
-            <div class="text-muted small text-uppercase mb-1">Teacher</div>
-            <div class="fw-semibold">{{ staff_profile.full_name }}</div>
-            <div class="text-muted small">
-              {{ staff_profile.employee_id }}
-              &bull;
-              {{ staff_profile.get_role_display }}
-            </div>
+      {# Added #}
+      {% if diff.added %}
+        <div class="card shadow-sm mb-3 border-success">
+          <div class="card-header bg-success text-white fw-semibold">
+            ✓ New Assignments
+            <span class="badge bg-white text-success ms-1">{{ diff.added|length }}</span>
           </div>
-
-          {# Subject row #}
-          <div class="mb-3 pb-3 border-bottom">
-            <div class="text-muted small text-uppercase mb-1">Subject</div>
-            <div class="fw-semibold">{{ subject.name }}</div>
-            <div class="text-muted small">Code: {{ subject.code }}</div>
-          </div>
-
-          {# Classes #}
-          <div>
-            <div class="text-muted small text-uppercase mb-2">
-              Classes
-              <span class="badge text-bg-primary ms-1">{{ chosen_classes|length }}</span>
-            </div>
-            <ul class="list-group list-group-flush rounded border">
-              {% for cls in chosen_classes %}
-                <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                  {{ cls.supported_class.name }}
-                  <span class="text-muted small">{{ cls.supported_class.section|capfirst }}</span>
-                </li>
-              {% endfor %}
-            </ul>
-          </div>
-
+          <ul class="list-group list-group-flush">
+            {% for item in diff.added %}
+              <li class="list-group-item d-flex justify-content-between">
+                <span>{{ item.teacher_name }}</span>
+                <span class="text-muted small">{{ item.class_name }}</span>
+              </li>
+            {% endfor %}
+          </ul>
         </div>
-      </div>
+      {% endif %}
+
+      {# Kept #}
+      {% if diff.kept %}
+        <div class="card shadow-sm mb-3">
+          <div class="card-header bg-white fw-semibold text-muted">
+            Kept (no change)
+            <span class="badge bg-secondary ms-1">{{ diff.kept|length }}</span>
+          </div>
+          <ul class="list-group list-group-flush">
+            {% for item in diff.kept %}
+              <li class="list-group-item d-flex justify-content-between text-muted">
+                <span>{{ item.teacher_name }}</span>
+                <span class="small">{{ item.class_name }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {# Removed #}
+      {% if diff.removed %}
+        <div class="card shadow-sm mb-3 border-danger">
+          <div class="card-header bg-danger text-white fw-semibold">
+            ✕ To Be Removed
+            <span class="badge bg-white text-danger ms-1">{{ diff.removed|length }}</span>
+          </div>
+          <ul class="list-group list-group-flush">
+            {% for item in diff.removed %}
+              <li class="list-group-item d-flex justify-content-between">
+                <span>{{ item.teacher_name }}</span>
+                <span class="text-muted small">{{ item.class_name }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+          <div class="card-footer text-muted small">
+            These teachers will be unassigned from this subject only.
+            They remain assigned to their class.
+          </div>
+        </div>
+      {% endif %}
+
+      {# Nothing at all #}
+      {% if not diff.added and not diff.kept and not diff.removed %}
+        <div class="alert alert-warning">
+          No changes detected. Go back and make a selection.
+        </div>
+      {% endif %}
+
     </div>
 
     {# ── Password card ── #}
@@ -101,7 +126,7 @@
             <input type="hidden" name="step" value="3">
 
             <p class="text-muted small mb-3">
-              Enter your account password to save this assignment.
+              Enter your account password to apply all changes shown on the left.
             </p>
 
             <div class="mb-3">
@@ -121,8 +146,9 @@
             </div>
 
             <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-primary">
-                Confirm Assignment
+              <button type="submit" class="btn btn-primary"
+                {% if not diff.added and not diff.kept and not diff.removed %}disabled{% endif %}>
+                Apply Changes
               </button>
               <a href="{% url 'academics:assign_subject_to_teacher' subject.pk %}?step=2"
                  class="btn btn-outline-secondary">

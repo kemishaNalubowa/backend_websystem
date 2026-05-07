@@ -202,9 +202,7 @@
 
     <a href="{% url 'dashboard' %}"
        class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-      <span class="nav-icon">
-        <i class="bi bi-speedometer2"></i>
-      </span>
+      <span class="nav-icon"><i class="bi bi-speedometer2"></i></span>
       <span class="nav-label">Dashboard</span>
     </a>
 
@@ -215,119 +213,70 @@
 
     <a href="{% url 'academics:academic_year_list' %}"
        class="nav-link {% if 'academic_year_list' in request.resolver_match.url_name %}active{% endif %}">
-      <span class="nav-icon">
-        <i class="bi bi-calendar3"></i>
-      </span>
+      <span class="nav-icon"><i class="bi bi-calendar3"></i></span>
       <span class="nav-label">Academic Years</span>
     </a>
 
     <a href="{% url 'academics:terms_list' %}"
        class="nav-link {% if 'term' in request.resolver_match.url_name %}active{% endif %}">
-      <span class="nav-icon">
-        <i class="bi bi-calendar3"></i>
-      </span>
+      <span class="nav-icon"><i class="bi bi-calendar3"></i></span>
       <span class="nav-label">Terms</span>
     </a>
 
     <a href="{% url 'academics:subject_list' %}"
        class="nav-link {% if 'subject' in request.resolver_match.url_name %}active{% endif %}">
-      <span class="nav-icon">
-        <i class="bi bi-journal-bookmark"></i>
-      </span>
+      <span class="nav-icon"><i class="bi bi-journal-bookmark"></i></span>
       <span class="nav-label">Subjects</span>
     </a>
 
-    <a href="#"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-building"></i>
-      </span>
+    <a href="#" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-building"></i></span>
       <span class="nav-label">Classes</span>
     </a>
 
-    <a href="{% url 'academics:school_supported_classes_manage' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-diagram-3"></i>
-      </span>
+    <a href="{% url 'academics:school_supported_classes_manage' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-diagram-3"></i></span>
       <span class="nav-label">Supported Classes</span>
     </a>
 
-    <a href="{% url 'academics:assign_class_teacher' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-diagram-3"></i>
-      </span>
+    <a href="{% url 'academics:assign_class_teacher' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-diagram-3"></i></span>
       <span class="nav-label">Class Teachers</span>
     </a>
 
-
-    <a href="{% url 'assessments:list' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-clipboard-check"></i>
-      </span>
+    <a href="{% url 'assessments:list' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-clipboard-check"></i></span>
       <span class="nav-label">Assessments</span>
     </a>
 
 
+    <!-- ================= STUDENTS & ADMISSIONS ================= -->
 
+    <div class="nav-section-label">Students &amp; Admissions</div>
 
-    <!-- ================= STUDENTS ================= -->
-
-    <div class="nav-section-label">Students & Admissions</div>
-
-    <a href="{% url 'students:admission_list' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-person-plus"></i>
-      </span>
+    <a href="{% url 'students:admission_list' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-person-plus"></i></span>
       <span class="nav-label">Admissions</span>
     </a>
 
-    <a href="{% url 'students:student_list' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-mortarboard"></i>
-      </span>
+    <a href="{% url 'students:student_list' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-mortarboard"></i></span>
       <span class="nav-label">Students</span>
     </a>
 
-    <a href="{% url 'communication:list' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-envelope-paper"></i>
-      </span>
-      <span class="nav-label">Parent Requests</span>
-    </a>
 
-
-    <!-- ================= STAFF / USERS ================= -->
+    <!-- ================= PEOPLE ================= -->
 
     <div class="nav-section-label">People</div>
 
-    <a href="{% url 'accounts:user_list' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-people"></i>
-      </span>
+    <a href="{% url 'accounts:user_list' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-people"></i></span>
       <span class="nav-label">Users</span>
     </a>
 
-    <a href="#"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-person-badge"></i>
-      </span>
+    <a href="#" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-person-badge"></i></span>
       <span class="nav-label">Teachers</span>
-    </a>
-
-    <a href="{% url 'permissions:permission_list' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-shield-lock"></i>
-      </span>
-      <span class="nav-label">Permissions</span>
     </a>
 
 
@@ -335,103 +284,79 @@
 
     <div class="nav-section-label">Finance</div>
 
-    <a href="{% url 'fees:fees_list' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-cash-stack"></i>
-      </span>
+    <a href="{% url 'fees:fees_list' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-cash-stack"></i></span>
       <span class="nav-label">Fees</span>
     </a>
 
-    <a href="{% url 'fees:assessment_fees_list' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-receipt"></i>
-      </span>
+    <a href="{% url 'fees:assessment_fees_list' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-receipt"></i></span>
       <span class="nav-label">Assessment Fees</span>
     </a>
 
-    <a href="{% url 'fees:payment_list' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-credit-card"></i>
-      </span>
+    <a href="{% url 'fees:payment_list' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-credit-card"></i></span>
       <span class="nav-label">Payments</span>
     </a>
 
-    <a href="{% url 'fees:scholastic_requirements_list' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-credit-card"></i>
-      </span>
+    <a href="{% url 'fees:scholastic_requirements_list' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-list-check"></i></span>
       <span class="nav-label">Scholastic Requirements</span>
     </a>
 
-    <a href="{% url 'fees:scholastic_payment_list' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-credit-card"></i>
-      </span>
+    <a href="{% url 'fees:scholastic_payment_list' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-wallet2"></i></span>
       <span class="nav-label">Scholastic Payments</span>
     </a>
-
-
 
 
     <!-- ================= COMMUNICATION ================= -->
 
     <div class="nav-section-label">Communication</div>
 
-    <a href="{% url 'school:announcement_list' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-megaphone"></i>
-      </span>
+    <a href="{% url 'school:announcement_list' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-megaphone"></i></span>
       <span class="nav-label">Announcements</span>
     </a>
 
-    <a href="{% url 'school:event_list' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-calendar2-event"></i>
-      </span>
+    <a href="{% url 'school:event_list' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-calendar2-event"></i></span>
       <span class="nav-label">Events</span>
     </a>
 
+    <a href="{% url 'communication:list' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-envelope-paper"></i></span>
+      <span class="nav-label">Parent Requests</span>
+    </a>
 
-    <!-- ================= SCHOOL ================= -->
+
+    <!-- ================= SCHOOL MANAGEMENT ================= -->
 
     <div class="nav-section-label">School Management</div>
 
-    <a href="{% url 'school:school_profile' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-building-gear"></i>
-      </span>
+    <a href="{% url 'school:school_profile' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-building-gear"></i></span>
       <span class="nav-label">School Profile</span>
     </a>
 
-    <a href="{% url 'school:school_settings' %}"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-sliders"></i>
-      </span>
+    <a href="{% url 'school:school_settings' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-sliders"></i></span>
       <span class="nav-label">School Settings</span>
     </a>
-
-
 
 
     <!-- ================= SYSTEM ================= -->
 
     <div class="nav-section-label">System</div>
 
-    <a href="#"
-       class="nav-link">
-      <span class="nav-icon">
-        <i class="bi bi-gear"></i>
-      </span>
+    <a href="#" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-gear"></i></span>
       <span class="nav-label">Settings</span>
+    </a>
+
+    <a href="{% url 'permissions:permission_list' %}" class="nav-link">
+      <span class="nav-icon"><i class="bi bi-shield-lock"></i></span>
+      <span class="nav-label">Permissions</span>
     </a>
 
 
@@ -441,19 +366,11 @@
           action="{% url 'logout' %}"
           class="d-inline w-100">
       {% csrf_token %}
-
       <button type="submit"
               class="nav-link border-0 w-100 text-start"
               style="background:none;">
-
-        <span class="nav-icon">
-          <i class="bi bi-box-arrow-left"></i>
-        </span>
-
-        <span class="nav-label">
-          Logout
-        </span>
-
+        <span class="nav-icon"><i class="bi bi-box-arrow-left"></i></span>
+        <span class="nav-label">Logout</span>
       </button>
     </form>
 
