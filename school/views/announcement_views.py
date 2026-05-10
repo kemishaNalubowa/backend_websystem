@@ -15,6 +15,7 @@ from django.utils.dateparse import parse_datetime
 
 from academics.models import SchoolSupportedClasses
 from school.models import SchoolAnnouncement
+from permissions.decorators import has_permission
 
 _T = 'school/announcements/'
 
@@ -128,6 +129,7 @@ def _apply(ann, cleaned, is_new=False):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('announcements_list', action='read')
 def announcement_list(request):
     now = timezone.now()
     qs  = SchoolAnnouncement.objects.select_related(
@@ -188,6 +190,7 @@ def announcement_list(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('announcement', action='read')
 def announcement_add(request):
     lookups = _get_lookups()
 
@@ -246,6 +249,7 @@ def announcement_add(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('announcement', action='edit')
 def announcement_edit(request, pk):
     ann     = get_object_or_404(
         SchoolAnnouncement.objects.select_related('school_class__supported_class'),
@@ -311,6 +315,7 @@ def announcement_edit(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('announcement_list', action='read')
 def announcement_detail(request, pk):
     ann = get_object_or_404(
         SchoolAnnouncement.objects.select_related('school_class__supported_class', 'posted_by'),
@@ -360,6 +365,7 @@ def announcement_detail(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('announcement', action='delete')
 def announcement_delete(request, pk):
     ann = get_object_or_404(SchoolAnnouncement, pk=pk)
 
@@ -388,6 +394,7 @@ def announcement_delete(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('publish_announcement', action='toggle')
 def announcement_toggle_published(request, pk):
     if request.method != 'POST':
         return redirect('school:announcement_list')

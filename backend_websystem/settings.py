@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "school",
     "students",
     "permissions",
+    'help_center',
 ]
 
 MIDDLEWARE = [

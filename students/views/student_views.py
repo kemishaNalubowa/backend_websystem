@@ -49,6 +49,7 @@ from students.utils.student_utils import (
     validate_direct_parents_step,
     validate_direct_student_step,
 )
+from permissions.decorators import has_permission
 
 _T = 'students/'
 
@@ -74,6 +75,7 @@ def _progress_ctx(current_step: int) -> dict:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('enrol_student', action='create')
 def student_create_step1(request):
     """
     Step 1 of the 3-step direct student creation flow.
@@ -131,7 +133,10 @@ def student_create_step1(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('enrol_student', action='create')
 def student_create_step2(request):
+    
+    
     """
     Step 2 — Multi-parent details (always new-parent mode for direct creation).
 
@@ -180,6 +185,7 @@ def student_create_step2(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('enrol_student', action='create')
 def student_create_step3(request):
     """
     Step 3 — Review, enter password, and create all objects atomically:
@@ -283,6 +289,7 @@ def student_create_step3(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('students_list', action='read')
 def student_list(request):
     """
     All active students with stats and filters.
@@ -361,6 +368,7 @@ def student_list(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('student_details', action='read')
 def student_detail(request, pk):
     """
     Full student analysis page.
@@ -406,6 +414,7 @@ def student_detail(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('activate_deactivate_student', action='toggle')
 def student_toggle_active(request, pk):
     """POST-only: flip is_active on a student."""
     if request.method != 'POST':
@@ -473,6 +482,7 @@ def _admin_get_student_classes(student):
 
 
 @login_required
+@has_permission('view_student_academic_history', action='read')
 def admin_student_history(request, pk):
     """Class cards for this student — entry point into the history drill-down."""
     student       = get_object_or_404(Student, pk=pk)
@@ -488,6 +498,7 @@ def admin_student_history(request, pk):
 
 
 @login_required
+@has_permission('view_history_by_term', action='read')
 def admin_student_class_terms(request, pk, class_id):
     """Term cards for a given class."""
     student      = get_object_or_404(Student, pk=pk)
@@ -557,6 +568,7 @@ def admin_student_class_terms(request, pk, class_id):
 
 
 @login_required
+@has_permission('view_history_by_term', action='read')
 def admin_student_class_term_overview(request, pk, class_id, term_id):
     """Section mini-cards (Fees, Scholastic, Performance) for one term."""
     student      = get_object_or_404(Student, pk=pk)
@@ -607,6 +619,7 @@ def admin_student_class_term_overview(request, pk, class_id, term_id):
 
 
 @login_required
+@has_permission('view_history_fees', action='read')
 def admin_student_class_term_fees(request, pk, class_id, term_id):
     """Fees structure table for one class + term."""
     student      = get_object_or_404(Student, pk=pk)
@@ -677,6 +690,7 @@ def admin_student_class_term_fees(request, pk, class_id, term_id):
 
 
 @login_required
+@has_permission('view_history_scholastic', action='read')
 def admin_student_class_term_scholastic(request, pk, class_id, term_id):
     """Scholastic requirements table for one class + term."""
     student      = get_object_or_404(Student, pk=pk)
@@ -743,6 +757,7 @@ def admin_student_class_term_scholastic(request, pk, class_id, term_id):
 
 
 @login_required
+@has_permission('view_history_performance', action='read')
 def admin_student_class_term_performance(request, pk, class_id, term_id):
     """Assessment performance table for one class + term."""
     from assessments.models import AssessmentSubject, AssessmentTotalMark

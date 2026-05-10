@@ -9,6 +9,7 @@ from fees.models import (
 )
 from academics.models import Term
 from academics.utils.subject_utils import get_sch_supported_classes
+from permissions.decorators import has_permission
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -114,6 +115,7 @@ def _checked_pks_from_post(post, supported_classes):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
+@has_permission('scholastic_requirement', action='read')
 def scholastic_requirements_list(request):
     term_id  = request.GET.get('term', '').strip()
     terms    = Term.objects.all().order_by('-name')
@@ -135,6 +137,7 @@ def scholastic_requirements_list(request):
 
 
 @login_required
+@has_permission('scholastic_requirement', action='create')
 def add_scholastic_requirements(request, pk=None):
     """Handles both add (pk=None) and edit (pk provided)."""
 
@@ -210,6 +213,7 @@ def add_scholastic_requirements(request, pk=None):
 
 
 @login_required
+@has_permission('scholastic_requirement', action='read')
 def scholastic_requirements_detail(request, pk):
     requirement = get_object_or_404(
         SchoolScholasticRequirements.objects
@@ -224,6 +228,7 @@ def scholastic_requirements_detail(request, pk):
 
 
 @login_required
+@has_permission('scholastic_requirement', action='delete')
 def delete_scholastic_requirement(request, pk):
     requirement = get_object_or_404(SchoolScholasticRequirements, pk=pk)
 
@@ -239,6 +244,7 @@ def delete_scholastic_requirement(request, pk):
 
 
 @login_required
+@has_permission('scholastic_requirement', action='toggle')
 def toggle_scholastic_requirement(request, pk):
     requirement = get_object_or_404(SchoolScholasticRequirements, pk=pk)
 
@@ -298,6 +304,7 @@ _T = 'fees/scholastic_payments/'
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('scholastic_payments_list', action='read')
 def scholastic_payment_list(request):
     """
     All ScholasticRequirementPayment records with filters and stats.
@@ -400,6 +407,7 @@ def scholastic_payment_list(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('scholastic_payments_list', action='read')
 def scholastic_payment_detail(request, pk):
     """
     Full receipt detail for a single ScholasticRequirementPayment.
@@ -467,6 +475,7 @@ def scholastic_payment_detail(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('scholastic_payment', action='delete')
 def scholastic_payment_delete(request, pk):
     """
     Delete a ScholasticRequirementPayment record.

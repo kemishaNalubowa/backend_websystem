@@ -68,6 +68,8 @@ from students.utils.admission_utils import (
     validate_verify_student_step,
 )
 
+from permissions.decorators import has_permission
+
 _T               = 'students/admissions/'
 _STATUS_CHOICES  = list(STATUS_LABELS.items())
 _GENDER_CHOICES  = [('male', 'Male'), ('female', 'Female')]
@@ -96,6 +98,7 @@ def _verify_progress_ctx(current_step: int) -> dict:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('add_admission', action='create')
 def admission_add_step1(request):
     """
     Step 1 of the 3-step admission add flow.
@@ -144,6 +147,7 @@ def admission_add_step1(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('add_admission', action='create')
 def admission_add_step2(request):
     """
     Step 2 of the 3-step admission add flow.
@@ -206,6 +210,7 @@ def admission_add_step2(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('add_admission', action='create')
 def admission_add_step3(request):
     """
     Step 3 of the 3-step admission add flow.
@@ -322,6 +327,7 @@ def admission_add_step3(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('admissions_list', action='read')
 def admission_list(request):
     """
     All admission applications with statistics and filters.
@@ -422,6 +428,7 @@ def admission_list(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('admission_details', action='read')
 def admission_detail(request, pk):
     """
     Full single admission application page.
@@ -450,6 +457,7 @@ def admission_detail(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('delete_admission', action='delete')
 def admission_delete(request, pk):
     """
     GET  — confirmation page.
@@ -491,6 +499,7 @@ def admission_delete(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('update_admission_status', action='toggle')
 def admission_update_status(request, pk):
     """
     GET  — status-update form (pre-selects target status from ?to= param).
@@ -570,6 +579,7 @@ def admission_update_status(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('edit_admission_parent_details', action='edit')
 def admission_edit_parents(request, pk):
     """
     Edit the parents_data JSON on an existing admission (not yet verified).
@@ -638,6 +648,7 @@ def admission_edit_parents(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('verify_admission', action='toggle')
 def admission_verify_step1(request, pk):
     """
     Verify flow Step 1.
@@ -704,6 +715,7 @@ def admission_verify_step1(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('verify_admission', action='toggle')
 def admission_verify_step2(request, pk):
     """
     Verify flow Step 2 — Create the Student record.
@@ -796,6 +808,7 @@ def admission_verify_step2(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('verify_admission', action='toggle')
 def admission_verify_step3(request, pk):
     """
     Verify flow Step 3 — Create parent user + profile for each parent
@@ -901,6 +914,7 @@ def admission_verify_step3(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('verify_admission', action='toggle')
 def admission_verify_step4(request, pk):
     """
     Verify flow Step 4 — Read-only summary.

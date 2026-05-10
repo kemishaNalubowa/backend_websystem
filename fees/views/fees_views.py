@@ -429,123 +429,7 @@ def fees_delete(request, pk):
 from fees.models import FeesPayment, AssessmentFees, StudentFeesPaymentsStatus
 from students.models import Student
 
-# @login_required
-# def fees_detail(request, pk):
 
-#     school_fee = get_object_or_404(
-#         SchoolFees.objects.select_related('term'),
-#         pk=pk
-#     )
-
-#     assessment_fee = get_object_or_404(
-#         AssessmentFees.objects.select_related('term'),
-#         pk=pk
-#     )
-
-
-#     fee_class =   []
-#     fees_payments = []
-#     fees_students_paid =[]
-#     student_fee_payments_status =[]
-#     fees_students_still = {}
-
-    
-
-#     if school_fee:
-
-#         fee_class = FeesClass.objects.filter(fees=school_fee)
-
-#         fees_payments = FeesPayment.objects.filter(school_fees=school_fee)
-
-#         student_fee_payments_status = StudentFeesPaymentsStatus.objects.filter(fully_paid=True, school_fees=school_fee)
-
-#         fees_students_paid = [set(school_fee.student) for school_fee in fees_payments]
-
-
-#         school_fees_payments_class_students = {}
-
-#         fee_students =None
-#         for fc in fee_class:
-#             fee_students = Student.objects.filter(current_class=fc.school_class)
-
-#             if fee_students:
-#                 school_fees_payments_class_students[fc.school_class] = fee_students
-
-#         if school_fees_payments_class_students:
-#             for school_class, students in school_fees_payments_class_students.items():
-
-#                 students_still = []
-
-#                 for student in students:
-#                     if not student in fees_students_paid:
-#                         students_still.append(student)
-                
-#                 if students_still:
-#                     fees_students_still[school_class] = students_still
-                
-
-
-
-#     elif assessment_fee:
-
-#         fee_class = FeesClass.objects.filter(assessment_fee=assessment_fee)
-
-#         fees_payments = FeesPayment.objects.filter(assessment_fees=assessment_fee)
-
-#         student_fee_payments_status = StudentFeesPaymentsStatus.objects.filter(assessment_fees=assessment_fee)
-
-#         fees_students_paid = [set(assessment_fee.student) for assessment_fee in fees_payments]
-
-
-#         school_fees_payments_class_students = {}
-
-#         fee_students =None
-#         for fc in fee_class:
-#             fee_students = Student.objects.filter(current_class=fc.school_class)
-
-#             if fee_students:
-#                 school_fees_payments_class_students[fc.school_class] = fee_students
-
-#         if school_fees_payments_class_students:
-#             for school_class, students in school_fees_payments_class_students.items():
-
-#                 students_still = []
-
-#                 for student in students:
-#                     if not student in fees_students_paid:
-#                         students_still.append(student)
-                
-#                 if students_still:
-#                     fees_students_still[school_class] = students_still
-                
-
-
-
-#     assessment_fees =FeesPayment.objects.filter(assessment_fees=fee)
-    
-    
-#     assessment_fee_student_paid = [assessment_fee.student for assessment_fee in assessment_fees]
-
-#     fees_students_still = []
-#     assessment_fees_students_still = []
-
-#     fees_students = []
-
-#     for fc in fee_class:
-
-#         fee_students = Student.objects.filter(current_class=fc.school_class)
-
-
-
-#     context = {
-#         'fee':        fee,
-#         'page_title': (
-#             f'{FEES_TYPE_LABELS.get(fee.fees_type, fee.fees_type)} '
-#             # f'— {fee.school_class} | {fee.term}'
-#         ),
-#         # **stats,
-#     }
-#     return render(request, f'{_T}detail.html', context)
 
 
 from django.contrib.auth.decorators import login_required
@@ -560,9 +444,11 @@ from fees.models import (
     StudentFeesPaymentsStatus,
 )
 from students.models import Student
+from permissions.decorators import has_permission
 
 
 @login_required
+@has_permission('')
 def fees_detail(request, pk):
     """
     Production-ready detail view for either a SchoolFees or AssessmentFees record.
@@ -683,12 +569,6 @@ def fees_detail(request, pk):
 
     # _T is whatever template prefix you already use in the rest of the app
     return render(request, f"{_T}detail.html", context)
-
-
-
-
-
-
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

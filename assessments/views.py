@@ -419,97 +419,6 @@ def _get_or_create_mod(assessment):
 # STEP 1 — Assign Classes
 # =============================================================================
 
-# @login_required
-# def add_assessment_class(request, pk):
-#     """
-#     Show every school-supported class as a card with a checkbox and an
-#     attendance-count input.  On POST validate and create AssessmentClass rows.
-
-#     Re-visiting this page is allowed: existing records are shown and
-#     the form pre-excludes already-linked classes so duplicates are impossible.
-#     """
-#     assessment = get_object_or_404(Assessment, pk=pk)
-
-#     supported_classes   = get_sch_supported_classes()
-#     already_linked_pks  = set(
-#         AssessmentClass.objects
-#         .filter(assessment=assessment)
-#         .values_list('school_class_id', flat=True)
-#     )
-
-#     # Only offer classes not already linked
-#     available_classes = [sc for sc in supported_classes
-#                          if sc.pk not in already_linked_pks]
-
-#     # Current links (for display)
-#     existing_classes = (
-#         AssessmentClass.objects
-#         .filter(assessment=assessment)
-#         .select_related('school_class__supported_class')
-#         .order_by('school_class__supported_class__order')
-#     )
-
-#     if request.method == 'POST':
-#         errors   = {}
-#         selected = []  # list of { 'sc': SchoolSupportedClasses, 'attended': int }
-
-#         for sc in available_classes:
-#             key      = sc.supported_class.key.lower()
-#             checked  = request.POST.get(f'class_{key}')          # checkbox value = sc.pk
-#             attended = request.POST.get(f'attended_{key}', '')
-
-#             if not checked:
-#                 continue   # not selected — skip
-
-#             attended_val = _parse_pos_int(
-#                 attended,
-#                 f'{sc.supported_class.name} — Students Attended',
-#                 errors,
-#                 f'attended_{key}',
-#             )
-#             if attended_val is None:
-#                 continue
-
-#             selected.append({'sc': sc, 'attended': attended_val})
-
-#         if not selected and not errors:
-#             messages.error(request, 'Please select at least one class.')
-#             return redirect(reverse('assessments:add_class', args=[pk]))
-
-#         if errors:
-#             messages.error(request, 'Please correct the highlighted errors.')
-#             ctx = {
-#                 'assessment':       assessment,
-#                 'available_classes': available_classes,
-#                 'existing_classes': existing_classes,
-#                 'errors':           errors,
-#                 'post':             request.POST,
-#             }
-#             return render(request, 'assessments/add_assessment_class.html', ctx)
-
-#         with transaction.atomic():
-#             for item in selected:
-#                 AssessmentClass.objects.create(
-#                     assessment        = assessment,
-#                     school_class      = item['sc'],
-#                     students_attended = item['attended'],
-#                 )
-
-#         total = len(selected)
-#         messages.success(
-#             request,
-#             f'{total} class{"es" if total != 1 else ""} added to "{assessment.title}".'
-#         )
-#         return redirect(reverse('assessments:add_subject', args=[pk]))
-
-#     ctx = {
-#         'assessment':        assessment,
-#         'available_classes': available_classes,
-#         'existing_classes':  existing_classes,
-#         'errors':            {},
-#         'post':              {},
-#     }
-#     return render(request, 'assessments/add_assessment_class.html', ctx)
 
 
 @login_required
@@ -587,7 +496,7 @@ def add_assessment_class(request, pk):
                 'post':              request.POST,
                 'mod':               mod,
             }
-            return render(request, 'assessments/add_assessment_class.html', ctx)
+            return render(request, 'assessments/bridge/add_assessment_class.html', ctx)
 
         with transaction.atomic():
             for item in to_create:
@@ -623,7 +532,7 @@ def add_assessment_class(request, pk):
         'post':              {},
         'mod':               mod,
     }
-    return render(request, 'assessments/add_assessment_class.html', ctx)
+    return render(request, 'assessments/bridge/add_assessment_class.html', ctx)
 
 # =============================================================================
 # STEP 2 — Assign Subjects
@@ -745,7 +654,7 @@ def add_assessment_subject(request, pk):
                 'post':                       request.POST,
                 'mod':                        mod,
             }
-            return render(request, 'assessments/add_assessment_subject.html', ctx)
+            return render(request, 'assessments/bridge/add_assessment_subject.html', ctx)
 
         with transaction.atomic():
 
@@ -797,7 +706,7 @@ def add_assessment_subject(request, pk):
         'post':                       {},
         'mod':                        mod,
     }
-    return render(request, 'assessments/add_assessment_subject.html', ctx)
+    return render(request, 'assessments/bridge/add_assessment_subject.html', ctx)
 
 # =============================================================================
 # STEP 3 — Set Total Marks     
@@ -882,7 +791,7 @@ def add_assessment_total_marks(request, pk):
                 'post':                request.POST,
                 'mod':                 mod,
             }
-            return render(request, 'assessments/add_assessment_total_marks.html', ctx)
+            return render(request, 'assessments/bridge/add_assessment_total_marks.html', ctx)
 
         with transaction.atomic():
             for item in to_create:
@@ -918,7 +827,7 @@ def add_assessment_total_marks(request, pk):
         'post':                 {},
         'mod':                  mod,
     }
-    return render(request, 'assessments/add_assessment_total_marks.html', ctx)
+    return render(request, 'assessments/bridge/add_assessment_total_marks.html', ctx)
 
 
 
@@ -926,167 +835,6 @@ def add_assessment_total_marks(request, pk):
 # =============================================================================
 # STEP 4 — Assign Teachers
 # =============================================================================
-
-# @login_required
-# def add_assessment_teacher(request, pk):
-#     """
-#     For each (class × subject) pair in the assessment, allow staff to
-#     assign the responsible teacher from the pool of teachers who are
-#     already linked to that class via TeacherClass and TeacherSubject.
-
-#     Guard: assessment must have subjects linked first.
-#     """
-#     assessment = get_object_or_404(Assessment, pk=pk)
-
-#     assessment_classes = (
-#         AssessmentClass.objects
-#         .filter(assessment=assessment)
-#         .select_related('school_class__supported_class')
-#         .order_by('school_class__supported_class__order')
-#     )
-#     assessment_subjects = (
-#         AssessmentSubject.objects
-#         .filter(assessment=assessment)
-#         .select_related('subject')
-#     )
-
-#     if not assessment_subjects.exists():
-#         messages.error(
-#             request,
-#             'Please assign subjects to this assessment first (Step 2).'
-#         )
-#         return redirect(reverse('assessments:add_subject', args=[pk]))
-
-#     # Already assigned pairs (assessment + teacher + subject + class)
-#     already_assigned = set(
-#         AssessmentTeacher.objects
-#         .filter(assessment=assessment)
-#         .values_list('teacher_id', 'subject_id', 'school_class_id')
-#     )
-
-#     # Build slot grid: one slot per (class, subject) pair
-#     # Each slot holds the candidate teachers for that pairing.
-
-
-#     slots = []
-#     for ac in assessment_classes:
-#         class_teacher_links = (
-#             TeacherClass.objects
-#             .filter(school_class=ac.school_class, is_active=True)
-#             .select_related('teacher')
-#         )
-#         class_teacher_users = {tc.teacher for tc in class_teacher_links}
-
-#         # ← Filter subjects for THIS class only, not all assessment subjects
-#         class_subjects = AssessmentSubject.objects.filter(
-#             assessment=assessment,
-#             assessment_class=ac.school_class,
-#         ).select_related('subject')
-
-#         for as_subj in class_subjects:  # ← use class_subjects, not assessment_subjects
-#             subject_teacher_links = (
-#                 TeacherSubject.objects
-#                 .filter(
-#                     school_class = ac.school_class,
-#                     subject      = as_subj.subject,
-#                 )
-#                 .select_related('teacher')
-#             )
-#             candidates = [
-#                 ts.teacher for ts in subject_teacher_links
-#                 if ts.teacher in class_teacher_users
-#             ]
-
-#             if not candidates:
-#                 candidates = list(class_teacher_users)
-
-#             slot_key = (
-#                 f'{ac.school_class.supported_class.key}_'
-#                 f'{as_subj.subject.code}'
-#             ).lower()
-
-#             slots.append({
-#                 'ac':         ac,
-#                 'as_subj':    as_subj,
-#                 'candidates': candidates,
-#                 'slot_key':   slot_key,
-#             })
-
-
-
-#     if request.method == 'POST':
-#         errors  = {}
-#         to_save = []
-
-#         for slot in slots:
-#             print(type(slot['ac'].school_class), slot['ac'].school_class)
-#             messages.error(request, f'{slot['ac'].school_class}')
-            
-
-#             field_key  = f'teacher_{slot["slot_key"]}'
-#             teacher_pk = (request.POST.get(field_key) or '').strip()
-
-#             if not teacher_pk:
-#                 # Optional: skip unselected slots (admin may leave some blank)
-#                 continue
-
-#             try:
-#                 teacher = CustomUser.objects.get(pk=teacher_pk, is_active=True)
-#             except CustomUser.DoesNotExist:
-#                 errors[field_key] = 'Selected teacher not found or is inactive.'
-#                 continue
-
-#             triple = (teacher.pk, slot['as_subj'].subject_id, slot['ac'].school_class_id)
-#             if triple in already_assigned:
-#                 continue   # already linked — silently skip
-
-#             to_save.append({
-#                 'teacher':      teacher,
-#                 'subject':      slot['as_subj'].subject,
-#                 'school_class': slot['ac'].school_class,
-#             })
-
-
-
-#         # return redirect(reverse('assessments:add_teacher', args=[pk]))
-
-#         if errors:
-#             messages.error(request, 'Please correct the highlighted errors.')
-#             ctx = {
-#                 'assessment': assessment,
-#                 'slots':      slots,
-#                 'errors':     errors,
-#                 'post':       request.POST,
-#             }
-#             return render(request, 'assessments/add_assessment_teacher.html', ctx)
-
-#         if not to_save:
-#             messages.warning(request, 'No new teacher assignments were submitted.')
-#             return redirect(reverse('assessments:detail', args=[pk]))
-
-#         with transaction.atomic():
-#             for item in to_save:
-#                 AssessmentTeacher.objects.create(
-#                     assessment   = assessment,
-#                     teacher      = item['teacher'],
-#                     subject      = item['subject'],
-#                     school_class = item['school_class'],
-#                 )
-
-#         messages.success(
-#             request,
-#             f'{len(to_save)} teacher assignment(s) saved for "{assessment.title}".'
-#         )
-#         return redirect(reverse('assessments:detail', args=[pk]))
-
-#     ctx = {
-#         'assessment': assessment,
-#         'slots':      slots,
-#         'errors':     {},
-#         'post':       {},
-#     }
-#     return render(request, 'assessments/add_assessment_teacher.html', ctx)
-
 
 @login_required
 @has_permission('assign_teacher_to_assessment', action='create')
@@ -1199,7 +947,7 @@ def add_assessment_teacher(request, pk):
                 'post':       request.POST,
                 'mod':        mod,
             }
-            return render(request, 'assessments/add_assessment_teacher.html', ctx)
+            return render(request, 'assessments/bridge/add_assessment_teacher.html', ctx)
 
         with transaction.atomic():
             for item in to_create:
@@ -1231,7 +979,7 @@ def add_assessment_teacher(request, pk):
         'post':       {},
         'mod':        mod,
     }
-    return render(request, 'assessments/add_assessment_teacher.html', ctx)
+    return render(request, 'assessments/bridge/add_assessment_teacher.html', ctx)
 
 
 

@@ -29,12 +29,18 @@ _TYPE_CHOICES       = list(SCHOOL_TYPE_LABELS.items())
 _REGION_CHOICES     = list(REGION_LABELS.items())
 _CURRICULUM_CHOICES = list(CURRICULUM_LABELS.items())
 
+from permissions.decorators import has_permission
+
+
+
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  1. PROFILE  (read-only)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('school_profile', action='read')
 def school_profile(request):
     setting = get_school_setting()
 
@@ -63,6 +69,7 @@ def school_profile(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('school_profile', action='edit')
 def school_profile_edit(request):
     setting = get_school_setting()
     is_new  = setting is None
@@ -141,6 +148,7 @@ def school_profile_edit(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('school_profile', action='edit')
 def school_profile_mini(request):
     setting = get_school_setting()
 
@@ -166,6 +174,7 @@ def school_profile_mini(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('school_settings', action='ed')
 def school_settings(request):
     setting = get_school_setting()
 

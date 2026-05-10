@@ -43,6 +43,7 @@ from fees.utils.pending_fees_utils import (
     record_scholastic_payment,
 )
 from students.models import Student
+from permissions.decorators import has_permission
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -330,6 +331,7 @@ def _compute_remaining(student, entries):
 # =============================================================================
 
 @login_required
+@has_permission('fee_payment', action='read')
 def payment_add_step1(request):
     if request.method == 'POST':
 
@@ -393,6 +395,7 @@ def payment_add_step1(request):
 # =============================================================================
 
 @login_required
+@has_permission('fee_payment', action='read')
 def payment_add_step2(request):
     wizard = _get_wizard(request)
     step1  = wizard.get('step1')
@@ -468,6 +471,7 @@ def payment_add_step2(request):
 # =============================================================================
 
 @login_required
+@has_permission('fee_payment', action='read')
 def payment_add_step3(request):
     wizard = _get_wizard(request)
     step1  = wizard.get('step1')
@@ -592,6 +596,7 @@ def payment_add_step3(request):
 # =============================================================================
 
 @login_required
+@has_permission('fee_payment', action='read')
 def payment_add_step4(request):
     wizard     = _get_wizard(request)
     step1      = wizard.get('step1')
@@ -714,8 +719,3 @@ def payment_add_step4(request):
         'pw_error': None,
     })
 
-
-# =============================================================================
-# URL SNIPPET — paste into fees/urls.py
-# =============================================================================
-#

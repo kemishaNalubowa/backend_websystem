@@ -60,12 +60,14 @@ def _staff_form_lookups() -> dict:
         ],
     }
 
+from permissions.decorators import  has_permission
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  1. USER LIST
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('users_list', action='read')
 def user_list(request):
     """
     All system users with stats and filters.
@@ -125,6 +127,7 @@ def user_list(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('register_staff', action='create')
 def register_staff(request):
     """
     Multi-stage staff registration.
@@ -402,6 +405,7 @@ def register_staff(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('staff_details', action='read')
 def user_detail(request, pk):
     """
     Full profile page for any user type.
@@ -457,6 +461,7 @@ def user_detail(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('activate_deactivate_staff', action='toggle')
 def user_toggle_active(request, pk):
     """POST-only: activate or deactivate a user account."""
     if request.method != 'POST':

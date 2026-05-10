@@ -255,6 +255,8 @@ def user_login(request):
     
     user = authenticate(request, username=username, password=password)
 
+    
+
     if user is None:
         messages.error(request, "Invalid credentials. Please check your username and password.")
         return redirect(reverse("login"))
@@ -267,6 +269,12 @@ def user_login(request):
     messages.success(request, f"Welcome back, {user.first_name}!")
 
     next_url = request.POST.get('next') or request.GET.get('next')
+
+    from accounts.models import ParentProfile
+
+    if user.user_type == 'parent':
+        return redirect(next_url if next_url else reverse("parent_dashboard"))
+    
     return redirect(next_url if next_url else reverse("dashboard"))
 
 

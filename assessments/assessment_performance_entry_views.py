@@ -33,7 +33,7 @@ from .models import (
     AssessmentModification,
     AssessmentPerformanceEntryStatus,
 )
-
+from permissions.decorators import has_permission
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Internal helper — reused across all four views
@@ -52,6 +52,7 @@ def _get_or_create_mod(assessment):
 # =============================================================================
 
 @login_required
+@has_permission("open_performance_entry", action='toggle')
 def enable_assessment_performance_entry(request, pk):
     """
     GET  → renders a password-confirmation page before enabling entry.
@@ -88,7 +89,7 @@ def enable_assessment_performance_entry(request, pk):
     # ── Guard: already open ───────────────────────────────────────────────────
     if mod.modify_performance:
         messages.info(request, 'Performance entry is already open for this assessment.')
-        return redirect(reverse('assessments:performance_list', args=[pk]))
+        return redirect(reverse('assessments:performance_overview', args=[pk]))
 
     # ── GET: show confirmation + auth page ────────────────────────────────────
     if request.method == 'GET':
@@ -127,7 +128,7 @@ def enable_assessment_performance_entry(request, pk):
         f'Performance entry is now OPEN for "{assessment.title}". '
         f'Teachers can begin entering marks.'
     )
-    return redirect(reverse('assessments:performance_list', args=[pk]))
+    return redirect(reverse('assessments:performance_overview', args=[pk]))
 
 
 # =============================================================================
@@ -135,6 +136,7 @@ def enable_assessment_performance_entry(request, pk):
 # =============================================================================
 
 @login_required
+@has_permission("disable_performance_entry", action='toggle')
 def disable_assessment_performance_entry(request, pk):
     """
     GET  → renders a password-confirmation page before disabling entry.
@@ -150,7 +152,7 @@ def disable_assessment_performance_entry(request, pk):
 
     if not mod.modify_performance:
         messages.info(request, 'Performance entry is already closed for this assessment.')
-        return redirect(reverse('assessments:performance_list', args=[pk]))
+        return redirect(reverse('assessments:performance_overview', args=[pk]))
 
     # ── GET: show confirmation + auth page ────────────────────────────────────
     if request.method == 'GET':
@@ -160,7 +162,7 @@ def disable_assessment_performance_entry(request, pk):
             'action_label': 'Disable Performance Entry',
             'action_description': f'This will CLOSE mark entry for "{assessment.title}". All open per-subject edit windows will also be closed. Teachers will no longer be able to enter marks.',
             'confirm_url': reverse('assessments:performance_disable', args=[pk]),
-            'cancel_url': reverse('assessments:performance_list', args=[pk]),
+            'cancel_url': reverse('assessments:performance_overview', args=[pk]),
             'danger': True,
         })
 
@@ -175,7 +177,7 @@ def disable_assessment_performance_entry(request, pk):
             'action_label': 'Disable Performance Entry',
             'action_description': f'This will CLOSE mark entry for "{assessment.title}". All open per-subject edit windows will also be closed. Teachers will no longer be able to enter marks.',
             'confirm_url': reverse('assessments:performance_disable', args=[pk]),
-            'cancel_url': reverse('assessments:performance_list', args=[pk]),
+            'cancel_url': reverse('assessments:performance_overview', args=[pk]),
             'danger': True,
             'auth_error': True,
         })
@@ -194,7 +196,7 @@ def disable_assessment_performance_entry(request, pk):
         request,
         f'Performance entry is now CLOSED for "{assessment.title}".'
     )
-    return redirect(reverse('assessments:performance_list', args=[pk]))
+    return redirect(reverse('assessments:performance_overview', args=[pk]))
 
 # =============================================================================
 # 3. Performance Entry Status List
@@ -279,6 +281,9 @@ def assessment_performance_list(request, pk):
 
 # =============================================================================
 # 4. Performance Detail — per student
+
+# opening prayers 900 pm, welcoming vistors, by pr.easther muwanguzi,welcoming overseeir pr. richard lunyanyeza,
+# , speech From pastors, Church 4ndraising session, lunch, short closing prayer
 # =============================================================================
 
 @login_required
@@ -303,7 +308,7 @@ def assessment_performance_detail(request, pk, student):
 
     if not student_obj:
         messages.error(request, f'No student found with ID "{student_id}".')
-        return redirect(reverse('assessments:performance_list', args=[pk]))
+        return redirect(reverse('assessments:performance_overview', args=[pk]))
 
     # ── Guard: student must be in one of this assessment's classes ────────────
     assessment_class_pks = set(
@@ -316,7 +321,7 @@ def assessment_performance_detail(request, pk, student):
             request,
             f'Student {student_id} is not enrolled in any class that sits this assessment.'
         )
-        return redirect(reverse('assessments:performance_list', args=[pk]))
+        return redirect(reverse('assessments:performance_overview', args=[pk]))
 
     # ── Fetch performance records ─────────────────────────────────────────────
     performances = list(

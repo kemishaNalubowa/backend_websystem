@@ -28,6 +28,7 @@ from .models import (
     AssessmentModification,
     AssessmentPerformanceEntryStatus,
 )
+from permissions.decorators import has_permission
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -126,6 +127,7 @@ def _get_total_marks_map(assessment):
 # ═════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission("add_performance_entry", action='create')
 def perf_entry_part1(request, pk):
     """
     GET  — show assessment classes as checkboxes + student-ID textarea.
@@ -165,7 +167,7 @@ def perf_entry_part1(request, pk):
             errors['student_ids'] = 'Please enter at least one student ID.'
 
         if errors:
-            return render(request, 'assessments/perf_entry_part1.html', {
+            return render(request, 'assessments/perf_entry/add/perf_entry_part1.html', {
                 'assessment':        assessment,
                 'assessment_classes': assessment_classes,
                 'errors':            errors,
@@ -176,7 +178,7 @@ def perf_entry_part1(request, pk):
         valid_acs = [ac for ac in assessment_classes if str(ac.pk) in chosen_class_pks]
         if not valid_acs:
             errors['classes'] = 'Invalid class selection.'
-            return render(request, 'assessments/perf_entry_part1.html', {
+            return render(request, 'assessments/perf_entry/add/perf_entry_part1.html', {
                 'assessment':        assessment,
                 'assessment_classes': assessment_classes,
                 'errors':            errors,
@@ -262,7 +264,7 @@ def perf_entry_part1(request, pk):
 
         if not new_students and not already_found:
             messages.warning(request, 'No valid students found for the selected classes.')
-            return render(request, 'assessments/perf_entry_part1.html', {
+            return render(request, 'assessments/perf_entry/add/perf_entry_part1.html', {
                 'assessment':        assessment,
                 'assessment_classes': assessment_classes,
                 'errors':            {},
@@ -305,7 +307,7 @@ def perf_entry_part1(request, pk):
 
         return redirect(reverse('assessments:perf_entry_part2', args=[pk]))
 
-    return render(request, 'assessments/perf_entry_part1.html', {
+    return render(request, 'assessments/perf_entry/add/perf_entry_part1.html', {
         'assessment':        assessment,
         'assessment_classes': assessment_classes,
         'errors':            {},
@@ -318,6 +320,7 @@ def perf_entry_part1(request, pk):
 # ═════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission("add_performance_entry", action='create')
 def perf_entry_part2(request, pk):
     """
     GET  — show available subjects per class; user ticks which to enter now.
@@ -354,7 +357,7 @@ def perf_entry_part2(request, pk):
                 chosen_subjects[str(ac_pk)] = [int(p) for p in chosen]
 
         if errors:
-            return render(request, 'assessments/perf_entry_part2.html', {
+            return render(request, 'assessments/perf_entry/add/perf_entry_part2.html', {
                 'assessment':    assessment,
                 'chosen_classes': chosen_classes,
                 'class_subjects': class_subjects,
@@ -398,7 +401,7 @@ def perf_entry_part2(request, pk):
 
         return redirect(reverse('assessments:perf_entry_part3', args=[pk]))
 
-    return render(request, 'assessments/perf_entry_part2.html', {
+    return render(request, 'assessments/perf_entry/add/perf_entry_part2.html', {
         'assessment':    assessment,
         'chosen_classes': chosen_classes,
         'class_subjects': class_subjects,
@@ -412,6 +415,7 @@ def perf_entry_part2(request, pk):
 # ═════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission("add_performance_entry", action='create')
 def perf_entry_part3(request, pk):
     """
     GET  — render the marks-entry table.
@@ -549,7 +553,7 @@ def perf_entry_part3(request, pk):
                         entries_preview.append(entry)
 
         if errors:
-            return render(request, 'assessments/perf_entry_part3.html', {
+            return render(request, 'assessments/perf_entry/add/perf_entry_part3.html', {
                 'assessment':      assessment,
                 'class_student_map': class_student_map,
                 'total_marks_map': total_marks_map,
@@ -565,7 +569,7 @@ def perf_entry_part3(request, pk):
 
         return redirect(reverse('assessments:perf_entry_part4', args=[pk]))
 
-    return render(request, 'assessments/perf_entry_part3.html', {
+    return render(request, 'assessments/perf_entry/add/perf_entry_part3.html', {
         'assessment':      assessment,
         'class_student_map': class_student_map,
         'total_marks_map': total_marks_map,
@@ -593,6 +597,7 @@ def _compute_pass(marks_str, passmark_str):
 # ═════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission("add_performance_entry", action='create')
 def perf_entry_part4(request, pk):
     """
     GET  — display preview table.
@@ -641,7 +646,7 @@ def perf_entry_part4(request, pk):
 
         if user is None:
             messages.error(request, 'Incorrect password. Please try again.')
-            return render(request, 'assessments/perf_entry_part4.html', {
+            return render(request, 'assessments/perf_entry/add/perf_entry_part4.html', {
                 'assessment':     assessment,
                 'preview_by_class': preview_by_class,
                 'chosen_classes': chosen_classes,
@@ -718,7 +723,7 @@ def perf_entry_part4(request, pk):
         messages.success(request, 'Performance records saved successfully.')
         return redirect(reverse('assessments:detail', args=[pk]))
 
-    return render(request, 'assessments/perf_entry_part4.html', {
+    return render(request, 'assessments/perf_entry/add/perf_entry_part4.html', {
         'assessment':      assessment,
         'preview_by_class': preview_by_class,
         'chosen_classes':  chosen_classes,
@@ -800,7 +805,7 @@ def enable_edit_part1(request, pk):
             errors['confirm_password'] = 'Incorrect password.'
 
         if errors:
-            return render(request, 'assessments/enable_edit_part1.html', {
+            return render(request, 'assessments/perf_entry/enable_edit_part1.html', {
                 'assessment':          assessment,
                 'class_subject_status': class_subject_status,
                 'errors':              errors,
@@ -830,7 +835,7 @@ def enable_edit_part1(request, pk):
         )
         return redirect(reverse('assessments:detail', args=[pk]))
 
-    return render(request, 'assessments/enable_edit_part1.html', {
+    return render(request, 'assessments/perf_entry/enable_edit_part1.html', {
         'assessment':          assessment,
         'class_subject_status': class_subject_status,
         'errors':              {},

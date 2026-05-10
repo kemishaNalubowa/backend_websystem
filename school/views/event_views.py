@@ -18,6 +18,9 @@ from academics.models import SchoolSupportedClasses
 from authentication.models import CustomUser
 from school.models import SchoolEvent
 
+
+from permissions.decorators import has_permission
+
 _T = 'school/events/'
 
 EVENT_TYPE_CHOICES = [
@@ -145,6 +148,7 @@ def _annotate(events, today):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('events_list', action='read')
 def event_list(request):
     today = date.today()
     qs    = SchoolEvent.objects.select_related('organized_by').prefetch_related(
@@ -218,6 +222,7 @@ def event_list(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('event', action='create')
 def event_add(request):
     lookups = _get_form_lookups()
 
@@ -282,6 +287,7 @@ def event_add(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('event', action='edit')
 def event_edit(request, pk):
     event   = get_object_or_404(
         SchoolEvent.objects.prefetch_related('school_classes'),
@@ -357,6 +363,7 @@ def event_edit(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('events_list', action='read')
 def event_detail(request, pk):
     event = get_object_or_404(
         SchoolEvent.objects
@@ -412,6 +419,7 @@ def event_detail(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('event', action='delete')
 def event_delete(request, pk):
     event = get_object_or_404(
         SchoolEvent.objects.prefetch_related('school_classes'),
@@ -445,6 +453,7 @@ def event_delete(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('event', action='toggle')
 def event_toggle_published(request, pk):
     if request.method != 'POST':
         return redirect('school:event_list')

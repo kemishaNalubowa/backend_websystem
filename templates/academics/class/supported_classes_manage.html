@@ -12,7 +12,8 @@
         </h4>
 
         <div>
-            {% if user_perms.class.can_create and not request.user.user_type == 'admin' %}
+
+            {% if request.user.user_type == 'admin' and not user_perms.class.can_create  %}
                 <button
                     class="btn btn-primary"
                     data-bs-toggle="modal"
@@ -22,7 +23,7 @@
                 </button>
             {% endif %}
 
-            {% if user_perms.class.can_edit %}
+            {% if request.user.user_type == 'admin' and not user_perms.class.can_edit %}
                 <button
                     class="btn btn-warning"
                     data-bs-toggle="modal"

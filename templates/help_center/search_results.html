@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% block title %}
+    {% if query %}Search: "{{ query }}"{% else %}Search{% endif %} — Help Center
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'help_center:overview' %}">
+                    <i class="bi bi-life-preserver me-1"></i>Help Center
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Search Results</li>
+        </ol>
+    </nav>
+
+    <!-- Search Bar -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-lg-8">
+            <form method="get" action="">
+                <div class="input-group input-group-lg shadow-sm">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="bi bi-search text-muted"></i>
+                    </span>
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ query }}"
+                        class="form-control border-start-0 ps-0"
+                        placeholder="Search the help center..."
+                        autofocus
+                    >
+                    <button class="btn btn-primary px-4" type="submit">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if query %}
+
+        {% if result_count > 0 %}
+
+            <!-- Result Summary -->
+            <p class="text-muted mb-4">
+                Found <strong>{{ result_count }}</strong>
+                result{{ result_count|pluralize }} for <strong>"{{ query }}"</strong>
+            </p>
+
+            {% for group in grouped_results %}
+<div class="mb-5">
+
+    <!-- Category Label -->
+    <div class="d-flex align-items-center gap-2 mb-2 pb-2 border-bottom">
+        <i class="bi {{ group.category.icon }} text-primary"></i>
+        <a href="{% url 'help_center:category' group.category.slug %}"
+           class="fw-semibold text-decoration-none text-dark">
+            {{ group.category.title }}
+        </a>
+        <span class="badge bg-primary bg-opacity-10 text-primary fw-normal">
+            {{ group.count }} result{{ group.count|pluralize }}
+        </span>
+    </div>
+
+    <!-- Articles in this category -->
+    <div class="list-group shadow-sm">
+        {% for article in group.articles %}
+        <a href="{% url 'help_center:article_detail' article.slug %}"
+           class="list-group-item list-group-item-action py-3 px-4">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1 me-3">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <i class="bi bi-file-text text-primary"></i>
+                        <span class="fw-semibold text-dark">{{ article.title }}</span>
+                    </div>
+                    <p class="text-muted small mb-0">
+                        {{ article.content|striptags|truncatewords:30 }}
+                    </p>
+                </div>
+                <i class="bi bi-chevron-right text-muted flex-shrink-0 mt-1"></i>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+</div>
+{% endfor %}
+
+            <!-- No Results -->
+            <div class="text-center py-5">
+                <i class="bi bi-search fs-1 text-muted"></i>
+                <h5 class="mt-3 fw-semibold">No results for "{{ query }}"</h5>
+                <p class="text-muted">Try different keywords, or browse all categories.</p>
+                <a href="{% url 'help_center:overview' %}" class="btn btn-primary mt-2">
+                    <i class="bi bi-grid me-1"></i>Browse All Categories
+                </a>
+            </div>
+
+        {% endif %}
+
+    {% else %}
+
+        <!-- No Query Entered -->
+        <div class="text-center py-5">
+            <i class="bi bi-search fs-1 text-muted"></i>
+            <p class="text-muted mt-3">Enter a keyword above to search the help center.</p>
+            <a href="{% url 'help_center:overview' %}" class="btn btn-outline-primary mt-2">
+                <i class="bi bi-grid me-1"></i>Browse All Categories
+            </a>
+        </div>
+
+    {% endif %}
+
+</div>
+{% endblock %}

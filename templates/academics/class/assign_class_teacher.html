@@ -13,7 +13,7 @@
 
         <div>
 
-            {% if user_perms.assign_class_teacher.can_create %}
+            {% if request.user.user_type == 'admin' and not user_perms.assign_class_teacher.can_create %}
             <button
                 class="btn btn-primary"
                 data-bs-toggle="modal"

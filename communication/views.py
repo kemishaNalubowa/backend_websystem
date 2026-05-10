@@ -15,13 +15,14 @@ from .utils   import (
     VALID_REQUEST_TYPES,
     VALID_STATUSES,
 )
-
+from permissions.decorators import has_permission
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Add Parent Request
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
+@has_permission('parent_requests_center', action='read')
 def add_parent_request(request):
     """
     Both parents and staff can open a new request.
@@ -108,6 +109,7 @@ def add_parent_request(request):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
+@has_permission('parent_requests_center', action='read')
 def parent_requests_list(request):
     """
     - Staff see all requests, with optional filters.
@@ -178,6 +180,7 @@ def parent_requests_list(request):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
+@has_permission('parent_requests_center', action='read')
 def parent_request_detail(request, ref):
     """
     Shows the full request thread with all replies.
@@ -226,6 +229,7 @@ def parent_request_detail(request, ref):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
+@has_permission('parent_requests_center', action='read')
 def add_parent_request_reply(request, ref):
     """
     POST-only view. Both parents and staff can reply.

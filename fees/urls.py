@@ -2,7 +2,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # URL patterns for the fees app.
 # Namespace: 'fees'
-#
+# 
 # Include in root urls.py as:
 #   path('fees/', include('fees.urls', namespace='fees'))
 # ─────────────────────────────────────────────────────────────────────────────
@@ -23,8 +23,6 @@ from fees.views.assessment_fees_views import (
     assessment_fees_edit,
     assessment_fees_delete,
     assessment_fees_detail,
-    assessment_fees_recalculate,
-    assessment_fees_bulk_generate,
 )
 
 
@@ -91,13 +89,10 @@ urlpatterns = [
     #   /fees/assessment-fees/<pk>/recalculate/         → POST: sync from payments
     path('assessment-fees/',                          assessment_fees_list,          name='assessment_fees_list'),
     path('assessment-fees/add/',                      assessment_fees_add,           name='assessment_fees_add'),
-    path('assessment-fees/bulk-generate/',            assessment_fees_bulk_generate, name='assessment_fees_bulk_generate'),
     path('assessment-fees/<int:pk>/',                 assessment_fees_detail,        name='assessment_fees_detail'),
     path('assessment-fees/<int:pk>/edit/',            assessment_fees_edit,          name='assessment_fees_edit'),
     path('assessment-fees/<int:pk>/delete/',          assessment_fees_delete,        name='assessment_fees_delete'),
-    path('assessment-fees/<int:pk>/recalculate/',     assessment_fees_recalculate,   name='assessment_fees_recalculate'),
-
-
+    
 
 
     path('payments/add/step1/', payment_add_step1, name='payment_add_step1'),

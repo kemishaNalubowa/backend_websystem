@@ -53,6 +53,7 @@ urlpatterns = [
     path("school/", include("school.urls",  namespace="school")),
     path("permissions/", include("permissions.urls",  namespace="permissions")),
     path("students/", include("students.urls",  namespace="students")),
+    path('help/', include('help_center.urls')),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

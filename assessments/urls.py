@@ -21,11 +21,6 @@ urlpatterns = [
         name='add'
     ),
 
-    # path(
-    #     '<int:pk>/edit/',
-    #     views.edit_assessment,
-    #     name='edit'
-    # ),
     path(
         '<int:pk>/',
         views.assessment_detail,

@@ -9,11 +9,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from academics.models import SchoolClass, Term
 from fees.models import AssessmentFees
 from fees.utils.assessment_fees_utils import (
-    bulk_generate_for_class,
-    recalculate_from_payments,
     validate_and_parse_assessment_fees,
 )
 from assessments.models import Assessment
+from permissions.decorators import has_permission
 
 _T = 'fees/assessment_fees/'
 
@@ -44,6 +43,7 @@ def _apply_to_instance(instance: AssessmentFees, cleaned: dict) -> None:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('assessment_fee', action='read')
 def assessment_fees_list(request):
     qs = AssessmentFees.objects.select_related('term', 'generated_by', 'assessment__term')
 
@@ -80,6 +80,7 @@ def assessment_fees_list(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('assessment_fee', action='create')
 def assessment_fees_add(request):
     lookups      = _get_form_lookups()
     current_term = Term.objects.filter(is_active=True).first()
@@ -137,6 +138,7 @@ def assessment_fees_add(request):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('assessment_fee', action='edit')
 def assessment_fees_edit(request, pk):
     af = get_object_or_404(
         AssessmentFees.objects.select_related('assessment', 'term', 'generated_by'),
@@ -199,6 +201,7 @@ def assessment_fees_edit(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('assessment_fee', action='delete')
 def assessment_fees_delete(request, pk):
     af = get_object_or_404(
         AssessmentFees.objects.select_related('assessment', 'term'),
@@ -224,6 +227,7 @@ def assessment_fees_delete(request, pk):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@has_permission('assessment_fee', action='read')
 def assessment_fees_detail(request, pk):
     af = get_object_or_404(
         AssessmentFees.objects.select_related(
@@ -237,100 +241,3 @@ def assessment_fees_detail(request, pk):
     })
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  6. RECALCULATE  (POST only)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@login_required
-def assessment_fees_recalculate(request, pk):
-    if request.method != 'POST':
-        messages.warning(request, 'Invalid request method.')
-        return redirect('fees:assessment_fees_list')
-
-    af = get_object_or_404(
-        AssessmentFees.objects.select_related('assessment', 'term'), pk=pk
-    )
-
-    try:
-        with transaction.atomic():
-            result = recalculate_from_payments(af)
-    except Exception as exc:
-        messages.error(request, f'Recalculation failed: {exc}')
-        return redirect('fees:assessment_fees_detail', pk=af.pk)
-
-    if result.get('changed'):
-        messages.success(
-            request,
-            f'Recalculated for {af.assessment.title} | {af.term}. '
-            f'Total paid updated from UGX {result["old_paid"]:,.0f} '
-            f'to UGX {result["new_paid"]:,.0f}.'
-        )
-    else:
-        messages.info(request, f'No change — already correct.')
-
-    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER')
-    if next_url:
-        return redirect(next_url)
-    return redirect('fees:assessment_fees_detail', pk=af.pk)
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  7. BULK GENERATE  (POST only)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@login_required
-def assessment_fees_bulk_generate(request):
-    if request.method != 'POST':
-        messages.warning(request, 'Invalid request method.')
-        return redirect('fees:assessment_fees_list')
-
-    class_id = (request.POST.get('school_class') or '').strip()
-    term_id  = (request.POST.get('term') or '').strip()
-    errors   = {}
-
-    if not class_id:
-        errors['school_class'] = 'Class is required.'
-    if not term_id:
-        errors['term'] = 'Term is required.'
-
-    if errors:
-        for msg in errors.values():
-            messages.error(request, msg)
-        return redirect('fees:assessment_fees_list')
-
-    try:
-        school_class = SchoolClass.objects.get(pk=int(class_id))
-        term         = Term.objects.get(pk=int(term_id))
-    except (SchoolClass.DoesNotExist, Term.DoesNotExist, ValueError):
-        messages.error(request, 'Invalid class or term selected.')
-        return redirect('fees:assessment_fees_list')
-
-    overwrite = request.POST.get('overwrite', '0') == '1'
-
-    try:
-        with transaction.atomic():
-            result = bulk_generate_for_class(
-                school_class=school_class,
-                term=term,
-                generated_by=request.user,
-                overwrite=overwrite,
-            )
-    except Exception as exc:
-        messages.error(request, f'Bulk generation failed: {exc}')
-        return redirect('fees:assessment_fees_list')
-
-    parts = []
-    if result.get('created'): parts.append(f'{result["created"]} created')
-    if result.get('updated'): parts.append(f'{result["updated"]} updated')
-    if result.get('skipped'): parts.append(f'{result["skipped"]} skipped')
-
-    messages.success(
-        request,
-        f'Bulk generation for {school_class} | {term} — '
-        f'{", ".join(parts) if parts else "No records processed"}.'
-    )
-    for err in result.get('errors', []):
-        messages.warning(request, f'Warning: {err}')
-
-    from django.urls import reverse
-    return redirect(f"{reverse('fees:assessment_fees_list')}?term={term.pk}")
