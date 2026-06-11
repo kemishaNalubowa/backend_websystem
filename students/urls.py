@@ -143,3 +143,16 @@ urlpatterns = [
           admin_student_class_term_performance,
           name='admin_student_class_term_performance'),
 ]
+
+
+
+
+# students/urls.py  ← ADD THIS AT THE VERY END
+from django.urls import path, include
+
+# ... [all your existing urlpatterns above] ...
+
+# ── NEW: API routes for React (isolated) ───────────────
+urlpatterns += [
+    path('api/students/', include('students.api.urls', namespace='students_api')),
+]

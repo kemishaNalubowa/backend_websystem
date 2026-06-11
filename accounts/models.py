@@ -44,15 +44,12 @@ class ParentProfile(models.Model):
     Extended guardian / parent information.
     Linked 1-to-1 with a CustomUser whose user_type = 'parent'.
 
-    Login flow:
-        username  → user.parent_id  (e.g. PAR20250001)
-        password  → access_token    (shared among all parents of a student)
-
-    The access_token is generated once at account creation, stored here,
-    and set as the hashed password on the linked CustomUser.
-    It is also stored (un-hashed as an identifier) on each
-    StudentParentRelationship row so the portal can verify which
-    student a token belongs to.
+    NEW AUTHENTICATION FLOW (v2):
+        Login credentials  → phone_number + password (user-created)
+        API access token   → DRF Token (auto-generated, hidden from user)
+        
+    The access_token field below is DEPRECATED and kept only for backward compatibility.
+    New parents authenticate via phone + password, and receive a DRF token on login.
     """
 
     RELATIONSHIP_CHOICES = [
@@ -78,9 +75,9 @@ class ParentProfile(models.Model):
     access_token = models.CharField(
                        max_length=64,
                        help_text=(
-                           'Opaque token used as the parent portal login password. '
-                           'Generated once at account creation. Shared across all '
-                           'parents of the same student via StudentParentRelationship.'
+                           '[DEPRECATED] Old authentication token field. '
+                           'No longer used. Kept for backward compatibility. '
+                           'New logins use DRF TokenAuthentication via phone + password.'
                        ),
                    )
 

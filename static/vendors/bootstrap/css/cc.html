@@ -6,104 +6,116 @@
     <title>Toggle Switch</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
-        /* Base styles for the body */
-        body {
-            display: flex;
-            flex-direction: column; /* Arrange toggles vertically */
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background-color: #f3f4f6; /* Equivalent to bg-gray-100 */
-            font-family: 'Inter', sans-serif; /* Using Inter font as per instructions */
-            margin: 0;
-            gap: 2rem; /* Space between multiple toggle containers */
-        }
+    /* ───────── BODY ───────── */
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: #FAF8F5;
+        font-family: 'Nunito', sans-serif;
+        margin: 0;
+        gap: 2rem;
+        color: #1a0f2e;
+    }
 
-        /* Container for the toggle switch and label */
-        .toggle-container {
-            padding: 1.5rem; /* Equivalent to p-6 */
-            background-color: #fff; /* Equivalent to bg-white */
-            border-radius: 0.75rem; /* Equivalent to rounded-xl */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Equivalent to shadow-lg */
-            display: flex;
-            align-items: center;
-            gap: 1rem; /* Equivalent to space-x-4 */
-        }
+    /* ───────── TOGGLE CONTAINER ───────── */
+    .toggle-container {
+        padding: 1.5rem;
+        background-color: #ffffff;
+        border-radius: 0.75rem;
+        box-shadow: 0 20px 40px rgba(21,9,32,0.12);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        border: 1px solid #E9ECEF;
+    }
 
-        /* Label for the feature */
-        .feature-label {
-            font-size: 1.125rem; /* Equivalent to text-lg */
-            font-weight: 500; /* Equivalent to font-medium */
-            color: #374151; /* Equivalent to text-gray-700 */
-        }
+    /* ───────── FEATURE LABEL ───────── */
+    .feature-label {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: #1a0f2e;
+    }
 
-        /* Wrapper for the actual toggle switch (track and circle) */
-        .toggle-wrapper {
-            position: relative;
-            display: inline-block;
-            width: 3rem; /* Increased width to 3rem for a longer switch */
-            margin-right: 0.5rem; /* Equivalent to mr-2 */
-            vertical-align: middle;
-            user-select: none;
-            transition: all 0.2s ease-in;
-        }
+    /* ───────── TOGGLE WRAPPER ───────── */
+    .toggle-wrapper {
+        position: relative;
+        display: inline-block;
+        width: 3rem;
+        margin-right: 0.5rem;
+        vertical-align: middle;
+        user-select: none;
+        transition: all 0.2s ease-in;
+    }
 
-        /* Hidden checkbox for functionality */
-        .toggle-checkbox {
-            position: absolute;
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
+    /* ───────── HIDDEN CHECKBOX ───────── */
+    .toggle-checkbox {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
 
-        /* Label acts as the track for the switch */
-        .toggle-label {
-            display: block;
-            overflow: hidden;
-            height: 1.25rem; /* A bit bigger height */
-            border-radius: 9999px; /* Equivalent to rounded-full */
-            background-color: #d1d5db; /* Equivalent to bg-gray-300 */
-            cursor: pointer;
-            position: relative;
-            /* Inset shadow for the "off" state */
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15); /* Darker inset shadow */
-            transition: background-color 0.2s ease-in, box-shadow 0.2s ease-in; /* Add box-shadow to transition */
-        }
+    /* ───────── TOGGLE TRACK ───────── */
+    .toggle-label {
+        display: block;
+        overflow: hidden;
+        height: 1.25rem;
+        border-radius: 9999px;
+        background-color: #d1d5db;
+        cursor: pointer;
+        position: relative;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+        transition:
+            background-color 0.2s ease-in,
+            box-shadow 0.2s ease-in;
+    }
 
-        /* Circle/handle of the switch */
-        .toggle-circle {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 1.25rem; /* A bit bigger circle, matching label height */
-            height: 1.25rem; /* A bit bigger circle, matching label height */
-            border-radius: 9999px; /* Equivalent to rounded-full */
-            /* Default background color for the circle when off */
-            background-color: #4B5563; /* Dark gray for off state */
-            /* More prominent shadow for the circle */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            transform: translateX(0); /* Initial position */
-            transition: transform 0.2s ease-in, background-color 0.2s ease-in, box-shadow 0.2s ease-in; /* Add background-color to transition */
-            display: flex; /* Use flexbox to center the icon */
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem; /* Size for the icon, adjusted for bigger circle */
-            color: #fff; /* White icon color when off */
-        }
+    /* ───────── TOGGLE CIRCLE ───────── */
+    .toggle-circle {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1.25rem;
+        height: 1.25rem;
+        border-radius: 9999px;
+        background-color: #1a0f2e;
+        box-shadow:
+            0 4px 6px -1px rgba(0, 0, 0, 0.1),
+            0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transform: translateX(0);
+        transition:
+            transform 0.2s ease-in,
+            background-color 0.2s ease-in,
+            box-shadow 0.2s ease-in;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        color: #ffffff;
+    }
 
-        /* When the toggle-label has the 'is-checked' class: */
-        .toggle-label.is-checked {
-            background-color: #86EFAC; /* Darker light green for the track when on */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle outer shadow when on */
-        }
-        .toggle-label.is-checked .toggle-circle {
-            transform: translateX(1.75rem); /* Adjusted for the new length (3rem track - 1.25rem circle = 1.75rem) */
-            background-color: #15803D; /* Dark green for the circle when on */
-            color: #fff; /* White icon color when on for better contrast */
-            /* Subtle shadow when on, to make it look "pressed" or part of the track */
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        }
-    </style>
+    /* ───────── ON STATE ───────── */
+    .toggle-label.is-checked {
+        background-color: rgba(196,30,58,0.25);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .toggle-label.is-checked .toggle-circle {
+        transform: translateX(1.75rem);
+        background-color: #c41e3a;
+        color: #ffffff;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    /* ───────── OPTIONAL HOVER EFFECT ───────── */
+    .toggle-label:hover .toggle-circle {
+        box-shadow:
+            0 6px 12px rgba(21,9,32,0.15);
+    }
+</style>
 </head>
 <body>
     <div class="toggle-container">

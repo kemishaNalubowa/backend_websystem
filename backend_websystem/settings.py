@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure--9bm(6^dlzqeiq-4j^tj@6+s%a=+5w4eaj@glypsrgvv)_0^*q
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True 
 
-ALLOWED_HOSTS = ['dash.localhost', "localhost"]
+ALLOWED_HOSTS = ['dash.localhost', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -38,6 +38,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+
+    'corsheaders',
+    'rest_framework',
+    'rest_framework.authtoken',
 
     "django_hosts",
     "authentication",
@@ -55,6 +59,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django_hosts.middleware.HostsRequestMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -63,6 +68,21 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_hosts.middleware.HostsResponseMiddleware',
+]
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+}
+
+# Custom authentication backend supporting phone-based login
+AUTHENTICATION_BACKENDS = [
+    'authentication.utils.PhoneOrUsernameBackend',
+    'django.contrib.auth.backends.ModelBackend',  # Fallback to default
 ]
 
 ROOT_URLCONF = 'backend_websystem.urls'
@@ -79,7 +99,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'permissions.context_processors.user_permissions',   # ← add this
+                'permissions.context_processors.user_permissions',
             ],
         },
     },
@@ -155,25 +175,13 @@ ROOT_HOSTCONF = 'backend_websystem.hosts'
 DEFAULT_HOST = 'www' 
 
 
-
-
 from django.contrib.messages import constants as messages
 
 
 MESSAGE_TAGS = {
-
     messages.DEBUG: 'secondary',
-
     messages.INFO: 'info',
-
     messages.SUCCESS: 'success',
-
     messages.WARNING: 'warning',
-
     messages.ERROR: 'danger',
-
 }
-
-
-
-

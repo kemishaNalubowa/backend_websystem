@@ -299,15 +299,81 @@ def _validate_password(value, confirm):
     return None
 
 
+# ===========================================================================
+# CUSTOM AUTHENTICATION BACKEND (for phone-based login)
+# ===========================================================================
+
+class PhoneOrUsernameBackend:
+    """
+    Custom authentication backend that allows login via:
+    - username (for staff/teachers/admins)
+    - phone number (for parents/staff/teachers - not admins)
+
+    For non-admin users, first looks up by phone_number, then by username.
+    For admin users, only username is allowed.
+    """
+
+    def authenticate(self, request, username=None, password=None, phone=None, **kwargs):
+        """
+        Authenticate using username/phone + password.
+        Returns CustomUser if authentication succeeds, None otherwise.
+        """
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user = None
+
+        # Normalise whatever was passed in
+        norm_phone = re.sub(r"[\s\-\(\)\+]", "", username or phone or "")
+
+        # If a dedicated phone kwarg was passed, search by phone_number only
+        if phone:
+            user = User.objects.filter(
+                phone__in=[phone, norm_phone],
+                user_type__in=['parent', 'teacher', 'staff']
+            ).first()
+
+        elif username:
+            # Try phone_number first (parents / staff / teachers)
+            user = User.objects.filter(
+                phone__in=[username, norm_phone],
+                user_type__in=['parent', 'teacher', 'staff']
+            ).first()
+
+            # Fall back to username lookup (covers admins too)
+            if not user:
+                user = User.objects.filter(username__iexact=username).first()
+
+        # Verify password and active status
+        if user and user.check_password(password) and self.user_can_authenticate(user):
+            return user
+
+        return None
+
+    def user_can_authenticate(self, user):
+        """Check if user can authenticate (must be active)."""
+        return getattr(user, 'is_active', True)
+
+    def get_user(self, user_id):
+        """Retrieve a user by ID."""
+        from .models import CustomUser
+        try:
+            return CustomUser.objects.get(pk=user_id)
+        except CustomUser.DoesNotExist:
+            return None
+
+
+# ===========================================================================
+# FLOW HELPERS
+# ===========================================================================
 
 def _finalize_email_change_failure(request, user, old_email, new_email):
     """Send failure emails to both, reset is_email_verified, clear session."""
     _send_email_change_failure_email(old_email, new_email, user.first_name)
-    # Revert is_email_verified since email did not change
     user.is_email_verified = True
     user.save()
     for key in ("ce_new_email", "ce_old_email", "ce_otp", "ce_resend_count"):
         request.session.pop(key, None)
+
 
 def _dispatch_reset_otp(request, email, username, first_name):
     otp = generate_otp()
@@ -321,4 +387,3 @@ def _handle_recovery_lockout(request, email, first_name):
     _send_recovery_failed_email(email, first_name)
     for key in ("fp_email", "fp_username", "fp_first_name", "fp_email_tries", "fp_user_tries", "fp_mode", "fp_otp"):
         request.session.pop(key, None)
-
