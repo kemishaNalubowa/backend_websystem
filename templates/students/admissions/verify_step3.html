@@ -27,7 +27,7 @@
     <h4 class="fw-800 mb-0">Verify — Step 3: Create Parent Accounts</h4>
     <p class="text-muted small mb-0">
       The following parent accounts will be created. Each new parent will receive
-      a unique Parent ID and a shared portal access token.
+      a unique Parent ID and will be able to log in using their phone number (setting their password on first login).
     </p>
   </div>
 </div>
@@ -83,7 +83,6 @@
           <dt class="col-5 text-muted fw-700">Will receive</dt>
           <dd class="col-7">
             <span class="badge bg-secondary-subtle text-secondary border">Auto Parent ID</span>
-            <span class="badge bg-info-subtle text-info border border-info-subtle ms-1">Shared Token</span>
           </dd>
           {% endif %}
           <dt class="col-5 text-muted fw-700">Relationship</dt>
@@ -100,7 +99,7 @@
   <div class="card-body">
     <p class="small text-muted mb-3">
       Clicking <strong>Create Parent Accounts</strong> will create all the parent records above.
-      A single shared access token will be generated and set as the portal login password for all parents of this student.
+      Parents will be able to log in using their phone numbers and set their custom password on first login.
     </p>
     <form method="post">
       {% csrf_token %}

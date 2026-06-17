@@ -364,13 +364,13 @@ def get_user_list_stats() -> dict:
     }
 
     return {
-        'total':    qs.count(),
-        'parents':  by_type.get('parent', 0),
-        'teachers': by_type.get('teacher', 0),
-        'staff':    by_type.get('staff', 0),
-        'admins':   by_type.get('admin', 0),
-        'active':   qs.filter(is_active=True).count(),
-        'inactive': qs.filter(is_active=False).count(),
+        'total_users':    qs.count(),
+        'parent_count':   by_type.get('parent', 0),
+        'teacher_count':  by_type.get('teacher', 0),
+        'staff_count':    by_type.get('staff', 0),
+        'admin_count':    by_type.get('admin', 0),
+        'active_count':   qs.filter(is_active=True).count(),
+        'inactive_count': qs.filter(is_active=False).count(),
     }
 
 

@@ -30,15 +30,22 @@ from school.views.event_views import (
     event_list, event_add, event_edit,
     event_delete, event_detail, event_toggle_published,
 )
-# from school.views.calendar_views import (
-#     calendar_list, calendar_add, calendar_edit,
-#     calendar_delete, calendar_detail,
-#     calendar_toggle_published, calendar_toggle_active,
-# )
+from school.views.image_views import (
+    image_list, image_add, image_edit,
+    image_delete, image_toggle_active,
+)
 
 app_name = 'school'
 
 urlpatterns = [
+
+    # ── Dynamic Images ───────────────────────────────────────────────────────
+    path('images/',                           image_list,             name='image_list'),
+    path('images/add/',                       image_add,              name='image_add'),
+    path('images/<int:pk>/edit/',             image_edit,             name='image_edit'),
+    path('images/<int:pk>/delete/',           image_delete,           name='image_delete'),
+    path('images/<int:pk>/toggle-active/',    image_toggle_active,    name='image_toggle_active'),
+
 
     # ── School Profile ────────────────────────────────────────────────────────
     path('profile/',        school_profile,      name='school_profile'),

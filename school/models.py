@@ -205,3 +205,104 @@ class SchoolEvent(TimeStampedModel):
     def __str__(self):
         return f"{self.title} | {self.start_date} — {self.get_event_type_display()}"
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+class DynamicImage(TimeStampedModel):
+    """
+    Admin-managed image assets for the public-facing website.
+    Each image has a unique `key` (e.g. 'about_hero', 'events_hero',
+    'team_director') that the frontend references by name.
+    The API returns each key with a cache-busting ?v= query string
+    derived from the file's last-modified timestamp so browsers always
+    fetch the latest version after an upload.
+    """
+
+    CATEGORY_CHOICES = [
+        ('hero',  'Hero / Banner Image'),
+        ('team',  'Team Member Photo'),
+        ('event', 'Event Image'),
+        ('other', 'Other'),
+    ]
+
+    key         = models.SlugField(
+                      max_length=80, unique=True,
+                      help_text=(
+                          'Machine-readable identifier used by the frontend. '
+                          'Examples: about_hero, events_hero, team_director'
+                      )
+                  )
+    label       = models.CharField(
+                      max_length=150,
+                      help_text='Human-readable label shown in admin (e.g. "About Us Hero Image")'
+                  )
+    category    = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='other')
+    image       = models.ImageField(
+                      upload_to='dynamic_images/',
+                      help_text='Upload the image file. Replaces any previous version.'
+                  )
+    description = models.TextField(blank=True, help_text='Optional notes for admin reference')
+    is_active   = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name        = 'Dynamic Image'
+        verbose_name_plural = 'Dynamic Images'
+        ordering            = ['category', 'key']
+
+    def __str__(self):
+        return f"[{self.get_category_display()}] {self.label} ({self.key})"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fee Management Models
+
+class FeeCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = "Fee Category"
+        verbose_name_plural = "Fee Categories"
+
+    def __str__(self):
+        return self.name
+
+class FeeStructure(models.Model):
+    fee_category = models.ForeignKey(FeeCategory, on_delete=models.CASCADE, related_name='structures')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    academic_year = models.CharField(max_length=9)  # e.g., "2025-2026"
+    grade_level = models.CharField(max_length=50)  # e.g., "Grade 10"
+
+    class Meta:
+        verbose_name = "Fee Structure"
+        verbose_name_plural = "Fee Structures"
+        unique_together = ('fee_category', 'academic_year', 'grade_level')
+
+    def __str__(self):
+        return f"{self.fee_category.name} - {self.grade_level} ({self.academic_year})"
+
+class StudentFee(models.Model):
+    student = models.ForeignKey('authentication.CustomUser', on_delete=models.CASCADE, related_name='student_fees')
+    fee_structure = models.ForeignKey(FeeStructure, on_delete=models.CASCADE, related_name='student_fees')
+    due_date = models.DateField()
+    is_paid = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Student Fee"
+        verbose_name_plural = "Student Fees"
+
+    def __str__(self):
+        return f"{self.student.username} - {self.fee_structure}"
+
+class Payment(models.Model):
+    student_fee = models.ForeignKey(StudentFee, on_delete=models.CASCADE, related_name='payments')
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_date = models.DateTimeField(auto_now_add=True)
+    transaction_id = models.CharField(max_length=100, unique=True)
+    payment_method = models.CharField(max_length=50, blank=True)
+
+    class Meta:
+        verbose_name = "Payment"
+        verbose_name_plural = "Payments"
+
+    def __str__(self):
+        return f"{self.transaction_id} - {self.amount_paid}"

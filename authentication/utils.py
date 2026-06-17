@@ -322,20 +322,30 @@ class PhoneOrUsernameBackend:
         User = get_user_model()
         user = None
 
-        # Normalise whatever was passed in
-        norm_phone = re.sub(r"[\s\-\(\)\+]", "", username or phone or "")
+        target = phone or username or ""
+        cleaned_digits = re.sub(r"\D", "", target)
+        phone_variations = [target]
+        if cleaned_digits:
+            phone_variations.append(cleaned_digits)
+            if len(cleaned_digits) == 9:
+                phone_variations.extend(["0" + cleaned_digits, "256" + cleaned_digits])
+            elif len(cleaned_digits) == 10 and cleaned_digits.startswith("0"):
+                phone_variations.extend([cleaned_digits[1:], "256" + cleaned_digits[1:]])
+            elif len(cleaned_digits) == 12 and cleaned_digits.startswith("256"):
+                phone_variations.extend([cleaned_digits[3:], "0" + cleaned_digits[3:]])
+        phone_variations = list(set(phone_variations))
 
         # If a dedicated phone kwarg was passed, search by phone_number only
         if phone:
             user = User.objects.filter(
-                phone__in=[phone, norm_phone],
+                phone__in=phone_variations,
                 user_type__in=['parent', 'teacher', 'staff']
             ).first()
 
         elif username:
             # Try phone_number first (parents / staff / teachers)
             user = User.objects.filter(
-                phone__in=[username, norm_phone],
+                phone__in=phone_variations,
                 user_type__in=['parent', 'teacher', 'staff']
             ).first()
 

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Delete Image{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'school:image_list' %}" class="text-secondary">Site Images</a></li>
+<li class="breadcrumb-item active">Delete Image</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <div class="card border-danger">
+      <div class="card-header bg-danger-subtle border-bottom border-danger py-3">
+        <h5 class="fw-700 mb-0 text-danger">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Deletion
+        </h5>
+      </div>
+      <div class="card-body text-center py-4">
+        {% if image.image %}
+        <div class="mb-3">
+          <img src="{{ image.image.url }}" alt="{{ image.label }}"
+               class="rounded border" style="max-height:150px;max-width:100%;object-fit:contain;"/>
+        </div>
+        {% endif %}
+        <h5 class="fw-700 mb-1">{{ image.label }}</h5>
+        <code class="d-block mb-2">{{ image.key }}</code>
+        <p class="text-muted small mb-0">
+          Are you sure you want to permanently delete this image?<br>
+          This action cannot be undone.
+        </p>
+      </div>
+      <div class="modal-footer border-top border-danger-subtle justify-content-center">
+        <form method="post">
+          {% csrf_token %}
+          <div class="d-flex gap-2">
+            <a href="{% url 'school:image_list' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-x-lg me-1"></i>Cancel
+            </a>
+            <button type="submit" class="btn btn-danger px-4">
+              <i class="bi bi-trash me-1"></i>Delete Image
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+</write_to_file>

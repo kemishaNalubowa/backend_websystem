@@ -126,6 +126,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_active         = models.BooleanField(default=True)
     is_staff          = models.BooleanField(default=False)
     is_email_verified = models.BooleanField(default=False)
+    is_first_login    = models.BooleanField(default=True, help_text='Flags if the user must change password on next login.')
+
+    # ── Password Recovery ─────────────────────────────────────────────────────
+    reset_token        = models.CharField(max_length=10, blank=True, null=True)
+    reset_token_expiry = models.DateTimeField(blank=True, null=True)
 
     # ── Timestamps ────────────────────────────────────────────────────────────
     date_joined      = models.DateTimeField(auto_now_add=True)

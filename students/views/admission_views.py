@@ -557,6 +557,46 @@ def admission_update_status(request, pk):
                 setattr(adm, field, value)
             adm.reviewed_by = request.user
             adm.save()
+            
+            # Simulate sending response notification via SMS / Email
+            new_status = cleaned['status']
+            if new_status in ('approved', 'rejected'):
+                parents = adm.get_parents_data()
+                primary_parent = parents[0] if parents else None
+                if primary_parent:
+                    parent_name = primary_parent.get('full_name', 'Parent')
+                    parent_phone = primary_parent.get('phone', '')
+                    parent_email = primary_parent.get('email', '')
+                    student_name = f"{adm.first_name} {adm.last_name}"
+                    
+                    if new_status == 'approved':
+                        message_body = (
+                            f"Dear {parent_name}, we are pleased to inform you that your admission application "
+                            f"({adm.admission_number}) for {student_name} to JOKS School Connect has been APPROVED. "
+                            f"Please log in to the School Portal using your phone number to complete onboarding."
+                        )
+                    else:
+                        reason_str = f" Reason: {adm.rejection_reason}" if adm.rejection_reason else ""
+                        message_body = (
+                            f"Dear {parent_name}, we regret to inform you that your admission application "
+                            f"({adm.admission_number}) for {student_name} to JOKS School Connect has been rejected.{reason_str}"
+                        )
+                        
+                    # Simulated output (log to console)
+                    print("\n" + "="*80)
+                    print(f"--- [SIMULATED NOTIFICATION DIALER] ---")
+                    print(f"Status: Sending notification via SMS & Email...")
+                    print(f"Recipient Name: {parent_name}")
+                    if parent_phone:
+                        print(f"SMS Dispatch -> To: {parent_phone} | Message: \"{message_body}\"")
+                    if parent_email:
+                        print(f"Email Dispatch -> To: {parent_email} | Subject: Admission Application {new_status.upper()} | Body: \"{message_body}\"")
+                    print("="*80 + "\n")
+                    
+                    messages.info(
+                        request,
+                        f"Simulated {new_status.upper()} response notification sent to {parent_name} ({parent_phone or parent_email})."
+                    )
     except Exception as exc:
         messages.error(request, f'Could not update status: {exc}')
         return redirect('students:admission_detail', pk=adm.pk)

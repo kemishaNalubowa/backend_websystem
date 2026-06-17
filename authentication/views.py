@@ -1,5 +1,8 @@
 import re
+import json
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
+from rest_framework.authtoken.models import Token
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout, update_session_auth_hash
 
@@ -240,19 +243,42 @@ def user_login(request):
     if request.method == "GET":
         return render(request, "authentication/login.html")
 
-    username = request.POST.get("username", "").strip()
-    password          = request.POST.get("password", "").strip()
-
+    # Support both form-encoded and JSON payloads
+    if request.content_type == "application/json":
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            messages.error(request, "Invalid JSON payload.")
+            return JsonResponse({"success": false, "message": "Invalid JSON payload."}, status=400)
+        username = data.get("contact", "").strip()
+        password = data.get("password", "").strip()
+    else:
+        # Existing form handling
+        username = request.POST.get("username", "").strip() or request.POST.get("contact", "").strip()
+        password = request.POST.get("password", "").strip()
+    
     if not username:
-        messages.error(request, "Username or Password Is required.")
+        messages.error(request, "Username or contact is required.")
+        if request.content_type == "application/json":
+            return JsonResponse({"success": false, "message": "Username or contact is required."}, status=400)
         return redirect(reverse("login"))
-
+    
     if not password:
         messages.error(request, "Password is required.")
+        if request.content_type == "application/json":
+            return JsonResponse({"success": false, "message": "Password is required."}, status=400)
         return redirect(reverse("login"))
 
+    # Support login via phone number (contact)
     user = None
-    
+    # If identifier looks like a phone number, normalize and lookup the user by phone_number
+    if username.replace('+', '').isdigit():
+        normalized = re.sub(r"[\s\-\(\)\+]", "", username)
+        try:
+            contact_user = CustomUser.objects.get(phone_number=normalized)
+            username = contact_user.username
+        except CustomUser.DoesNotExist:
+            pass
     user = authenticate(request, username=username, password=password)
 
     
@@ -267,14 +293,27 @@ def user_login(request):
 
     login(request, user)
     messages.success(request, f"Welcome back, {user.first_name}!")
-
+    # Generate token for API usage
+    token_obj, _ = Token.objects.get_or_create(user=user)
+    # Determine response based on request type
+    if request.content_type == "application/json":
+        # Return JSON with token and basic user info
+        return JsonResponse({
+            "success": True,
+            "token": token_obj.key,
+            "user": {
+                "id": user.id,
+                "name": user.get_full_name() or user.first_name,
+                "contact": user.phone_number,
+                "email": user.email,
+                "role": user.user_type,
+            },
+        })
+    # Fallback to HTML redirect for normal web login
     next_url = request.POST.get('next') or request.GET.get('next')
-
     from accounts.models import ParentProfile
-
     if user.user_type == 'parent':
         return redirect(next_url if next_url else reverse("parent_dashboard"))
-    
     return redirect(next_url if next_url else reverse("dashboard"))
 
 

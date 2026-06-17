@@ -1,11 +1,10 @@
-{% comment %}
+<![CDATA[{% comment %}
 dashboard/templates/dashboard/base_parent.html
 ──────────────────────────────────────────────
 Base layout for the parent portal.
-• Bootstrap 5 (CDN)
-• Bootstrap Icons (CDN)
-• No custom CSS — Bootstrap utility classes only
-• No custom JS — Bootstrap bundle handles all interactivity
+• Bootstrap 5
+• Bootstrap Icons
+• Theme-aligned colors (navy, teal, purple)
 {% endcomment %}
 
 
@@ -18,19 +17,167 @@ Base layout for the parent portal.
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Parent Portal{% endblock %} — JOKS School Connect</title>
 
-  <!-- Bootstrap 5 -->
-    <!-- Bootstrap 5 CSS -->
+  <!-- Bootstrap 5 CSS -->
   <link href="{% static 'vendors/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet"/>
   <!-- Bootstrap Icons -->
   <link href="{% static 'vendors/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet"/>
+  <!-- Theme overrides -->
+  <link href="{% static 'css/theme.css' %}" rel="stylesheet"/>
 
+  <style>
+    :root {
+      --navy-dark:        #0f172a;
+      --navy:             #1e3a8a;
+      --navy-light:       #2563eb;
+      --teal:             #0d9488;
+      --teal-light:       #14b8a6;
+      --teal-dark:        #0f766e;
+      --purple:           #7c3aed;
+      --purple-light:     #a78bfa;
+      --bg-light:         #f8fafc;
+      --text-primary:     #0f172a;
+      --text-secondary:   #475569;
+      --text-muted:       #64748b;
+      --border:           #e2e8f0;
+      --radius-md:        0.5rem;
+      --radius-lg:        0.75rem;
+      --shadow-sm: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+      --shadow-md: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.08);
+    }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-light);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(124, 58, 237, 0.03) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(13, 148, 136, 0.04) 0%, transparent 50%);
+      color: var(--text-primary);
+      font-size: 0.92rem;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Outfit', sans-serif; }
+    
+    /* Parent portal navbar - teal gradient */
+    .navbar-parent {
+      background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dark) 100%) !important;
+      box-shadow: 0 4px 20px rgba(13, 148, 136, 0.2);
+    }
+    .navbar-parent .navbar-brand {
+      color: #fff !important;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .navbar-parent .nav-link {
+      color: rgba(255, 255, 255, 0.85) !important;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .navbar-parent .nav-link:hover {
+      color: #fff !important;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+    }
+    .navbar-parent .btn-outline-light {
+      border-color: rgba(255, 255, 255, 0.5);
+      color: #fff;
+      transition: all 0.2s ease;
+    }
+    .navbar-parent .btn-outline-light:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: #fff;
+    }
+    .navbar-parent .badge.bg-light {
+      background: rgba(255, 255, 255, 0.9) !important;
+      color: var(--teal-dark) !important;
+    }
+    .navbar-parent .navbar-text {
+      color: rgba(255, 255, 255, 0.8) !important;
+    }
+
+    /* Sidebar */
+    .sidebar-parent {
+      background: #fff;
+      border-right: 1px solid var(--border);
+      box-shadow: 1px 0 10px rgba(15, 23, 42, 0.03);
+    }
+    .sidebar-parent .nav-link {
+      color: var(--text-secondary);
+      font-weight: 500;
+      padding: 0.6rem 1rem;
+      border-radius: var(--radius-md);
+      transition: all 0.2s ease;
+    }
+    .sidebar-parent .nav-link:hover {
+      background: rgba(13, 148, 136, 0.06);
+      color: var(--teal);
+    }
+    .sidebar-parent .nav-link.active {
+      background: rgba(13, 148, 136, 0.1);
+      color: var(--teal-dark);
+      font-weight: 700;
+    }
+    .sidebar-parent .nav-link.text-success { color: var(--teal) !important; }
+    .sidebar-parent .nav-link.text-success:hover { color: var(--teal-dark) !important; }
+    .sidebar-parent .nav-link.text-danger { color: #ef4444 !important; }
+    .sidebar-parent .nav-link.text-danger:hover { color: #b91c1c !important; }
+    .sidebar-parent hr { border-color: var(--border); }
+
+    /* Cards */
+    .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s ease;
+    }
+    .card:hover { box-shadow: var(--shadow-md); }
+    .card-header {
+      background: linear-gradient(135deg, rgba(13, 148, 136, 0.03), rgba(13, 148, 136, 0.01));
+      border-bottom: 1px solid var(--border);
+      font-weight: 700;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      background: linear-gradient(135deg, var(--teal) 0%, var(--teal-light) 100%);
+      border: none;
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+      transition: all 0.25s ease;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--teal-dark) 0%, var(--teal) 100%);
+      box-shadow: 0 6px 16px rgba(13, 148, 136, 0.35);
+      transform: translateY(-2px);
+    }
+
+    /* Alerts */
+    .alert {
+      border-radius: var(--radius-md);
+      border-left: 4px solid;
+      border-top: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .alert-success { background: rgba(16, 185, 129, 0.05); border-left-color: #10b981; }
+    .alert-danger { background: rgba(239, 68, 68, 0.05); border-left-color: #ef4444; }
+    .alert-warning { background: rgba(245, 158, 11, 0.05); border-left-color: #f59e0b; }
+    .alert-info { background: rgba(14, 165, 233, 0.05); border-left-color: #0ea5e9; }
+
+    a { color: var(--teal); transition: all 0.2s ease; text-decoration: none; }
+    a:hover { color: var(--teal-dark); }
+    
+    .badge { border-radius: 999px; font-weight: 600; }
+    .badge.bg-primary { background: linear-gradient(135deg, var(--teal) 0%, var(--teal-light) 100%) !important; }
+    .badge.bg-primary-subtle { background: rgba(13, 148, 136, 0.1) !important; color: var(--teal-dark) !important; border: 1px solid rgba(13, 148, 136, 0.2) !important; }
+  </style>
 </head>
 <body class="bg-light">
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!--  TOP NAVBAR                                                            -->
+<!--  TOP NAVBAR (Teal gradient)                                            -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm sticky-top">
+<nav class="navbar navbar-parent navbar-expand-lg sticky-top">
   <div class="container-fluid px-3 px-lg-4">
 
     <!-- Brand -->
@@ -78,11 +225,11 @@ Base layout for the parent portal.
       <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
         {% if request.user.is_authenticated %}
         <li class="nav-item">
-          <span class="navbar-text text-white-50 small d-flex align-items-center gap-1">
+          <span class="navbar-text small d-flex align-items-center gap-1">
             <i class="bi bi-person-circle"></i>
             {{ request.user.get_full_name }}
             {% if request.user.parent_id %}
-              <span class="badge bg-light text-primary ms-1">{{ request.user.parent_id }}</span>
+              <span class="badge bg-light ms-1">{{ request.user.parent_id }}</span>
             {% endif %}
           </span>
         </li>
@@ -109,14 +256,14 @@ Base layout for the parent portal.
   <div class="row">
 
     <!-- ── SIDEBAR (desktop only) ───────────────────────────────────────── -->
-    <nav class="col-lg-2 d-none d-lg-block bg-white border-end min-vh-100 px-0 shadow-sm">
+    <nav class="col-lg-2 d-none d-lg-block sidebar-parent min-vh-100 px-0">
       <div class="py-3">
 
         <!-- Parent name card -->
         <div class="px-3 pb-3 border-bottom">
           <div class="d-flex align-items-center gap-2">
-            <div class="rounded-circle bg-primary bg-opacity-10 p-2">
-              <i class="bi bi-person-fill text-primary fs-5"></i>
+            <div class="rounded-circle p-2" style="background: rgba(13, 148, 136, 0.1);">
+              <i class="bi bi-person-fill" style="color: var(--teal); font-size: 1.2rem;"></i>
             </div>
             <div>
               <div class="fw-semibold small lh-sm">{{ request.user.get_full_name }}</div>
@@ -183,10 +330,10 @@ Base layout for the parent portal.
               class="alert alert-{% if msg.tags == 'error' %}danger{% else %}{{ msg.tags }}{% endif %} alert-dismissible fade show d-flex align-items-start gap-2"
               role="alert"
             >
-              {% if msg.tags == 'success' %}<i class="bi bi-check-circle-fill text-success mt-1 flex-shrink-0"></i>
-              {% elif msg.tags == 'error' %}<i class="bi bi-exclamation-triangle-fill text-danger mt-1 flex-shrink-0"></i>
-              {% elif msg.tags == 'warning' %}<i class="bi bi-exclamation-circle-fill text-warning mt-1 flex-shrink-0"></i>
-              {% else %}<i class="bi bi-info-circle-fill text-info mt-1 flex-shrink-0"></i>{% endif %}
+              {% if msg.tags == 'success' %}<i class="bi bi-check-circle-fill mt-1 flex-shrink-0" style="color: #10b981;"></i>
+              {% elif msg.tags == 'error' %}<i class="bi bi-exclamation-triangle-fill mt-1 flex-shrink-0" style="color: #ef4444;"></i>
+              {% elif msg.tags == 'warning' %}<i class="bi bi-exclamation-circle-fill mt-1 flex-shrink-0" style="color: #f59e0b;"></i>
+              {% else %}<i class="bi bi-info-circle-fill mt-1 flex-shrink-0" style="color: #0ea5e9;"></i>{% endif %}
               <span>{{ msg|safe }}</span>
               <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
@@ -209,3 +356,4 @@ Base layout for the parent portal.
 {% block extra_js %}{% endblock %}
 </body>
 </html>
+]]>

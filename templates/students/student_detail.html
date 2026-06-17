@@ -9,22 +9,6 @@
 
 {% block content %}
 
-{# ── One-time access token banner (shown immediately after creation) ── #}
-{% if new_token %}
-<div class="alert alert-warning border-warning border-2 d-flex gap-3 align-items-start mb-4">
-  <i class="bi bi-key-fill text-warning fs-3 flex-shrink-0"></i>
-  <div>
-    <div class="fw-700 mb-1">Portal Access Token — Note this down now</div>
-    <div class="bg-dark text-success font-monospace rounded px-3 py-2 d-inline-block mb-2"
-         style="font-size:1.2rem;letter-spacing:.08em;">{{ new_token }}</div>
-    <div class="small text-muted">
-      This is the shared login password for all parents of <strong>{{ student.full_name }}</strong>.
-      Each parent uses their own <strong>Parent ID</strong> as the username.
-      This token is only shown once in plain text.
-    </div>
-  </div>
-</div>
-{% endif %}
 
 {# ── Page header ── #}
 <div class="d-flex align-items-start justify-content-between mb-4 gap-3 flex-wrap">

@@ -12,19 +12,71 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
+from school.models import FeeStructure, SchoolAnnouncement
+from school.serializers import FeeStructureSerializer
 
 from authentication.models import CustomUser
 from accounts.models import ParentProfile
 from students.models import Student, StudentParentRelationship
-from academics.models import SchoolSupportedClasses, Term
+from academics.models import SchoolSupportedClasses, Term, SchoolClassTeacher, TeacherClass, TeacherSubject
 from fees.models import (
     SchoolFees, FeesPayment, StudentFeesPaymentsStatus,
     SchoolScholasticRequirements, StudentScholasticRequirementStatus,
     ScholasticRequirementPayment
 )
 from assessments.models import Assessment, AssessmentSubject, AssessmentPerformance, AssessmentTotalMark
-from school.models import SchoolAnnouncement, SchoolEvent
+from django.utils import timezone
+import datetime
+
+# --- Password Validation Utility ---
+def validate_password_strength(password, user_contact=None, user_id=None):
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long."
+    if not re.search(r"[A-Z]", password):
+        return False, "Password must contain at least one uppercase letter."
+    if not re.search(r"[a-z]", password):
+        return False, "Password must contain at least one lowercase letter."
+    if not re.search(r"[0-9]", password):
+        return False, "Password must contain at least one number."
+    if not re.search(r"[@#$%^&*!]", password):
+        return False, "Password must contain at least one special character (@#$%^&*!)."
+    if password.strip() == "":
+        return False, "Password must not contain only spaces."
+    if user_contact and password == user_contact:
+        return False, "Password cannot be the same as your contact number."
+    if user_id and password == user_id:
+        return False, "Password cannot be the same as your User ID."
+    return True, "Valid password"
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_dynamic_images(request):
+    """Return a map of image keys to URLs with cache‑busting query strings."""
+    images = DynamicImage.objects.filter(is_active=True)
+    data = {}
+    for img in images:
+        # Build absolute URL and append version based on updated_at timestamp
+        url = request.build_absolute_uri(img.image.url)
+        if img.updated_at:
+            version = img.updated_at.strftime('%Y%m%d%H%M%S')
+            url = f"{url}?v={version}"
+        data[img.key] = {
+            "url": url,
+            "label": img.label,
+            "category": img.category,
+        }
+    return Response(data)
+
 from communication.models import ParentsRequest, ParentsRequestReply
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_fees_structure(request):
+    """Return flat list of fee structures."""
+    fees = FeeStructure.objects.select_related('fee_category').all()
+    serializer = FeeStructureSerializer(fees, many=True)
+    return Response(serializer.data)
+
 from students.utils.admission_utils import generate_parent_id, generate_access_token
 
 @api_view(['POST'])
@@ -66,83 +118,255 @@ def parent_login(request):
             'message': 'Phone number and password are required.'
         }, status=400)
         
-    # Normalize phone search
-    norm_contact = re.sub(r"[\s\-\(\)\+]", "", contact)
+    # Get all phone number variations for robust lookup
+    cleaned_digits = re.sub(r"\D", "", contact)
+    phone_variations = [contact, cleaned_digits]
+    if cleaned_digits:
+        if len(cleaned_digits) == 9:
+            phone_variations.extend(["0" + cleaned_digits, "256" + cleaned_digits])
+        elif len(cleaned_digits) == 10 and cleaned_digits.startswith("0"):
+            phone_variations.extend([cleaned_digits[1:], "256" + cleaned_digits[1:]])
+        elif len(cleaned_digits) == 12 and cleaned_digits.startswith("256"):
+            phone_variations.extend([cleaned_digits[3:], "0" + cleaned_digits[3:]])
+    phone_variations = list(set(phone_variations))
     
-    # Look up CustomUser by phone or username
+    # Look up CustomUser by phone, username or parent_id (allow any active user type)
     user = CustomUser.objects.filter(
-        Q(phone=contact) | Q(phone=norm_contact) | Q(username__iexact=contact) | Q(parent_id__iexact=contact),
-        user_type='parent',
+        Q(phone__in=phone_variations) | Q(username__iexact=contact) | Q(parent_id__iexact=contact),
         is_active=True
     ).first()
     
     if not user:
         return Response({
             'success': False, 
-            'message': 'Invalid phone number or password.'
+            'message': 'Invalid contact or password.'
         }, status=401)
         
-    # Authenticate using phone + password
+    # First-time login password initialization (only for parent role)
+    if user.user_type == 'parent':
+        try:
+            profile = user.parent_profile
+            if profile.access_token and user.check_password(profile.access_token):
+                # First login: update the user's password to the entered password
+                user.set_password(password)
+                user.save()
+                profile.access_token = ""  # Mark first-login completed by clearing token
+                profile.save(update_fields=['access_token'])
+        except ParentProfile.DoesNotExist:
+            pass
+
+    # Authenticate using phone + password, falling back to username + password
     authenticated_user = authenticate(request, phone=contact, password=password)
+    if not authenticated_user:
+        authenticated_user = authenticate(request, username=contact, password=password)
+        
     if not authenticated_user:
         return Response({
             'success': False, 
-            'message': 'Invalid phone number or password.'
+            'message': 'Invalid contact or password.'
         }, status=401)
         
-    # Get or create DRF token (NOT stored in ParentProfile)
+    # Check if this is the user's first login
+    if authenticated_user.is_first_login:
+        return Response({
+            'success': True,
+            'requires_password_change': True,
+            'contact': contact,
+            'user_id': authenticated_user.pk,
+            'message': 'Please set up a secure personal password to continue.'
+        })
+
+    # Get or create DRF token
     token, _ = Token.objects.get_or_create(user=authenticated_user)
     
-    # Get parent profile
-    try:
-        profile = authenticated_user.parent_profile
-    except ParentProfile.DoesNotExist:
+    # Handle role-specific response data
+    role = authenticated_user.user_type
+    
+    if role == 'parent':
+        try:
+            profile = authenticated_user.parent_profile
+        except ParentProfile.DoesNotExist:
+            return Response({
+                'success': False, 
+                'message': 'Parent profile not found.'
+            }, status=404)
+            
+        # Get linked students
+        students = []
+        try:
+            relationships = StudentParentRelationship.objects.filter(parent=profile)
+            for rel in relationships:
+                students.append({
+                    'id': rel.student.pk,
+                    'student_id': rel.student.student_id,
+                    'name': rel.student.full_name
+                })
+        except Exception:
+            pass
+            
         return Response({
-            'success': False, 
-            'message': 'Parent profile not found.'
-        }, status=404)
+            'success': True,
+            'token': token.key,
+            'role': 'parent',
+            'parent': {
+                'id': profile.parent_id,
+                'name': authenticated_user.full_name,
+                'contact': authenticated_user.phone,
+                'email': authenticated_user.email
+            },
+            'students': students
+        })
+    else:
+        # Check if they are also a parent
+        is_also_parent = False
+        parent_students = []
         
-    # Get linked students
-    students = []
-    try:
-        relationships = StudentParentRelationship.objects.filter(parent=profile)
-        for rel in relationships:
-            students.append({
-                'id': rel.student.pk,
-                'student_id': rel.student.student_id,
-                'name': rel.student.full_name
-            })
-    except Exception:
-        pass
-        
-    return Response({
-        'success': True,
-        'token': token.key,  # Frontend stores this and uses it for all API requests
-        'parent': {
-            'id': profile.parent_id,
-            'name': authenticated_user.full_name,
-            'contact': authenticated_user.phone,
-            'email': authenticated_user.email
-        },
-        'students': students
-    })
-
+        if hasattr(authenticated_user, 'parent_profile'):
+            is_also_parent = True
+            try:
+                relationships = StudentParentRelationship.objects.filter(parent=authenticated_user.parent_profile)
+                for rel in relationships:
+                    parent_students.append({
+                        'id': rel.student.pk,
+                        'student_id': rel.student.student_id,
+                        'name': rel.student.full_name
+                    })
+            except Exception:
+                pass
+                
+        return Response({
+            'success': True,
+            'token': token.key,
+            'role': role,
+            'user': {
+                'id': authenticated_user.pk,
+                'name': authenticated_user.full_name,
+                'contact': authenticated_user.phone,
+                'email': authenticated_user.email
+            },
+            'is_also_parent': is_also_parent,
+            'parent_students': parent_students
+        })
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def set_initial_password(request):
+    contact = request.data.get('contact', '').strip()
+    current_password = request.data.get('current_password', '').strip()
+    new_password = request.data.get('new_password', '')
+    
+    authenticated_user = authenticate(request, phone=contact, password=current_password)
+    if not authenticated_user:
+        authenticated_user = authenticate(request, username=contact, password=current_password)
+        
+    if not authenticated_user:
+        return Response({'success': False, 'message': 'Invalid credentials.'}, status=401)
+        
+    if not authenticated_user.is_first_login:
+        return Response({'success': False, 'message': 'Account already activated.'}, status=400)
+        
+    is_valid, msg = validate_password_strength(new_password, user_contact=contact, user_id=authenticated_user.username)
+    if not is_valid:
+        return Response({'success': False, 'message': msg}, status=400)
+        
+    authenticated_user.set_password(new_password)
+    authenticated_user.is_first_login = False
+    authenticated_user.save()
+    
+    # Authenticate with the new password to generate token
+    token, _ = Token.objects.get_or_create(user=authenticated_user)
+    
+    # We will let the frontend redirect them back to login or we could return the dashboard payload.
+    # For simplicity, let the frontend redirect to login screen after success.
+    return Response({'success': True, 'message': 'Password set successfully. Please log in with your new password.'})
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def forgot_password_request(request):
+    contact = request.data.get('contact', '').strip()
+    if not contact:
+        return Response({'success': False, 'message': 'Contact number is required.'}, status=400)
+        
+    cleaned_digits = re.sub(r"\D", "", contact)
+    phone_variations = [contact, cleaned_digits]
+    if cleaned_digits:
+        if len(cleaned_digits) == 9:
+            phone_variations.extend(["0" + cleaned_digits, "256" + cleaned_digits])
+        elif len(cleaned_digits) == 10 and cleaned_digits.startswith("0"):
+            phone_variations.extend([cleaned_digits[1:], "256" + cleaned_digits[1:]])
+    phone_variations = list(set(phone_variations))
+    
+    user = CustomUser.objects.filter(
+        Q(phone__in=phone_variations) | Q(username__iexact=contact) | Q(parent_id__iexact=contact),
+        is_active=True
+    ).first()
+    
+    if not user:
+        return Response({'success': False, 'message': 'No active account found with this contact.'}, status=404)
+        
+    token_str = ''.join(secrets.choice(string.digits) for i in range(6))
+    user.reset_token = token_str
+    user.reset_token_expiry = timezone.now() + datetime.timedelta(minutes=15)
+    user.save()
+    
+    # Simulate sending SMS
+    print(f"\n==================================================")
+    print(f"SMS TO: {user.phone or contact}")
+    print(f"MESSAGE: Your JOKS School password reset code is {token_str}. It expires in 15 minutes.")
+    print(f"==================================================\n")
+    
+    return Response({'success': True, 'message': 'If an account exists, a reset code has been sent.', 'simulated_token': token_str})
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def forgot_password_reset(request):
+    contact = request.data.get('contact', '').strip()
+    token_str = request.data.get('token', '').strip()
+    new_password = request.data.get('new_password', '')
+    
+    cleaned_digits = re.sub(r"\D", "", contact)
+    phone_variations = [contact, cleaned_digits]
+    if cleaned_digits:
+        if len(cleaned_digits) == 9:
+            phone_variations.extend(["0" + cleaned_digits, "256" + cleaned_digits])
+        elif len(cleaned_digits) == 10 and cleaned_digits.startswith("0"):
+            phone_variations.extend([cleaned_digits[1:], "256" + cleaned_digits[1:]])
+    phone_variations = list(set(phone_variations))
+    
+    user = CustomUser.objects.filter(
+        Q(phone__in=phone_variations) | Q(username__iexact=contact) | Q(parent_id__iexact=contact),
+        is_active=True
+    ).first()
+    
+    if not user:
+        return Response({'success': False, 'message': 'Invalid request.'}, status=400)
+        
+    if not user.reset_token or user.reset_token != token_str:
+        return Response({'success': False, 'message': 'Invalid or expired reset code.'}, status=400)
+        
+    if not user.reset_token_expiry or timezone.now() > user.reset_token_expiry:
+        return Response({'success': False, 'message': 'Reset code has expired. Please request a new one.'}, status=400)
+        
+    is_valid, msg = validate_password_strength(new_password, user_contact=contact, user_id=user.username)
+    if not is_valid:
+        return Response({'success': False, 'message': msg}, status=400)
+        
+    user.set_password(new_password)
+    user.reset_token = None
+    user.reset_token_expiry = None
+    user.is_first_login = False
+    user.save()
+    
+    return Response({'success': True, 'message': 'Password has been reset successfully. You can now log in.'})
+@permission_classes([AllowAny])
 def parent_register(request):
     """
-    PARENT REGISTRATION:
+    PARENT REGISTRATION / ONBOARDING:
     - Phone number + password (user-created)
+    - If a parent record already exists with this phone number (pre-created by school),
+      we update their password, name, and email instead of throwing a duplicate error.
+      This preserves their student links.
     - Generates DRF token automatically
-    
-    Request JSON:
-    {
-        "name": "John Doe",
-        "email": "john@example.com" (optional),
-        "phone_number": "+256701234567",
-        "password": "UserPassword123!"
-    }
     """
     name = request.data.get('name', '').strip()
     email = request.data.get('email', '').strip()
@@ -155,26 +379,23 @@ def parent_register(request):
             'message': 'Name, phone number, and password are required.'
         }, status=400)
 
-    # Validate uniqueness
-    normalised_phone = re.sub(r"[\s\-\(\)\+]", "", phone_number)
-    
-    if CustomUser.objects.filter(
-        Q(phone__iexact=normalised_phone) | Q(phone=phone_number),
+    # Generate phone variations for robust lookup
+    cleaned_digits = re.sub(r"\D", "", phone_number)
+    phone_variations = [phone_number, cleaned_digits]
+    if cleaned_digits:
+        if len(cleaned_digits) == 9:
+            phone_variations.extend(["0" + cleaned_digits, "256" + cleaned_digits])
+        elif len(cleaned_digits) == 10 and cleaned_digits.startswith("0"):
+            phone_variations.extend([cleaned_digits[1:], "256" + cleaned_digits[1:]])
+        elif len(cleaned_digits) == 12 and cleaned_digits.startswith("256"):
+            phone_variations.extend([cleaned_digits[3:], "0" + cleaned_digits[3:]])
+    phone_variations = list(set(phone_variations))
+
+    # Look up if user already exists
+    existing_user = CustomUser.objects.filter(
+        Q(phone__in=phone_variations),
         user_type='parent'
-    ).exists():
-        return Response({
-            'success': False, 
-            'message': 'An account with this phone number already exists.'
-        }, status=400)
-
-    if email and CustomUser.objects.filter(email__iexact=email, user_type='parent').exists():
-        return Response({
-            'success': False, 
-            'message': 'An account with this email address already exists.'
-        }, status=400)
-
-    # Generate parent_id
-    parent_id = generate_parent_id()
+    ).first()
 
     # Split name into first and last name
     name_parts = name.split()
@@ -185,11 +406,70 @@ def parent_register(request):
         first_name = name
         last_name = ''
 
-    # Create CustomUser with phone + password
+    if existing_user:
+        # If an account exists with a DIFFERENT email, check uniqueness
+        if email and CustomUser.objects.filter(email__iexact=email, user_type='parent').exclude(pk=existing_user.pk).exists():
+            return Response({
+                'success': False, 
+                'message': 'An account with this email address already exists.'
+            }, status=400)
+
+        # Update existing user's credentials
+        existing_user.set_password(password)
+        existing_user.first_name = first_name
+        existing_user.last_name = last_name
+        if email:
+            existing_user.email = email
+        existing_user.is_active = True
+        existing_user.is_email_verified = True
+        existing_user.save()
+
+        # Get or create profile
+        profile, _ = ParentProfile.objects.get_or_create(user=existing_user)
+
+        # Generate DRF token
+        token, _ = Token.objects.get_or_create(user=existing_user)
+
+        # Fetch linked students
+        students = []
+        try:
+            relationships = StudentParentRelationship.objects.filter(parent=profile)
+            for rel in relationships:
+                students.append({
+                    'id': rel.student.pk,
+                    'student_id': rel.student.student_id,
+                    'name': rel.student.full_name
+                })
+        except Exception:
+            pass
+
+        return Response({
+            'success': True,
+            'token': token.key,
+            'parent': {
+                'id': profile.parent_id,
+                'name': existing_user.full_name,
+                'contact': existing_user.phone,
+                'email': existing_user.email
+            },
+            'students': students
+        }, status=201)
+
+    # Standard flow: Create new parent user
+    if email and CustomUser.objects.filter(email__iexact=email, user_type='parent').exists():
+        return Response({
+            'success': False, 
+            'message': 'An account with this email address already exists.'
+        }, status=400)
+
+    # Generate parent_id
+    parent_id = generate_parent_id()
+    normalised_phone = cleaned_digits or phone_number
+
     user = CustomUser.objects.create_user(
         username=parent_id,
         email=email or '',
-        password=password,  # Password is hashed and stored
+        password=password,
         phone=normalised_phone,
         first_name=first_name,
         last_name=last_name,
@@ -200,19 +480,17 @@ def parent_register(request):
     user.is_email_verified = True
     user.save()
 
-    # Create ParentProfile (access_token field is now deprecated)
     profile = ParentProfile.objects.create(
         user=user,
-        access_token='',  # No longer used; passwords are stored in CustomUser
+        access_token='',
         relationship='other',
     )
 
-    # Generate DRF token for API access
     token, _ = Token.objects.get_or_create(user=user)
 
     return Response({
         'success': True,
-        'token': token.key,  # Frontend stores and uses for authentication
+        'token': token.key,
         'parent': {
             'id': profile.parent_id,
             'name': user.full_name,
@@ -747,3 +1025,180 @@ def submit_request_reply(request, request_id):
             'isStaff': False
         }
     })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_supported_classes(request):
+    classes = SchoolSupportedClasses.objects.select_related('supported_class').all().order_by('supported_class__section', 'supported_class__order')
+    data = []
+    for cls in classes:
+        data.append({
+            'id': cls.pk,
+            'name': cls.supported_class.name if cls.supported_class else f"Class {cls.pk}",
+            'level': cls.supported_class.key if cls.supported_class else "",
+            'section': cls.supported_class.section if cls.supported_class else ""
+        })
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def submit_admission_application(request):
+    """
+    Public API endpoint to submit a new online admission application.
+    """
+    from students.utils.admission_utils import generate_admission_number
+    from students.models import Admission
+    
+    student_data = request.data.get('student', {})
+    parents_list = request.data.get('parents', [])
+
+    if not student_data or not parents_list:
+        return Response({
+            'success': False,
+            'message': 'Student and parent information are required.'
+        }, status=400)
+
+    # Validate student details
+    first_name = student_data.get('first_name', '').strip()
+    last_name = student_data.get('last_name', '').strip()
+    date_of_birth = student_data.get('date_of_birth', '').strip()
+    gender = student_data.get('gender', '').strip()
+    applied_class_id = student_data.get('applied_class_id')
+
+    if not first_name or not last_name or not date_of_birth or not gender or not applied_class_id:
+        return Response({
+            'success': False,
+            'message': 'Required student details (first name, last name, DOB, gender, applied class) are missing.'
+        }, status=400)
+
+    try:
+        applied_class = SchoolSupportedClasses.objects.get(pk=applied_class_id)
+    except SchoolSupportedClasses.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Invalid applied class selected.'
+        }, status=400)
+
+    # Format parents data
+    formatted_parents = []
+    for parent in parents_list:
+        p_name = parent.get('full_name', '').strip()
+        p_rel = parent.get('relationship', '').strip()
+        p_phone = parent.get('phone', '').strip()
+        p_address = parent.get('address', '').strip()
+
+        if not p_name or not p_rel or not p_phone or not p_address:
+            return Response({
+                'success': False,
+                'message': 'Required parent details (full name, relationship, phone, address) are missing.'
+            }, status=400)
+
+        formatted_parents.append({
+            'full_name': p_name,
+            'relationship': p_rel,
+            'phone': p_phone,
+            'email': parent.get('email', '').strip(),
+            'occupation': parent.get('occupation', '').strip(),
+            'address': p_address,
+            'nin': parent.get('nin', '').strip()
+        })
+
+    # Create Admission record inside transaction
+    from django.db import transaction
+    try:
+        with transaction.atomic():
+            admission_number = generate_admission_number()
+            admission = Admission.objects.create(
+                admission_number=admission_number,
+                academic_year=str(date.today().year),
+                applied_class=applied_class,
+                first_name=first_name,
+                last_name=last_name,
+                other_names=student_data.get('other_names', '').strip(),
+                date_of_birth=date_of_birth,
+                gender=gender,
+                nationality=student_data.get('nationality', 'Ugandan').strip(),
+                previous_school=student_data.get('previous_school', '').strip(),
+                previous_class=student_data.get('previous_class', '').strip(),
+                parents_data=formatted_parents,
+                status='pending'
+            )
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Error saving admission application: {str(e)}'
+        }, status=500)
+
+    return Response({
+        'success': True,
+        'message': 'Admission application submitted successfully!',
+        'admission_number': admission.admission_number
+    })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_teacher_dashboard(request):
+    """
+    Returns dashboard data for a logged-in teacher.
+    Requires Token authentication.
+    """
+    user = request.user
+    
+    if user.user_type != 'teacher':
+        return Response({'success': False, 'message': 'Access denied: User is not a teacher'}, status=403)
+        
+    try:
+        staff_profile = user.staff_profile
+    except Exception:
+        return Response({'success': False, 'message': 'Staff profile not found'}, status=404)
+        
+    # Get classes where they are the class teacher
+    managed_classes_qs = SchoolClassTeacher.objects.filter(teacher=user, is_active=True).select_related('school_class')
+    managed_classes = [{
+        'id': mc.school_class.id,
+        'name': mc.school_class.class_name,
+        'code': mc.school_class.class_code
+    } for mc in managed_classes_qs]
+    
+    # Get teaching assignments (class + stream)
+    teaching_assignments_qs = TeacherClass.objects.filter(teacher=user, is_active=True).select_related('school_class', 'school_stream')
+    teaching_assignments = []
+    for ta in teaching_assignments_qs:
+        teaching_assignments.append({
+            'class_id': ta.school_class.id,
+            'class_name': ta.school_class.class_name,
+            'stream_name': ta.school_stream.stream_name if ta.school_stream else None,
+            'notes': ta.notes
+        })
+        
+    # Get subjects taught
+    subjects_taught_qs = TeacherSubject.objects.filter(teacher=user).select_related('subject', 'school_class')
+    subjects_taught = []
+    for ts in subjects_taught_qs:
+        subjects_taught.append({
+            'subject_code': ts.subject.code,
+            'subject_name': ts.subject.name,
+            'class_name': ts.school_class.class_name if ts.school_class else 'All Classes'
+        })
+        
+    # Check if they are also a parent
+    is_also_parent = hasattr(user, 'parent_profile')
+        
+    data = {
+        'success': True,
+        'profile': {
+            'employee_id': staff_profile.employee_id,
+            'name': user.full_name,
+            'role': staff_profile.get_role_display(),
+            'qualification': staff_profile.get_qualification_display() if staff_profile.qualification else 'None',
+            'is_class_teacher': staff_profile.is_class_teacher
+        },
+        'managed_classes': managed_classes,
+        'teaching_assignments': teaching_assignments,
+        'subjects_taught': subjects_taught,
+        'is_also_parent': is_also_parent,
+    }
+    
+    return Response(data)

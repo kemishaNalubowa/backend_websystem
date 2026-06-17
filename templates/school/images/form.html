@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'school:image_list' %}" class="text-secondary">Site Images</a></li>
+<li class="breadcrumb-item active">{{ form_title }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-800 mb-0">{{ form_title }}</h4>
+    <p class="text-muted small mb-0">
+      {% if action == 'add' %}Upload a new image asset for the website or dashboard.
+      {% else %}Update the image details or replace the file.{% endif %}
+    </p>
+  </div>
+  <a href="{% url 'school:image_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to Images
+  </a>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+{% csrf_token %}
+
+<div class="row g-4">
+  <div class="col-12 col-lg-8">
+
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-image me-2 text-primary"></i>Image Details</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Image Key <span class="text-danger">*</span></label>
+            <input type="text" name="key"
+              class="form-control font-monospace {% if errors.key %}is-invalid{% endif %}"
+              value="{% if post.key %}{{ post.key }}{% endif %}"
+              maxlength="80" placeholder="e.g. about_hero"/>
+            {% if errors.key %}<div class="invalid-feedback">{{ errors.key }}</div>{% endif %}
+            <div class="form-text">Machine-readable identifier (e.g. <code>about_hero</code>, <code>team_director</code>)</div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Label <span class="text-danger">*</span></label>
+            <input type="text" name="label"
+              class="form-control {% if errors.label %}is-invalid{% endif %}"
+              value="{% if post.label %}{{ post.label }}{% endif %}"
+              maxlength="150" placeholder="e.g. About Us Hero Image"/>
+            {% if errors.label %}<div class="invalid-feedback">{{ errors.label }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-700 small">Category <span class="text-danger">*</span></label>
+            <select name="category" class="form-select {% if errors.category %}is-invalid{% endif %}">
+              <option value="">— Select category —</option>
+              {% for key, label in categories %}
+              <option value="{{ key }}" {% if post.category == key %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% if errors.category %}<div class="invalid-feedback">{{ errors.category }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <div class="form-check form-switch mt-4">
+              <input class="form-check-input" type="checkbox" role="switch" id="is_active" name="is_active" value="1"
+                {% if post.is_active or action == 'add' %}checked{% endif %}/>
+              <label class="form-check-label fw-700" for="is_active">Active (visible on frontend)</label>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-700 small">Description <span class="text-muted fw-400">(optional)</span></label>
+            <textarea name="description" class="form-control" rows="3"
+              placeholder="Notes for admin reference…">{% if post.description %}{{ post.description }}{% endif %}</textarea>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <h6 class="fw-700 mb-0"><i class="bi bi-upload me-2 text-success"></i>Image File</h6>
+      </div>
+      <div class="card-body">
+        {% if post.current_image %}
+        <div class="d-flex align-items-center gap-3 mb-3 p-3 bg-light rounded border">
+          <img src="{{ post.current_image }}" alt="Current image"
+               class="rounded" style="height:80px;width:auto;max-width:200px;object-fit:cover;"/>
+          <div>
+            <div class="fw-700 small">Current image</div>
+            <div class="text-muted small">Upload a new file below to replace it.</div>
+            <label class="form-check mt-1">
+              <input type="checkbox" class="form-check-input" name="clear_image" value="1"/>
+              <span class="small text-danger fw-600">Remove image (no replacement)</span>
+            </label>
+          </div>
+        </div>
+        {% endif %}
+
+        <label class="form-label fw-700 small">
+          {% if action == 'add' %}Select Image <span class="text-danger">*</span>{% else %}Replace Image{% endif %}
+        </label>
+        <input type="file" name="image"
+          class="form-control {% if errors.image %}is-invalid{% endif %}"
+          accept=".jpg,.jpeg,.png,.webp,.svg,.gif"/>
+        {% if errors.image %}<div class="invalid-feedback">{{ errors.image }}</div>{% endif %}
+        <div class="form-text">Allowed: JPG, JPEG, PNG, WebP, SVG, GIF. Max size: 10MB.</div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 pb-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i>
+        {% if action == 'add' %}Upload Image{% else %}Save Changes{% endif %}
+      </button>
+      <a href="{% url 'school:image_list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+
+  </div>
+
+  <div class="col-12 col-lg-4">
+    <div class="card border-primary-subtle sticky-top" style="top:76px;">
+      <div class="card-header bg-primary-subtle py-3">
+        <h6 class="fw-700 mb-0 text-primary"><i class="bi bi-lightbulb me-2"></i>Image Guide</h6>
+      </div>
+      <div class="card-body small text-secondary">
+        <dt class="fw-700 text-dark">Key naming</dt>
+        <dd class="mb-2">Use lowercase with underscores. Examples: <code>about_hero</code>, <code>home_banner</code>, <code>team_director</code>. The frontend references these keys.</dd>
+        <dt class="fw-700 text-dark">Image size</dt>
+        <dd class="mb-2">For hero/banner images, use 1920×600px. For team photos, use 400×400px (square).</dd>
+        <dt class="fw-700 text-dark">Active flag</dt>
+        <dd class="mb-0">Only active images are served to the frontend. Deactivate an image temporarily without deleting it.</dd>
+      </div>
+    </div>
+  </div>
+
+</div>
+</form>
+{% endblock %}
+</write_to_file>
