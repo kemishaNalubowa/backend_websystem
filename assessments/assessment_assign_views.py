@@ -1,10 +1,13 @@
-# assessments/views.py  ── four assignment step views
+# assessments/assessment_assign_views.py  ── step-gated assignment views
 # ─────────────────────────────────────────────────────────────────────────────
 # Step flow (all guarded so each step requires the previous one to be done):
-#   1. add_assessment_class       → which classes sit this assessment
-#   2. add_assessment_subject     → which subjects (per class) + pass mark
-#   3. add_assessment_total_marks → max marks per subject
-#   4. add_assessment_teacher     → link a teacher per subject per class
+#   1. add_assessment_class          → which classes sit this assessment
+#   2. add_assessment_subject        → which subjects (per class) + pass mark
+#   3. add_assessment_total_marks    → max marks per subject
+#   4. add_assessment_teacher        → link a teacher per subject per class
+#   5. activate_performance_entry    → open the assessment for mark entry
+#   6. enter_student_performance     → redirect to the performance entry wizard
+#   7. publish_assessment            → publish results to parents
 # ─────────────────────────────────────────────────────────────────────────────
 
 from django.shortcuts               import render, redirect, get_object_or_404
@@ -18,12 +21,14 @@ from accounts.models    import StaffProfile
 from authentication.models import CustomUser
 from academics.base     import TEACHING_STAFF_ROLES
 from academics.models   import TeacherSubject, TeacherClass
+from permissions.decorators import has_permission
 
 from .models import (
     Assessment,
     AssessmentClass,
     AssessmentSubject,
     AssessmentTeacher,
+    AssessmentModification,
 )
 from academics.utils.subject_utils import get_sch_supported_classes
 
@@ -78,6 +83,7 @@ def _parse_pos_decimal(raw, label, errors, key):
 # =============================================================================
 
 @login_required
+@has_permission('assign_class_to_assessment', action='create')
 def add_assessment_class(request, pk):
     """
     Show every school-supported class as a card with a checkbox and an
@@ -175,6 +181,7 @@ def add_assessment_class(request, pk):
 # =============================================================================
 
 @login_required
+@has_permission('assign_subject_to_assessment', action='create')
 def add_assessment_subject(request, pk):
     """
     For each class already linked to the assessment, show that class's
@@ -306,6 +313,7 @@ def add_assessment_subject(request, pk):
 # =============================================================================
 
 @login_required
+@has_permission('assign_subject_to_assessment', action='create')
 def add_assessment_total_marks(request, pk):
     """
     For each AssessmentSubject already linked to this assessment, allow
@@ -361,10 +369,8 @@ def add_assessment_total_marks(request, pk):
 
         with transaction.atomic():
             for item in to_save:
-                # Update the passmark field (which your model uses as "max marks")
-                # Replace 'passmark' with 'total_marks' if you add that field separately.
-                item['as_subj'].passmark = item['total']
-                item['as_subj'].save(update_fields=['passmark'])
+                item['as_subj'].total_marks = item['total']
+                item['as_subj'].save(update_fields=['total_marks'])
 
         messages.success(
             request,
@@ -386,6 +392,7 @@ def add_assessment_total_marks(request, pk):
 # =============================================================================
 
 @login_required
+@has_permission('assign_teacher_to_assessment', action='create')
 def add_assessment_teacher(request, pk):
     """
     For each (class × subject) pair in the assessment, allow staff to
@@ -529,3 +536,123 @@ def add_assessment_teacher(request, pk):
         'post':       {},
     }
     return render(request, 'assessments/add_assessment_teacher.html', ctx)
+
+
+# =============================================================================
+# STEP 5 — Activate Performance Entry
+# =============================================================================
+
+@login_required
+@has_permission('open_performance_entry', action='toggle')
+def activate_performance_entry(request, pk):
+    """
+    Toggle is_entry_active on the Assessment so teachers can begin
+    entering student marks.
+
+    Guard: assessment must have at least one teacher assigned (Step 4 done).
+    POST-only action.
+    """
+    assessment = get_object_or_404(Assessment, pk=pk)
+
+    has_teachers = (
+        AssessmentTeacher.objects
+        .filter(assessment=assessment)
+        .exists()
+    )
+    if not has_teachers:
+        messages.error(
+            request,
+            'Please assign teachers to this assessment first (Step 4).'
+        )
+        return redirect(reverse('assessments:add_teacher', args=[pk]))
+
+    if request.method == 'POST':
+        # Toggle the flag
+        assessment.is_entry_active = not assessment.is_entry_active
+        assessment.save(update_fields=['is_entry_active'])
+
+        state = 'activated' if assessment.is_entry_active else 'deactivated'
+        messages.success(
+            request,
+            f'Performance entry {state} for "{assessment.title}".'
+        )
+        return redirect(reverse('assessments:detail', args=[pk]))
+
+    # GET — show a confirmation page
+    return render(request, 'assessments/activate_performance_entry.html', {
+        'assessment': assessment,
+    })
+
+
+# =============================================================================
+# STEP 6 — Enter Student Performance (redirect to wizard)
+# =============================================================================
+
+@login_required
+@has_permission('add_performance_entry', action='create')
+def enter_student_performance(request, pk):
+    """
+    Gateway view that checks pre-conditions then redirects staff into
+    the existing performance entry wizard (perf_entry_part1).
+
+    Guard: assessment must have is_entry_active = True.
+    """
+    assessment = get_object_or_404(Assessment, pk=pk)
+
+    if not assessment.is_entry_active:
+        messages.error(
+            request,
+            'Performance entry is not active for this assessment. '
+            'Please activate it first (Step 5).'
+        )
+        return redirect(reverse('assessments:detail', args=[pk]))
+
+    # Redirect into the existing performance entry wizard
+    return redirect(reverse('assessments:perf_entry_part1', args=[pk]))
+
+
+# =============================================================================
+# STEP 7 — Publish Assessment Results
+# =============================================================================
+
+@login_required
+@has_permission('publish_assessment', action='toggle')
+def publish_assessment(request, pk):
+    """
+    Toggle results_published so parent portal can see the marks.
+
+    Guard: assessment should have at least one performance record entered.
+    POST-only action.
+    """
+    from .models import AssessmentPerformance
+
+    assessment = get_object_or_404(Assessment, pk=pk)
+
+    has_performance = (
+        AssessmentPerformance.objects
+        .filter(assessment=assessment)
+        .exists()
+    )
+    if not has_performance:
+        messages.error(
+            request,
+            'No student performance records exist for this assessment. '
+            'Please enter marks first (Step 6).'
+        )
+        return redirect(reverse('assessments:detail', args=[pk]))
+
+    if request.method == 'POST':
+        assessment.results_published = not assessment.results_published
+        assessment.save(update_fields=['results_published'])
+
+        state = 'published' if assessment.results_published else 'unpublished'
+        messages.success(
+            request,
+            f'Results {state} for "{assessment.title}".'
+        )
+        return redirect(reverse('assessments:detail', args=[pk]))
+
+    # GET — show a confirmation page
+    return render(request, 'assessments/publish_assessment.html', {
+        'assessment': assessment,
+    })

@@ -12,7 +12,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from school.models import FeeStructure, SchoolAnnouncement
+from school.models import FeeStructure, SchoolAnnouncement, SchoolEvent
 from school.serializers import FeeStructureSerializer
 
 from authentication.models import CustomUser
@@ -1107,6 +1107,8 @@ def submit_admission_application(request):
 
     # Create Admission record inside transaction
     from django.db import transaction
+    from django.core.mail import send_mail
+    from django.conf import settings as django_settings
     try:
         with transaction.atomic():
             admission_number = generate_admission_number()
@@ -1131,9 +1133,47 @@ def submit_admission_application(request):
             'message': f'Error saving admission application: {str(e)}'
         }, status=500)
 
+    # ── Send email confirmation to each parent who provided an email ──────────
+    student_full_name = f"{first_name} {last_name}".strip()
+    class_name = applied_class.supported_class.name if applied_class.supported_class else 'the applied class'
+
+    email_subject = f"Admission Application Received – {admission.admission_number}"
+    email_body = (
+        f"Dear Parent/Guardian,\n\n"
+        f"Thank you for submitting an admission application for {student_full_name} to JOKS School.\n\n"
+        f"Your application details:\n"
+        f"  Admission Number : {admission.admission_number}\n"
+        f"  Student Name     : {student_full_name}\n"
+        f"  Applied Class    : {class_name}\n"
+        f"  Academic Year    : {admission.academic_year}\n"
+        f"  Status           : Pending Review\n\n"
+        f"Our admissions team will review your application and get back to you shortly.\n"
+        f"Please keep your admission number safe for future reference.\n\n"
+        f"Regards,\n"
+        f"JOKS School Admissions Office\n"
+    )
+
+    parent_emails = [
+        p.get('email', '').strip()
+        for p in formatted_parents
+        if p.get('email', '').strip()
+    ]
+
+    if parent_emails:
+        try:
+            send_mail(
+                subject=email_subject,
+                message=email_body,
+                from_email=django_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=parent_emails,
+                fail_silently=True,
+            )
+        except Exception:
+            pass  # Never block the response due to an email failure
+
     return Response({
         'success': True,
-        'message': 'Admission application submitted successfully!',
+        'message': 'Admission application submitted successfully! A confirmation has been sent to your email.',
         'admission_number': admission.admission_number
     })
 
@@ -1146,59 +1186,661 @@ def get_teacher_dashboard(request):
     """
     user = request.user
     
-    if user.user_type != 'teacher':
-        return Response({'success': False, 'message': 'Access denied: User is not a teacher'}, status=403)
+    if user.user_type not in ('teacher', 'staff'):
+        return Response({'success': False, 'message': 'Access denied: User is not a teacher or staff member'}, status=403)
         
     try:
         staff_profile = user.staff_profile
     except Exception:
         return Response({'success': False, 'message': 'Staff profile not found'}, status=404)
         
-    # Get classes where they are the class teacher
-    managed_classes_qs = SchoolClassTeacher.objects.filter(teacher=user, is_active=True).select_related('school_class')
-    managed_classes = [{
-        'id': mc.school_class.id,
-        'name': mc.school_class.class_name,
-        'code': mc.school_class.class_code
-    } for mc in managed_classes_qs]
-    
+    # Get classes where they are the form/class teacher
+    managed_classes_qs = SchoolClassTeacher.objects.filter(
+        teacher=user
+    ).select_related('school_class__supported_class')
+    managed_classes = []
+    for mc in managed_classes_qs:
+        sc = mc.school_class
+        managed_classes.append({
+            'id': sc.id,
+            'name': sc.supported_class.name if sc.supported_class else f'Class {sc.id}',
+            'code': sc.supported_class.key if sc.supported_class else '',
+        })
+
     # Get teaching assignments (class + stream)
-    teaching_assignments_qs = TeacherClass.objects.filter(teacher=user, is_active=True).select_related('school_class', 'school_stream')
+    teaching_assignments_qs = TeacherClass.objects.filter(
+        teacher=user, is_active=True
+    ).select_related('school_class__supported_class', 'school_stream')
     teaching_assignments = []
     for ta in teaching_assignments_qs:
+        sc = ta.school_class
         teaching_assignments.append({
-            'class_id': ta.school_class.id,
-            'class_name': ta.school_class.class_name,
-            'stream_name': ta.school_stream.stream_name if ta.school_stream else None,
-            'notes': ta.notes
+            'class_id': sc.id,
+            'class_name': sc.supported_class.name if sc.supported_class else f'Class {sc.id}',
+            'stream_name': ta.school_stream.name if ta.school_stream else None,
+            'notes': ta.notes,
         })
-        
+
     # Get subjects taught
-    subjects_taught_qs = TeacherSubject.objects.filter(teacher=user).select_related('subject', 'school_class')
+    subjects_taught_qs = TeacherSubject.objects.filter(
+        teacher=user
+    ).select_related('subject', 'school_class__supported_class')
     subjects_taught = []
     for ts in subjects_taught_qs:
         subjects_taught.append({
             'subject_code': ts.subject.code,
             'subject_name': ts.subject.name,
-            'class_name': ts.school_class.class_name if ts.school_class else 'All Classes'
+            'class_name': (
+                ts.school_class.supported_class.name
+                if ts.school_class and ts.school_class.supported_class
+                else 'All Classes'
+            ),
         })
-        
+
     # Check if they are also a parent
     is_also_parent = hasattr(user, 'parent_profile')
-        
+
     data = {
         'success': True,
         'profile': {
             'employee_id': staff_profile.employee_id,
             'name': user.full_name,
             'role': staff_profile.get_role_display(),
-            'qualification': staff_profile.get_qualification_display() if staff_profile.qualification else 'None',
-            'is_class_teacher': staff_profile.is_class_teacher
+            'qualification': (
+                staff_profile.get_qualification_display()
+                if staff_profile.qualification else 'N/A'
+            ),
+            'is_class_teacher': staff_profile.is_class_teacher,
         },
         'managed_classes': managed_classes,
         'teaching_assignments': teaching_assignments,
         'subjects_taught': subjects_taught,
         'is_also_parent': is_also_parent,
     }
-    
+
     return Response(data)
+
+
+# =============================================================================
+# Permission helper for JSON API views
+# =============================================================================
+
+def check_api_permission(user, permission_code, action='read'):
+    """
+    RBAC check re-usable in JSON API views (mirrors the MVC decorator logic).
+
+    Returns (allowed: bool, reason: str).
+    """
+    if user.is_superuser:
+        return True, ''
+
+    action_map = {
+        'create': 'can_create',
+        'read':   'can_read',
+        'edit':   'can_edit',
+        'delete': 'can_delete',
+        'toggle': 'can_toggle',
+    }
+    field_name = action_map.get(action, 'can_read')
+
+    from permissions.context_processors import _get_user_role
+    from permissions.models import UserTypePermission
+
+    role = _get_user_role(user)
+    if not role:
+        return False, 'User has no assigned role.'
+
+    try:
+        utp = (
+            UserTypePermission.objects
+            .select_related('permission')
+            .get(
+                role=role,
+                permission__permission_code=permission_code,
+                is_active=True,
+            )
+        )
+        allowed = getattr(utp, field_name, False)
+        if not allowed:
+            return False, f'Permission "{permission_code}" does not grant "{action}".'
+        return True, ''
+    except UserTypePermission.DoesNotExist:
+        return False, f'Permission "{permission_code}" not assigned to role "{role}".'
+
+
+def _deny(reason):
+    """Shortcut to return a 403 JSON response."""
+    return Response({'success': False, 'message': reason}, status=403)
+
+
+# =============================================================================
+# Parent — Child Assessment Marks
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def parent_child_marks(request):
+    """
+    GET /api/parent/marks/?student_id=<pk>
+    Returns published assessment performances for the parent's child.
+    """
+    user = request.user
+    if user.user_type != 'parent':
+        return Response({'error': 'Only parents can access this endpoint.'}, status=403)
+
+    try:
+        parent_profile = user.parent_profile
+    except ParentProfile.DoesNotExist:
+        return Response({'error': 'Parent profile not found.'}, status=404)
+
+    # Which student?
+    student_id = request.GET.get('student_id')
+    relationships = StudentParentRelationship.objects.filter(parent=parent_profile)
+
+    student = None
+    if student_id:
+        try:
+            student_pk = int(student_id)
+            rel = relationships.filter(student__pk=student_pk).first()
+        except ValueError:
+            rel = relationships.filter(student__student_id=student_id).first()
+        if rel:
+            student = rel.student
+    else:
+        first_rel = relationships.first()
+        if first_rel:
+            student = first_rel.student
+
+    if not student:
+        return Response({'error': 'Student not found or not linked.'}, status=404)
+
+    # Only published assessments
+    performances = (
+        AssessmentPerformance.objects
+        .filter(
+            student=student,
+            assessment__results_published=True,
+        )
+        .select_related('assessment', 'subject', 'school_class')
+        .order_by('-assessment__date_given', 'subject__name')
+    )
+
+    # Group by assessment
+    assessments_map = {}
+    for perf in performances:
+        a = perf.assessment
+        if a.pk not in assessments_map:
+            assessments_map[a.pk] = {
+                'id': a.pk,
+                'title': a.title,
+                'type': a.get_assessment_type_display(),
+                'date_given': str(a.date_given),
+                'term': str(a.term),
+                'subjects': [],
+            }
+
+        # Fetch total_marks and passmark from AssessmentSubject
+        as_subj = AssessmentSubject.objects.filter(
+            assessment=a,
+            subject=perf.subject,
+        ).first()
+        total_marks = float(as_subj.total_marks) if as_subj and as_subj.total_marks else None
+        pass_mark = float(as_subj.passmark) if as_subj else None
+
+        assessments_map[a.pk]['subjects'].append({
+            'subject': perf.subject.name,
+            'marks_obtained': float(perf.marks_obtained) if perf.marks_obtained is not None else None,
+            'total_marks': total_marks,
+            'pass_mark': pass_mark,
+            'comment': perf.comment,
+        })
+
+    return Response({
+        'student': {
+            'id': student.pk,
+            'student_id': student.student_id,
+            'name': student.full_name,
+        },
+        'assessments': list(assessments_map.values()),
+    })
+
+
+# =============================================================================
+# Announcements — Read (all) / Create (staff)
+# =============================================================================
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def api_announcements(request):
+    """
+    GET  /api/announcements/  — published announcements for any authenticated user.
+    POST /api/announcements/  — create a new announcement (staff with permission).
+    """
+    if request.method == 'GET':
+        qs = SchoolAnnouncement.objects.filter(is_published=True).order_by('-published_at', '-created_at')[:50]
+        data = []
+        for a in qs:
+            data.append({
+                'id': a.pk,
+                'title': a.title,
+                'content': a.content,
+                'priority': a.priority,
+                'date': a.published_at.strftime('%Y-%m-%d') if a.published_at else a.created_at.strftime('%Y-%m-%d'),
+            })
+        return Response(data)
+
+    # POST — create
+    allowed, reason = check_api_permission(request.user, 'manage_announcements', 'create')
+    if not allowed:
+        return _deny(reason)
+
+    title = request.data.get('title', '').strip()
+    content = request.data.get('content', '').strip()
+    priority = request.data.get('priority', 'normal').strip()
+
+    if not title or not content:
+        return Response({'error': 'Title and content are required.'}, status=400)
+
+    announcement = SchoolAnnouncement.objects.create(
+        title=title,
+        content=content,
+        priority=priority,
+        is_published=True,
+        published_at=timezone.now(),
+    )
+    return Response({
+        'success': True,
+        'id': announcement.pk,
+        'title': announcement.title,
+    }, status=201)
+
+
+# =============================================================================
+# Events — Read (all) / Create (staff)
+# =============================================================================
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def api_events(request):
+    """
+    GET  /api/events/  — upcoming published events.
+    POST /api/events/  — create a new event (staff with permission).
+    """
+    if request.method == 'GET':
+        qs = SchoolEvent.objects.filter(is_published=True).order_by('start_date')[:50]
+        data = []
+        for e in qs:
+            data.append({
+                'id': e.pk,
+                'title': e.title,
+                'description': e.description,
+                'event_type': e.event_type,
+                'start_date': str(e.start_date),
+                'end_date': str(e.end_date),
+                'venue': e.venue,
+            })
+        return Response(data)
+
+    # POST — create
+    allowed, reason = check_api_permission(request.user, 'manage_events', 'create')
+    if not allowed:
+        return _deny(reason)
+
+    title = request.data.get('title', '').strip()
+    event_type = request.data.get('event_type', 'other').strip()
+    start_date = request.data.get('start_date', '').strip()
+    end_date = request.data.get('end_date', '').strip()
+    description = request.data.get('description', '').strip()
+    venue = request.data.get('venue', '').strip()
+
+    if not title or not start_date or not end_date:
+        return Response({'error': 'Title, start_date, and end_date are required.'}, status=400)
+
+    event = SchoolEvent.objects.create(
+        title=title,
+        event_type=event_type,
+        start_date=start_date,
+        end_date=end_date,
+        description=description,
+        venue=venue,
+        is_published=True,
+        organized_by=request.user,
+    )
+    return Response({
+        'success': True,
+        'id': event.pk,
+        'title': event.title,
+    }, status=201)
+
+
+# =============================================================================
+# Staff — Parent Requests Management
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def staff_requests_list(request):
+    """
+    GET /api/staff/requests/
+    Lists parent requests visible to staff members.
+    """
+    allowed, reason = check_api_permission(request.user, 'parent_requests', 'read')
+    if not allowed:
+        return _deny(reason)
+
+    status_filter = request.GET.get('status', '').strip()
+    type_filter = request.GET.get('type', '').strip()
+
+    qs = ParentsRequest.objects.select_related('parent', 'student').order_by('-created_at')
+
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    if type_filter:
+        qs = qs.filter(request_type=type_filter)
+
+    data = []
+    for r in qs[:100]:
+        data.append({
+            'id': r.pk,
+            'reference': r.reference_number,
+            'parent_name': r.parent.full_name,
+            'student_name': r.student.full_name if r.student else None,
+            'request_type': r.request_type,
+            'subject': r.subject,
+            'message': r.message,
+            'status': r.status,
+            'is_urgent': r.is_urgent,
+            'date': r.created_at.strftime('%Y-%m-%d %H:%M'),
+        })
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def staff_request_update_status(request, request_id):
+    """
+    POST /api/staff/requests/<id>/update-status/
+    Updates request status and optionally adds a staff reply.
+    """
+    allowed, reason = check_api_permission(request.user, 'parent_requests', 'edit')
+    if not allowed:
+        return _deny(reason)
+
+    parent_request = get_object_or_404(ParentsRequest, pk=request_id)
+
+    new_status = request.data.get('status', '').strip()
+    reply_message = request.data.get('reply', '').strip()
+    valid_statuses = dict(ParentsRequest.STATUS_CHOICES)
+
+    if new_status and new_status not in valid_statuses:
+        return Response({'error': f'Invalid status. Valid: {list(valid_statuses.keys())}'}, status=400)
+
+    if new_status:
+        parent_request.status = new_status
+        if new_status == 'resolved':
+            parent_request.resolved_at = timezone.now()
+        parent_request.save(update_fields=['status', 'resolved_at'])
+
+    reply_obj = None
+    if reply_message:
+        reply_obj = ParentsRequestReply.objects.create(
+            request=parent_request,
+            replied_by=request.user,
+            message=reply_message,
+            is_internal=False,
+        )
+
+    return Response({
+        'success': True,
+        'status': parent_request.status,
+        'reply_id': reply_obj.pk if reply_obj else None,
+    })
+
+
+# =============================================================================
+# Staff — Assessment Workflow Actions (JSON mirrors of MVC steps)
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_assessment_activate_entry(request, pk):
+    """POST /api/staff/assessment/<pk>/activate-entry/"""
+    allowed, reason = check_api_permission(request.user, 'open_performance_entry', 'toggle')
+    if not allowed:
+        return _deny(reason)
+
+    from assessments.models import Assessment, AssessmentTeacher
+    assessment = get_object_or_404(Assessment, pk=pk)
+
+    if not AssessmentTeacher.objects.filter(assessment=assessment).exists():
+        return Response({'error': 'No teachers assigned yet.'}, status=400)
+
+    assessment.is_entry_active = not assessment.is_entry_active
+    assessment.save(update_fields=['is_entry_active'])
+
+    return Response({
+        'success': True,
+        'is_entry_active': assessment.is_entry_active,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_assessment_publish(request, pk):
+    """POST /api/staff/assessment/<pk>/publish/"""
+    allowed, reason = check_api_permission(request.user, 'publish_assessment', 'toggle')
+    if not allowed:
+        return _deny(reason)
+
+    assessment = get_object_or_404(Assessment, pk=pk)
+
+    if not AssessmentPerformance.objects.filter(assessment=assessment).exists():
+        return Response({'error': 'No performance records to publish.'}, status=400)
+
+    assessment.results_published = not assessment.results_published
+    assessment.save(update_fields=['results_published'])
+
+    return Response({
+        'success': True,
+        'results_published': assessment.results_published,
+    })
+
+
+# =============================================================================
+# Auth — Resolved Permission Set
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def resolved_permissions(request):
+    """
+    GET /api/auth/permissions/resolved/
+    Returns every permission and its action flags for the current user's role.
+    """
+    from permissions.context_processors import _get_user_role
+    from permissions.models import UserTypePermission
+
+    user = request.user
+
+    if user.is_superuser:
+        return Response({'role': 'superuser', 'permissions': '__all__'})
+
+    role = _get_user_role(user)
+    if not role:
+        # Could be a parent — check parent role
+        if user.user_type == 'parent':
+            role = 'parent'
+        else:
+            return Response({'role': None, 'permissions': {}})
+
+    qs = (
+        UserTypePermission.objects
+        .filter(role=role, is_active=True)
+        .select_related('permission')
+    )
+
+    perms = {}
+    for utp in qs:
+        perms[utp.permission.permission_code] = {
+            'title': utp.permission.permission_title,
+            'can_create': utp.can_create,
+            'can_read': utp.can_read,
+            'can_edit': utp.can_edit,
+            'can_delete': utp.can_delete,
+            'can_toggle': utp.can_toggle,
+            'scope': utp.action_effect,
+        }
+
+    return Response({'role': role, 'permissions': perms})
+
+
+# =============================================================================
+# Admin — Broadcast Notification to All Users
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_broadcast(request):
+    """
+    POST /api/admin/broadcast/
+    Sends a notification to all active users via email (console backend in dev).
+    Only users with admin role may call this endpoint.
+
+    Request JSON:
+    {
+        "subject": "Important Notice",
+        "message": "School closes early tomorrow..."
+    }
+    """
+    user = request.user
+    if user.user_type != 'admin' and not user.is_superuser:
+        return Response({'success': False, 'message': 'Only admins can broadcast notifications.'}, status=403)
+
+    subject = request.data.get('subject', '').strip()
+    message_body = request.data.get('message', '').strip()
+
+    if not subject or not message_body:
+        return Response({'success': False, 'message': 'Subject and message are required.'}, status=400)
+
+    # Collect all active users who have an email address
+    recipients = list(
+        CustomUser.objects.filter(is_active=True)
+        .exclude(email='')
+        .values_list('email', flat=True)
+        .distinct()
+    )
+
+    sent_count = 0
+    from django.core.mail import send_mail
+    from django.conf import settings as django_settings
+
+    full_message = (
+        f"{message_body}\n\n"
+        f"—\nJOKS School Administration\n"
+        f"This is an automated broadcast message. Please do not reply directly to this email."
+    )
+
+    if recipients:
+        try:
+            # send_mail prints to console in dev; use EMAIL_BACKEND=smtp for production
+            send_mail(
+                subject=subject,
+                message=full_message,
+                from_email=django_settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipients,
+                fail_silently=False,
+            )
+            sent_count = len(recipients)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Broadcast failed: {str(e)}'
+            }, status=500)
+
+    # Also simulate SMS/console output for users with phone numbers only (no email)
+    phone_only_users = CustomUser.objects.filter(is_active=True, email='').exclude(phone='')
+    for u in phone_only_users:
+        print(f"\n[SMS BROADCAST] TO: {u.phone} | SUBJECT: {subject} | MESSAGE: {message_body}\n")
+
+    return Response({
+        'success': True,
+        'message': f'Broadcast sent successfully to {sent_count} users.',
+        'recipients_count': sent_count,
+    })
+
+
+# =============================================================================
+# Teacher — Classes with Enrolled Students
+# =============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def teacher_classes_students(request):
+    """
+    GET /api/teacher/classes/students/
+    Returns the teacher's assigned classes, each with a list of enrolled students.
+    Combines SchoolClassTeacher (form teacher) and TeacherClass (subject teacher) data.
+    """
+    user = request.user
+
+    if user.user_type not in ('teacher', 'staff'):
+        return Response({'success': False, 'message': 'Access denied.'}, status=403)
+
+    # Gather all class IDs this teacher is associated with
+    form_class_ids = list(
+        SchoolClassTeacher.objects.filter(teacher=user)
+        .values_list('school_class_id', flat=True)
+    )
+    teaching_class_ids = list(
+        TeacherClass.objects.filter(teacher=user, is_active=True)
+        .values_list('school_class_id', flat=True)
+    )
+
+    all_class_ids = list(set(form_class_ids + teaching_class_ids))
+
+    classes_data = []
+    for class_id in all_class_ids:
+        try:
+            ssc = SchoolSupportedClasses.objects.select_related('supported_class').get(pk=class_id)
+        except SchoolSupportedClasses.DoesNotExist:
+            continue
+
+        class_name = (
+            ssc.supported_class.name if ssc.supported_class else f'Class {ssc.pk}'
+        )
+        class_code = (
+            ssc.supported_class.key if ssc.supported_class else ''
+        )
+
+        students_qs = Student.objects.filter(
+            current_class=ssc,
+            is_active=True
+        ).order_by('last_name', 'first_name')
+
+        students_list = []
+        for s in students_qs:
+            students_list.append({
+                'id': s.pk,
+                'student_id': s.student_id,
+                'name': s.full_name,
+                'gender': s.gender,
+                'stream': s.school_stream.name if s.school_stream else None,
+                'photo': s.profile_photo.url if s.profile_photo else None,
+            })
+
+        is_form_teacher = class_id in form_class_ids
+
+        classes_data.append({
+            'class_id': ssc.pk,
+            'class_name': class_name,
+            'class_code': class_code,
+            'is_form_teacher': is_form_teacher,
+            'total_students': len(students_list),
+            'students': students_list,
+        })
+
+    return Response({
+        'success': True,
+        'classes': classes_data,
+    })
+

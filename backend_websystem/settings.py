@@ -188,3 +188,9 @@ MESSAGE_TAGS = {
     messages.WARNING: 'warning',
     messages.ERROR: 'danger',
 }
+
+# ─── Email Configuration ──────────────────────────────────────────────────────
+# Using console backend for development — emails print to terminal.
+# Replace with real SMTP settings for production.
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'JOKS School <noreply@joksschool.ac.ug>'

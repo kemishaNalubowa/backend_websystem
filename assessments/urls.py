@@ -5,6 +5,8 @@ from . import performance_views as pv
 
 from . import assessment_performance_entry_views as apev
 
+from . import assessment_assign_views as aav
+
 app_name = 'assessments'
 
 urlpatterns = [
@@ -37,26 +39,43 @@ urlpatterns = [
         name='change_status'
     ),
 
-    # ── Assessment bridge records (all posted from the detail page) ───────────
+    # ── Assessment bridge records (all posted from the detail page) ───────────────
     path(
         '<int:pk>/classes/add/',
-        views.add_assessment_class,
+        aav.add_assessment_class,
         name='add_class'
     ),
     path(
         '<int:pk>/subjects/add/',
-        views.add_assessment_subject,
+        aav.add_assessment_subject,
         name='add_subject'
     ),
     path(
         '<int:pk>/total-marks/add/',
-        views.add_assessment_total_marks,
+        aav.add_assessment_total_marks,
         name='add_total_marks'
     ),
     path(
         '<int:pk>/teachers/add/',
-        views.add_assessment_teacher,
+        aav.add_assessment_teacher,
         name='add_teacher'
+    ),
+
+    # ── New workflow steps (Steps 5–7) ──────────────────────────────────────────
+    path(
+        '<int:pk>/activate-entry/',
+        aav.activate_performance_entry,
+        name='activate_entry'
+    ),
+    path(
+        '<int:pk>/enter-performance/',
+        aav.enter_student_performance,
+        name='enter_performance'
+    ),
+    path(
+        '<int:pk>/publish/',
+        aav.publish_assessment,
+        name='publish'
     ),
 
     # ── Student Performance ───────────────────────────────────────────────────

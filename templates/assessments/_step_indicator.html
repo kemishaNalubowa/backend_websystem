@@ -2,9 +2,7 @@
 <div class="mb-4">
   <div class="d-flex align-items-center gap-0 flex-nowrap overflow-auto">
 
-    {% with steps="1,2,3,4" labels="Classes,Subjects,Total Marks,Teachers" icons="building,journal-bookmark,award,person-workspace" urls="add_class,add_subject,add_total_marks,add_teacher" %}
-
-    {# Step 1 #}
+    {# Step 1: Classes #}
     <div class="d-flex align-items-center">
       <a href="{% url 'assessments:add_class' assessment.pk %}"
          class="d-flex align-items-center gap-1 text-decoration-none px-2 py-1 rounded
@@ -22,7 +20,7 @@
       {% if step > 1 %}border-color:#198754 !important;{% else %}border-color:#dee2e6 !important;{% endif %}">
     </div>
 
-    {# Step 2 #}
+    {# Step 2: Subjects #}
     <div class="d-flex align-items-center">
       <a href="{% url 'assessments:add_subject' assessment.pk %}"
          class="d-flex align-items-center gap-1 text-decoration-none px-2 py-1 rounded
@@ -40,7 +38,7 @@
       {% if step > 2 %}border-color:#198754 !important;{% else %}border-color:#dee2e6 !important;{% endif %}">
     </div>
 
-    {# Step 3 #}
+    {# Step 3: Total Marks #}
     <div class="d-flex align-items-center">
       <a href="{% url 'assessments:add_total_marks' assessment.pk %}"
          class="d-flex align-items-center gap-1 text-decoration-none px-2 py-1 rounded
@@ -58,20 +56,73 @@
       {% if step > 3 %}border-color:#198754 !important;{% else %}border-color:#dee2e6 !important;{% endif %}">
     </div>
 
-    {# Step 4 #}
+    {# Step 4: Teachers #}
     <div class="d-flex align-items-center">
       <a href="{% url 'assessments:add_teacher' assessment.pk %}"
          class="d-flex align-items-center gap-1 text-decoration-none px-2 py-1 rounded
-           {% if step == 4 %}bg-primary text-white{% else %}text-muted{% endif %}">
+           {% if step == 4 %}bg-primary text-white{% elif step > 4 %}text-success{% else %}text-muted{% endif %}">
         <span class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
               style="width:24px;height:24px;font-size:0.75rem;
-                {% if step == 4 %}background:rgba(255,255,255,.25);{% else %}background:#e9ecef;{% endif %}">
-          4
+                {% if step == 4 %}background:rgba(255,255,255,.25);{% elif step > 4 %}background:#d1e7dd;{% else %}background:#e9ecef;{% endif %}">
+          {% if step > 4 %}<i class="bi bi-check"></i>{% else %}4{% endif %}
         </span>
         <span class="small fw-semibold d-none d-sm-inline">Teachers</span>
       </a>
     </div>
 
-    {% endwith %}
+    <div class="flex-fill border-top mx-1" style="height:2px;min-width:16px;
+      {% if step > 4 %}border-color:#198754 !important;{% else %}border-color:#dee2e6 !important;{% endif %}">
+    </div>
+
+    {# Step 5: Activate Entry #}
+    <div class="d-flex align-items-center">
+      <a href="{% url 'assessments:activate_performance_entry' assessment.pk %}"
+         class="d-flex align-items-center gap-1 text-decoration-none px-2 py-1 rounded
+           {% if step == 5 %}bg-primary text-white{% elif step > 5 %}text-success{% else %}text-muted{% endif %}">
+        <span class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
+              style="width:24px;height:24px;font-size:0.75rem;
+                {% if step == 5 %}background:rgba(255,255,255,.25);{% elif step > 5 %}background:#d1e7dd;{% else %}background:#e9ecef;{% endif %}">
+          {% if step > 5 %}<i class="bi bi-check"></i>{% else %}5{% endif %}
+        </span>
+        <span class="small fw-semibold d-none d-sm-inline">Activate Entry</span>
+      </a>
+    </div>
+
+    <div class="flex-fill border-top mx-1" style="height:2px;min-width:16px;
+      {% if step > 5 %}border-color:#198754 !important;{% else %}border-color:#dee2e6 !important;{% endif %}">
+    </div>
+
+    {# Step 6: Enter Performance #}
+    <div class="d-flex align-items-center">
+      <a href="{% url 'assessments:enter_student_performance' assessment.pk %}"
+         class="d-flex align-items-center gap-1 text-decoration-none px-2 py-1 rounded
+           {% if step == 6 %}bg-primary text-white{% elif step > 6 %}text-success{% else %}text-muted{% endif %}">
+        <span class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
+              style="width:24px;height:24px;font-size:0.75rem;
+                {% if step == 6 %}background:rgba(255,255,255,.25);{% elif step > 6 %}background:#d1e7dd;{% else %}background:#e9ecef;{% endif %}">
+          {% if step > 6 %}<i class="bi bi-check"></i>{% else %}6{% endif %}
+        </span>
+        <span class="small fw-semibold d-none d-sm-inline">Enter Marks</span>
+      </a>
+    </div>
+
+    <div class="flex-fill border-top mx-1" style="height:2px;min-width:16px;
+      {% if step > 6 %}border-color:#198754 !important;{% else %}border-color:#dee2e6 !important;{% endif %}">
+    </div>
+
+    {# Step 7: Publish #}
+    <div class="d-flex align-items-center">
+      <a href="{% url 'assessments:publish_assessment' assessment.pk %}"
+         class="d-flex align-items-center gap-1 text-decoration-none px-2 py-1 rounded
+           {% if step == 7 %}bg-primary text-white{% else %}text-muted{% endif %}">
+        <span class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
+              style="width:24px;height:24px;font-size:0.75rem;
+                {% if step == 7 %}background:rgba(255,255,255,.25);{% else %}background:#e9ecef;{% endif %}">
+          7
+        </span>
+        <span class="small fw-semibold d-none d-sm-inline">Publish</span>
+      </a>
+    </div>
+
   </div>
 </div>

@@ -308,6 +308,40 @@ def admission_add_step3(request):
             adm.reviewed_by      = request.user
             adm.save()
 
+            # ── Email confirmation to each parent who provided an email ─────
+            try:
+                from django.core.mail import send_mail
+                from django.conf import settings as _settings
+                _student_name = f"{adm.first_name} {adm.last_name}".strip()
+                _class_name = adm.applied_class.supported_class.name if adm.applied_class and adm.applied_class.supported_class else 'the applied class'
+                _emails = [
+                    p.get('email', '').strip()
+                    for p in (adm.parents_data or [])
+                    if p.get('email', '').strip()
+                ]
+                if _emails:
+                    send_mail(
+                        subject=f"Admission Application Received – {adm.admission_number}",
+                        message=(
+                            f"Dear Parent/Guardian,\n\n"
+                            f"Thank you for submitting an admission application for {_student_name} to JOKS School.\n\n"
+                            f"Your application details:\n"
+                            f"  Admission Number : {adm.admission_number}\n"
+                            f"  Student Name     : {_student_name}\n"
+                            f"  Applied Class    : {_class_name}\n"
+                            f"  Academic Year    : {adm.academic_year}\n"
+                            f"  Status           : Pending Review\n\n"
+                            f"Our admissions team will review your application and contact you shortly.\n"
+                            f"Please keep your admission number safe for future reference.\n\n"
+                            f"Regards,\nJOKS School Admissions Office\n"
+                        ),
+                        from_email=_settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=_emails,
+                        fail_silently=True,
+                    )
+            except Exception:
+                pass  # Email failure must never break the admission flow
+
     except Exception as exc:
         messages.error(request, f'Could not save application: {exc}')
         return redirect('students:admission_add_step3')
@@ -320,6 +354,7 @@ def admission_add_step3(request):
         f'{adm.first_name} {adm.last_name}.'
     )
     return redirect('students:admission_detail', pk=adm.pk)
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

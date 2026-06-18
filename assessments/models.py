@@ -105,6 +105,8 @@ class Assessment(TimeStampedModel):
     # Status and visibility
     is_published      = models.BooleanField(default=False,
                             help_text='Visible to teachers for mark entry when True')
+    is_entry_active   = models.BooleanField(default=False,
+                            help_text='True if performance entry is active/open')
     results_published = models.BooleanField(default=False,
                             help_text='Results visible to parents on the portal when True')
 
@@ -209,7 +211,9 @@ class AssessmentSubject(TimeStampedModel):
                       related_name='subject_assessment_links'
                   )
     passmark = models.DecimalField(max_digits=7, decimal_places=1,
-                      help_text='Max marks for this subject in this assessment')
+                      help_text='Pass mark for this subject in this assessment')
+    total_marks = models.DecimalField(max_digits=7, decimal_places=1, null=True, blank=True,
+                      help_text='Total marks for this subject in this assessment')
     
 
     notes       = models.CharField(max_length=200, blank=True)
@@ -222,7 +226,7 @@ class AssessmentSubject(TimeStampedModel):
         unique_together = ['assessment', 'assessment_class', 'subject']  # ← add assessment_class
 
     def __str__(self):
-        return f"{self.assessment.title} | {self.subject.code} | Max: {self.passmark}"
+        return f"{self.assessment.title} | {self.subject.code} | Passmark: {self.passmark} | Max: {self.total_marks}"
 
 
 # =============================================================================
